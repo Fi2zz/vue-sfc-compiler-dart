@@ -1,0 +1,466 @@
+[
+  {
+    "name": "defineProps_runtime",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ msg: String, count: { type: Number, default: 0 } })\n</script>"
+  },
+  {
+    "name": "defineProps_runtime_array",
+    "sfc": "<script setup>\nconst props = defineProps(['msg','count'])\n</script>"
+  },
+  {
+    "name": "defineProps_runtime_required",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ count: { type: Number, required: true } })\n</script>"
+  },
+  {
+    "name": "defineProps_runtime_validator",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ count: { type: Number, validator: (v:number)=> v >= 0 } })\n</script>"
+  },
+  {
+    "name": "defineProps_runtime_default_fn",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ items: { type: Array, default: ()=> [] } })\n</script>"
+  },
+  {
+    "name": "defineProps_runtime_boolean_default",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ enabled: { type: Boolean, default: true } })\n</script>"
+  },
+  {
+    "name": "defineProps_ts_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ msg: string; count?: number }>()\n</script>"
+  },
+  {
+    "name": "defineProps_ts_destructure",
+    "sfc": "<script setup lang=\"ts\">\nconst { msg = 'hi', count = 1 } = defineProps<{ msg: string; count?: number }>()\n</script>"
+  },
+  {
+    "name": "defineProps_ts_union",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ id: string | number; active?: boolean }>()\n</script>"
+  },
+  {
+    "name": "defineProps_ts_array_object",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ items: string[]; config?: { title: string } }>()\n</script>"
+  },
+  {
+    "name": "defineProps_ts_nested",
+    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ user: { name: string; roles: string[] } }>()\n</script>"
+  },
+  {
+    "name": "defineProps_ts_literal_union_destructure",
+    "sfc": "<script setup lang=\"ts\">\nconst { size = 'medium' } = defineProps<{ size: 'small' | 'medium' | 'large' }>()\n</script>"
+  },
+  {
+    "name": "withDefaults_typed_destructure",
+    "sfc": "<script setup lang=\"ts\">\nconst { msg, count } = withDefaults(defineProps<{ msg?: string; count?: number }>(), { msg: 'hi', count: 1 })\n</script>"
+  },
+  {
+    "name": "defineEmits_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits(['update','remove'])\nfunction onUpdate(id:number){ emit('update', id) }\n</script>"
+  },
+  {
+    "name": "defineEmits_object_validator",
+    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits({ submit(payload: { id: number }) { return true } })\nemit('submit', { id: 1 })\n</script>"
+  },
+  {
+    "name": "defineEmits_object_multi",
+    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits({ save(v: { id: number }) { return true }, cancel() { return true } })\nemit('save', { id: 1 })\nemit('cancel')\n</script>"
+  },
+  {
+    "name": "defineEmits_ts",
+    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'update', id: number): void; (e:'remove'): void }>()\nemit('remove')\nemit('update', 1)\n</script>"
+  },
+  {
+    "name": "defineEmits_ts_object_payload",
+    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'save', payload: { id: number }): void }>()\nemit('save', { id: 1 })\n</script>"
+  },
+  {
+    "name": "defineEmits_ts_union_payload",
+    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'select', payload: { id: number } | { slug: string }): void }>()\nemit('select', { id: 1 })\n</script>"
+  },
+  {
+    "name": "defineExpose_basic",
+    "sfc": "<script setup lang=\"ts\">\nfunction inc(){}\nconst count = 0\ndefineExpose({ inc, count })\n</script>"
+  },
+  {
+    "name": "defineExpose_empty",
+    "sfc": "<script setup lang=\"ts\">\ndefineExpose()\n</script>"
+  },
+  {
+    "name": "defineSlots_ts",
+    "sfc": "<script setup lang=\"ts\">\nconst slots = defineSlots<{ default(props:{msg:string}): any }>()\n</script>"
+  },
+  {
+    "name": "defineSlots_basic",
+    "sfc": "<script setup>\nconst slots = defineSlots()\n</script>"
+  },
+  {
+    "name": "defineSlots_multi_ts",
+    "sfc": "<script setup lang=\"ts\">\nconst slots = defineSlots<{ header(): any; default(props:{msg:string}): any; footer(): any }>()\n</script>"
+  },
+  {
+    "name": "useSlots_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst slots = useSlots()\n</script>"
+  },
+  {
+    "name": "useAttrs_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst attrs = useAttrs()\n</script>"
+  },
+  {
+    "name": "useCssVars_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst color = 'red'\nuseCssVars(() => ({ color }))\n</script>"
+  },
+  {
+    "name": "useId_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst uid = useId()\n</script>"
+  },
+  {
+    "name": "useTemplateRef_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst input = useTemplateRef('input')\n</script>"
+  },
+  {
+    "name": "reactive_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { reactive } from 'vue'\nconst state = reactive({ count: 0 })\n</script>"
+  },
+  {
+    "name": "ref_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { ref } from 'vue'\nconst count = ref(0)\n</script>"
+  },
+  {
+    "name": "computed_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { ref, computed } from 'vue'\nconst count = ref(1)\nconst double = computed(() => count.value * 2)\n</script>"
+  },
+  {
+    "name": "watch_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { ref, watch } from 'vue'\nconst v = ref(0)\nwatch(v, (nv, ov) => {})\n</script>"
+  },
+  {
+    "name": "watchEffect_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { ref, watchEffect } from 'vue'\nconst v = ref(0)\nwatchEffect(() => { v.value })\n</script>"
+  },
+  {
+    "name": "onMounted_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onMounted } from 'vue'\nonMounted(() => {})\n</script>"
+  },
+  {
+    "name": "provide_inject_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { provide, inject } from 'vue'\nprovide('key', 1)\nconst injected = inject('key', 0)\n</script>"
+  },
+  {
+    "name": "getCurrentInstance_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { getCurrentInstance } from 'vue'\nconst inst = getCurrentInstance()\n</script>"
+  },
+  {
+    "name": "variables_basic",
+    "sfc": "<script setup>\nconst a = 1\nconst b = true\n</script>"
+  },
+  {
+    "name": "variables_let",
+    "sfc": "<script setup>\nlet a = 1\n</script>"
+  },
+  {
+    "name": "variables_object",
+    "sfc": "<script setup>\nconst obj = { x: 1, ok: true }\n</script>"
+  },
+  {
+    "name": "variables_destructure",
+    "sfc": "<script setup>\nconst { x, ok = true } = { x: 1, ok: true }\n</script>"
+  },
+  {
+    "name": "function_basic",
+    "sfc": "<script setup>\nfunction foo(){ return 1 }\n</script>"
+  },
+  {
+    "name": "topLevelAwait_basic",
+    "sfc": "<script setup>\nconst res = await Promise.resolve(1)\n</script>"
+  },
+  {
+    "name": "import_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { ref, isRef } from 'vue'\nconst a = ref(1)\nconst ok = isRef(a)\n</script>"
+  },
+  {
+    "name": "export_named_basic",
+    "sfc": "<script setup>\nexport const api = 1\n</script>"
+  },
+  {
+    "name": "for_loop_basic",
+    "sfc": "<script setup>\nfor (let i = 0; i < 3; i++) { }\n</script>"
+  },
+  {
+    "name": "try_catch_basic",
+    "sfc": "<script setup>\ntry { throw new Error('x') } catch (e) { } finally { }\n</script>"
+  },
+  {
+    "name": "async_function_basic",
+    "sfc": "<script setup>\nasync function load(){ return 1 }\n</script>"
+  },
+  {
+    "name": "class_basic",
+    "sfc": "<script setup>\nclass X { a = 1 }\nconst x = new X()\n</script>"
+  },
+  {
+    "name": "export_default_error",
+    "sfc": "<script setup>\nexport default { name: 'X' }\n</script>"
+  },
+  {
+    "name": "type_alias_basic",
+    "sfc": "<script setup lang=\"ts\">\ntype User = { id: number; name: string }\n</script>"
+  },
+  {
+    "name": "interface_basic",
+    "sfc": "<script setup lang=\"ts\">\ninterface Point { x: number; y: number }\n</script>"
+  },
+  {
+    "name": "enum_basic",
+    "sfc": "<script setup lang=\"ts\">\nenum Color { Red, Green }\n</script>"
+  },
+  {
+    "name": "import_type_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport type { Component } from 'vue'\nlet c: Component | null = null\n</script>"
+  },
+  {
+    "name": "export_type_basic",
+    "sfc": "<script setup lang=\"ts\">\nexport type Result = { ok: boolean }\n</script>"
+  },
+  {
+    "name": "console_basic",
+    "sfc": "<script setup>\nconsole.log('hello')\n</script>"
+  },
+  {
+    "name": "onBeforeMount_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onBeforeMount } from 'vue'\nonBeforeMount(() => {})\n</script>"
+  },
+  {
+    "name": "onUpdated_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onUpdated } from 'vue'\nonUpdated(() => {})\n</script>"
+  },
+  {
+    "name": "onUnmounted_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onUnmounted } from 'vue'\nonUnmounted(() => {})\n</script>"
+  },
+  {
+    "name": "onErrorCaptured_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onErrorCaptured } from 'vue'\nonErrorCaptured(() => false)\n</script>"
+  },
+  {
+    "name": "onRenderTracked_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onRenderTracked } from 'vue'\nonRenderTracked(() => {})\n</script>"
+  },
+  {
+    "name": "onRenderTriggered_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onRenderTriggered } from 'vue'\nonRenderTriggered(() => {})\n</script>"
+  },
+  {
+    "name": "nextTick_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { nextTick } from 'vue'\nawait nextTick()\n</script>"
+  },
+  {
+    "name": "effectScope_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { effectScope } from 'vue'\nconst scope = effectScope()\nscope.stop()\n</script>"
+  },
+  {
+    "name": "getCurrentScope_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { getCurrentScope } from 'vue'\nconst scope = getCurrentScope()\n</script>"
+  },
+  {
+    "name": "onScopeDispose_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onScopeDispose } from 'vue'\nonScopeDispose(() => {})\n</script>"
+  },
+  {
+    "name": "shallowRef_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { shallowRef } from 'vue'\nconst a = shallowRef(1)\n</script>"
+  },
+  {
+    "name": "shallowReactive_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { shallowReactive } from 'vue'\nconst obj = shallowReactive({ a: 1 })\n</script>"
+  },
+  {
+    "name": "readonly_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { readonly, reactive } from 'vue'\nconst s = readonly(reactive({ a: 1 }))\n</script>"
+  },
+  {
+    "name": "toRefs_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { reactive, toRefs } from 'vue'\nconst s = reactive({ a: 1, b: 2 })\nconst { a, b } = toRefs(s)\n</script>"
+  },
+  {
+    "name": "toRef_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { reactive, toRef } from 'vue'\nconst s = reactive({ a: 1 })\nconst a = toRef(s, 'a')\n</script>"
+  },
+  {
+    "name": "unref_isRef_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { ref, unref, isRef } from 'vue'\nconst a = ref(1)\nconst v = unref(a)\nconst ok = isRef(a)\n</script>"
+  },
+  {
+    "name": "watchPostEffect_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { ref, watchPostEffect } from 'vue'\nconst v = ref(0)\nwatchPostEffect(() => { v.value })\n</script>"
+  },
+  {
+    "name": "watchSyncEffect_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { ref, watchSyncEffect } from 'vue'\nconst v = ref(0)\nwatchSyncEffect(() => { v.value })\n</script>"
+  },
+  {
+    "name": "onBeforeUpdate_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onBeforeUpdate } from 'vue'\nonBeforeUpdate(() => {})\n</script>"
+  },
+  {
+    "name": "onActivated_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onActivated } from 'vue'\nonActivated(() => {})\n</script>"
+  },
+  {
+    "name": "onDeactivated_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onDeactivated } from 'vue'\nonDeactivated(() => {})\n</script>"
+  },
+  {
+    "name": "customRef_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { customRef } from 'vue'\nconst r = customRef((track, trigger) => ({ get(){ track(); return 1 }, set(v){ trigger() } }))\n</script>"
+  },
+  {
+    "name": "triggerRef_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { shallowRef, triggerRef } from 'vue'\nconst r = shallowRef(1)\ntriggerRef(r)\n</script>"
+  },
+  {
+    "name": "markRaw_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { markRaw } from 'vue'\nconst obj = markRaw({ a: 1 })\n</script>"
+  },
+  {
+    "name": "isReactive_isReadonly_isProxy_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { reactive, readonly, isReactive, isReadonly, isProxy } from 'vue'\nconst a = reactive({})\nconst b = readonly({})\nconst ra = isReactive(a)\nconst ro = isReadonly(b)\nconst px = isProxy(a)\n</script>"
+  },
+  {
+    "name": "toValue_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { toValue, ref } from 'vue'\nconst a = ref(1)\nconst v = toValue(a)\n</script>"
+  },
+  {
+    "name": "defineAsyncComponent_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { defineAsyncComponent } from 'vue'\nconst Comp = defineAsyncComponent(() => Promise.resolve({}))\n</script>"
+  },
+  {
+    "name": "generic_function_basic",
+    "sfc": "<script setup lang=\"ts\">\nfunction id<T>(x: T): T { return x }\nconst n = id(1)\n</script>"
+  },
+  {
+    "name": "conditional_types_basic",
+    "sfc": "<script setup lang=\"ts\">\ntype IsString<T> = T extends string ? true : false\nconst r: IsString<'a'> = true\n</script>"
+  },
+  {
+    "name": "intersection_types_basic",
+    "sfc": "<script setup lang=\"ts\">\ntype A = { a: number }\ntype B = { b: string }\ntype C = A & B\nconst c: C = { a: 1, b: 'x' }\n</script>"
+  },
+  {
+    "name": "satisfies_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst conf = { a: 1 } satisfies { a: number }\n</script>"
+  },
+  {
+    "name": "as_const_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst cfg = { a: 1 } as const\n</script>"
+  },
+  {
+    "name": "import_dynamic_basic",
+    "sfc": "<script setup lang=\"ts\">\nconst mod = await import('./nonexistent')\n</script>"
+  },
+  {
+    "name": "defineProps_duplicate_error",
+    "sfc": "<script setup lang=\"ts\">\nconst p1 = defineProps<{ a: number }>()\nconst p2 = defineProps<{ b: string }>()\n</script>"
+  },
+  {
+    "name": "defineOptions_duplicate_error",
+    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'X1' })\ndefineOptions({ name: 'X2' })\n</script>"
+  },
+  {
+    "name": "onServerPrefetch_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { onServerPrefetch } from 'vue'\nonServerPrefetch(async () => {})\n</script>"
+  },
+  {
+    "name": "getCurrentInstance_emit_basic",
+    "sfc": "<script setup lang=\"ts\">\nimport { getCurrentInstance } from 'vue'\nconst inst = getCurrentInstance()\ninst?.emit?.('change')\n</script>"
+  },
+  {
+    "name": "class_private_field_basic",
+    "sfc": "<script setup>\nclass Y { #a = 1 }\nconst y = new Y()\n</script>"
+  },
+  {
+    "name": "symbol_bigint_importmeta_process_basic",
+    "sfc": "<script setup>\nconst S = Symbol('k')\nconst big = 1n\nconst env = import.meta.env\nconst nodeEnv = process.env.NODE_ENV\n</script>"
+  },
+  {
+    "name": "defineProps_type_and_runtime_error",
+    "sfc": "<script setup lang=\"ts\">\nconst p = defineProps<{ a: number }>({ a: Number })\n</script>"
+  },
+  {
+    "name": "withDefaults_non_call_error",
+    "sfc": "<script setup lang=\"ts\">\nconst foo = {} as any\nconst { a } = withDefaults(foo, { a: 1 })\n</script>"
+  },
+  {
+    "name": "withDefaults_runtime_error",
+    "sfc": "<script setup lang=\"ts\">\nconst { a } = withDefaults(defineProps({ a: Number }), { a: 1 })\n</script>"
+  },
+  {
+    "name": "defineEmits_duplicate_error",
+    "sfc": "<script setup lang=\"ts\">\nconst e1 = defineEmits(['a'])\nconst e2 = defineEmits(['b'])\n</script>"
+  },
+  {
+    "name": "defineEmits_type_mixed_error",
+    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e: 'a'): void; a: any }>()\n</script>"
+  },
+  {
+    "name": "defineModel_duplicate_name_error",
+    "sfc": "<script setup lang=\"ts\">\nconst a = defineModel<number>('count')\nconst b = defineModel<number>('count')\n</script>"
+  },
+  {
+    "name": "defineOptions_type_args_error",
+    "sfc": "<script setup lang=\"ts\">\ndefineOptions<{}>({ name: 'X' })\n</script>"
+  },
+  {
+    "name": "defineSlots_invalid_args_error",
+    "sfc": "<script setup lang=\"ts\">\ndefineSlots({})\n</script>"
+  },
+  {
+    "name": "defineModel_default",
+    "sfc": "<script setup lang=\"ts\">\nconst model = defineModel<string>()\n</script>"
+  },
+  {
+    "name": "defineModel_default_runtime_type",
+    "sfc": "<script setup>\nconst model = defineModel({ type: String })\n</script>"
+  },
+  {
+    "name": "defineModel_named",
+    "sfc": "<script setup lang=\"ts\">\nconst count = defineModel<number>('count', { default: 0 })\n</script>"
+  },
+  {
+    "name": "defineModel_local",
+    "sfc": "<script setup lang=\"ts\">\nconst count = defineModel<number>('count', { local: true })\n</script>"
+  },
+  {
+    "name": "defineModel_required",
+    "sfc": "<script setup lang=\"ts\">\nconst visible = defineModel<boolean>('visible', { required: true })\n</script>"
+  },
+  {
+    "name": "defineModel_get_set",
+    "sfc": "<script setup lang=\"ts\">\nconst value = defineModel<number>('value', { get: (v)=> v, set: (v)=> Math.max(0, v) })\n</script>"
+  },
+  {
+    "name": "defineModel_multiple",
+    "sfc": "<script setup lang=\"ts\">\nconst title = defineModel<string>()\nconst checked = defineModel<boolean>('checked')\n</script>"
+  },
+  {
+    "name": "defineModel_named_default_fn",
+    "sfc": "<script setup lang=\"ts\">\nconst config = defineModel<{ a: number }>('config', { default: () => ({ a: 1 }) })\n</script>"
+  },
+  {
+    "name": "defineOptions_basic",
+    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'MyComponent', inheritAttrs: false })\n</script>"
+  },
+  {
+    "name": "defineOptions_extends",
+    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'Extended', extends: { props: { a: String } } })\n</script>"
+  },
+  {
+    "name": "defineOptions_components",
+    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'WithComp', components: { A: {} } })\n</script>"
+  },
+  {
+    "name": "defineOptions_directives",
+    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'WithDir', directives: { focus: {} } })\n</script>"
+  },
+  {
+    "name": "defineOptions_props_error",
+    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'OptsPropsErr', props: { a: String } })\n</script>"
+  }
+]
