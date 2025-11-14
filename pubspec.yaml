@@ -1,0 +1,20 @@
+name: vue_sfc_parser
+description: A Dart implementation of Vue SFC parser, compatible with @vue/compiler-sfc.
+version: 1.0.0
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: ^3.9.2
+
+# Add regular dependencies here.
+dependencies:
+  path: ^1.9.0
+  html: ^0.15.6
+  analyzer: ^9.0.0
+  pub_semver: ^2.2.0
+  tree_sitter: ^0.2.1
+  ffi: ^2.1.2
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6
