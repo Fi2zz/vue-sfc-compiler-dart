@@ -322,16 +322,22 @@ ListLiteral toArray(AstNode n, String src) {
   );
 }
 
+class MacrosParserResult {
+  final CompilationUnit compilationUnit;
+  final AstNode rootAst;
+  MacrosParserResult(this.compilationUnit, this.rootAst);
+}
+
 class MacrosParser {
   // 解析 <script setup> 内容，输出 Result（含 Setup 聚合）
-  static CompilationUnit parse(String content, {String language = 'ts'}) {
+  static MacrosParserResult parse(String content, {String language = 'ts'}) {
     final parser = TSParser();
     final AstNode root = parser.parse(
       code: content,
       language: language,
       namedOnly: true,
     );
-    final ast = converter(root, content);
-    return ast;
+    final compilationUnit = converter(root, content);
+    return MacrosParserResult(compilationUnit, root);
   }
 }

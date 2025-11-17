@@ -55,7 +55,7 @@ class SfcCompileError extends SfcError {
   @override
   String toString() {
     final buf = StringBuffer();
-    buf.writeln('Vue Compile Error: [@vue/compiler-sfc] $reason');
+    buf.writeln('[vue/compiler-sfc] $reason');
     buf.writeln('');
     String fn = filename;
     if (fn.startsWith('./')) fn = fn.substring(2);

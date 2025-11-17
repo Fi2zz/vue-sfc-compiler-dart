@@ -9,12 +9,21 @@ class SetupResult {
   final AstNode rootAst;
   final String source;
   final String filename;
+  // Normal <script> default export object text to merge into component options
+  final String? normalScriptSpreadText;
+  // Normal <script> import lines to include in output
+  final List<String>? normalScriptImportLines;
+  // <script setup> import lines to include in output
+  final List<String>? setupImportLines;
   String get name => _inferComponentName(filename);
   SetupResult({
     required this.compilation,
     required this.rootAst,
     required this.source,
     required this.filename,
+    this.normalScriptSpreadText,
+    this.normalScriptImportLines,
+    this.setupImportLines,
   });
 }
 

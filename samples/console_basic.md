@@ -1,19 +1,17 @@
 # console_basic
 
-```ts
+```
 export default {
-  __name: "console_basic",
+  __name: 'console_basic',
   setup(__props, { expose: __expose }) {
-    __expose();
+  __expose();
 
-    console.log("hello");
+console.log('hello')
 
-    const __returned__ = {};
-    Object.defineProperty(__returned__, "__isScriptSetup", {
-      enumerable: false,
-      value: true,
-    });
-    return __returned__;
-  },
-};
+const __returned__ = {  }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+return __returned__
+}
+
+}
 ```

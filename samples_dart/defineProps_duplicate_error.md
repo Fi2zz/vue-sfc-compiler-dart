@@ -1,25 +1,10 @@
 # defineProps_duplicate_error
 
-```ts
-import { defineComponent as _defineComponent } from "vue";
+[vue/compiler-sfc] duplicate defineProps() calls are not allowed
 
-export default /*@__PURE__*/ _defineComponent({
-  __name: "defineProps_duplicate_error",
-  props: {
-    b: { type: String, required: true },
-  },
-  setup(__props: any, { expose: __expose }) {
-    __expose();
-
-    const p1 = __props;
-    const p2 = __props;
-
-    const __returned__ = { props, p1, p2 };
-    Object.defineProperty(__returned__, "__isScriptSetup", {
-      enumerable: false,
-      value: true,
-    });
-    return __returned__;
-  },
-});
-```
+./defineProps_duplicate_error.vue
+1 | <script setup lang="ts">
+| ^
+2 | defineProps() x 2
+| ^^^^^^^^^^^^^^^^^
+3 | </script>

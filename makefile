@@ -1,4 +1,4 @@
-.PHONY: run build-js build-core build-ts clean-native test bun all samples
+.PHONY: run build-js build-core build-ts clean-native test bun all samples debug
 
 
 
@@ -94,3 +94,6 @@ run:
 
 all:
 	make bun && make run
+debug:
+	bun run ./vue_compiler.ts
+	dart run ./vue_compiler.dart	

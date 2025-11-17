@@ -5,19 +5,32 @@ import {
   defineComponent as _defineComponent,
 } from "vue";
 import {
-  useAttrs,
-  useSlots,
+  ref,
   reactive,
   computed,
+  watch,
+  watchEffect,
   onMounted,
-  nextTick,
   provide,
   inject,
+  nextTick,
   defineAsyncComponent,
+  useSlots,
+  useAttrs,
 } from "vue";
 type Item = { id: number; label: string };
 
+const __default__ = {
+  name: "TestComplextComponent",
+
+  data(vm) {
+    return { world: "hello" };
+  },
+  mounted() {},
+  methods: {},
+};
 export default /*@__PURE__*/ _defineComponent({
+  ...__default__,
   ...{ name: "VueComplex", inheritAttrs: false },
   props: /*@__PURE__*/ _mergeModels(
     {
@@ -31,13 +44,13 @@ export default /*@__PURE__*/ _defineComponent({
       valueModifiers: {},
       cheched: { type: Boolean, ...{ default: false } },
       chechedModifiers: {},
-      modelValue: { type: String, ...{ default: "helloworld" } },
+      modelValue: { type: String, default: "helloworld" },
       modelModifiers: {},
-    },
+    }
   ),
   emits: /*@__PURE__*/ _mergeModels(
     ["increment", "select", "update:count"],
-    ["update:value", "update:cheched", "update:modelValue"],
+    ["update:value", "update:cheched", "update:modelValue"]
   ),
   setup(__props: any, { expose: __expose, emit: __emit }) {
     const $props = __props;
@@ -81,6 +94,8 @@ export default /*@__PURE__*/ _defineComponent({
     });
 
     const __returned__ = {
+      $props,
+      myemit,
       valueModel,
       checked,
       modelValue,
