@@ -20,11 +20,8 @@ class Sample {
 Future<void> main() async {
   try {
     final raw = vue_complex.readAsStringSync();
-
     final parser = SfcParser(raw, filename: filename);
-
     final descriptor = parser.parse();
-
     String code = compileScript(descriptor).trim();
 
     String md =
@@ -33,6 +30,7 @@ Future<void> main() async {
 """
             .trim();
     outfile.writeAsString(md);
+    print('vue-compiler-dart ok');
   } catch (error) {
     print('error $error');
   }

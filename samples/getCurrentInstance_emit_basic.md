@@ -1,23 +1,21 @@
 # getCurrentInstance_emit_basic
 
-```ts
-import { defineComponent as _defineComponent } from "vue";
-import { getCurrentInstance } from "vue";
+```
+import { defineComponent as _defineComponent } from 'vue'
+import { getCurrentInstance } from 'vue'
 
-export default /*@__PURE__*/ _defineComponent({
-  __name: "getCurrentInstance_emit_basic",
+export default /*@__PURE__*/_defineComponent({
+  __name: 'getCurrentInstance_emit_basic',
   setup(__props, { expose: __expose }) {
-    __expose();
+  __expose();
 
-    const inst = getCurrentInstance();
-    inst?.emit?.("change");
+const inst = getCurrentInstance()
+inst?.emit?.('change')
 
-    const __returned__ = { inst, getCurrentInstance };
-    Object.defineProperty(__returned__, "__isScriptSetup", {
-      enumerable: false,
-      value: true,
-    });
-    return __returned__;
-  },
-});
+const __returned__ = { inst, getCurrentInstance }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+return __returned__
+}
+
+})
 ```

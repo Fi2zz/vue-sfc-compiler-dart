@@ -1,25 +1,25 @@
 # defineProps_ts_destructure
 
-```ts
+```
 import { defineComponent as _defineComponent } from "vue";
 
 export default /*@__PURE__*/ _defineComponent({
-  __name: "defineProps_ts_destructure",
-  props: {
-    msg: { type: String, required: true },
-    count: { type: Number, required: false },
-  },
-  setup(__props: any, { expose: __expose }) {
-    __expose();
+props: {
+msg: { type: String, required: true },
+count: { type: Number, required: false },
+},
+setup(__props: any, { expose: __expose }) {
+__expose();
 
-    const { msg = "hi", count = 1 } = __props;
+const { msg = 'hi', count = 1 } = __props;
 
-    const __returned__ = { props };
-    Object.defineProperty(__returned__, "__isScriptSetup", {
-      enumerable: false,
-      value: true,
-    });
-    return __returned__;
-  },
+const __returned__ = {
+};
+Object.defineProperty(__returned__, "__isScriptSetup", {
+enumerable: false,
+value: true,
+});
+return __returned__;
+},
 });
 ```

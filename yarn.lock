@@ -601,3 +601,8 @@ vue@^3.5.24:
     "@vue/runtime-dom" "3.5.24"
     "@vue/server-renderer" "3.5.24"
     "@vue/shared" "3.5.24"
+
+world@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/world/-/world-0.0.1.tgz#a89cd54c2d222a4d0d4bcd112557bbfeeff00a08"
+  integrity sha512-loR2vPcMRa4mv+GnMlUDUriM9ElXODlnwPH4ki6pFc9kWbiytA/JqSvCdnaJSH0s2pwB2uxn6cJI/4qFpKxv8Q==

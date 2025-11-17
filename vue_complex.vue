@@ -88,6 +88,21 @@ const AsyncChild = defineAsyncComponent(async () => {
   } as any;
 });
 </script>
+<script lang="ts">
+import { createApp } from "vue";
+import * as vue from "vue";
+import hello from "world";
+// export default {};
+export default {
+  name: "TestComplextComponent",
+
+  data(vm) {
+    return { world: "hello" };
+  },
+  mounted() {},
+  methods: {},
+};
+</script>
 
 <template>
   <div class="complex" :data-theme="injectedTheme">

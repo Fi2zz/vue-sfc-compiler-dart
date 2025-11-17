@@ -38,8 +38,9 @@ Future<void> main() async {
       final buf = StringBuffer();
       buf.writeln('# ${s.name}\n');
       if (code.isNotEmpty) {
-        buf.writeln('```ts');
+        buf.writeln('```');
         buf.writeln(code);
+        buf.writeln('```');
       }
       final out = File('samples_dart/${s.name}.md');
       await out.writeAsString(buf.toString());

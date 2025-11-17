@@ -28,7 +28,7 @@ for (const { name, sfc } of samples) {
 await mkdir("samples", { recursive: true });
 for (const { name, code, error } of compiled) {
   let md = `# ${name}\n\n`;
-  if (code) md += "```ts\n" + code + "\n```\n\n";
+  if (code) md += "```\n" + code + "\n```\n\n";
   if (error) md += "Vue Compile Error: " + error;
   await Bun.file(`samples/${name}.md`).write(md);
 }

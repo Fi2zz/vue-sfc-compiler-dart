@@ -1,22 +1,10 @@
 # defineProps_type_and_runtime_error
 
-```ts
-import { defineComponent as _defineComponent } from "vue";
+[vue/compiler-sfc] defineProps() cannot mix type arguments with runtime props object
 
-export default /*@__PURE__*/ _defineComponent({
-  __name: "defineProps_type_and_runtime_error",
-  props: { a: Number },
-  setup(__props: any, { expose: __expose }) {
-    __expose();
-
-    const p = __props;
-
-    const __returned__ = { props, p };
-    Object.defineProperty(__returned__, "__isScriptSetup", {
-      enumerable: false,
-      value: true,
-    });
-    return __returned__;
-  },
-});
-```
+./defineProps_type_and_runtime_error.vue
+1 | <script setup lang="ts">
+| ^
+2 | defineProps<{ a: number }>({ a: Number })
+| ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+3 | </script>

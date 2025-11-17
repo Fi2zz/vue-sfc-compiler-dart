@@ -1,40 +1,37 @@
 import 'package:vue_sfc_parser/sfc_compiler.dart';
+import 'dart:convert';
 import 'package:vue_sfc_parser/ts_ast.dart';
 import 'package:vue_sfc_parser/ts_parser.dart';
-import 'package:vue_sfc_parser/sfc_error.dart';
+import 'package:vue_sfc_parser/validate_usage.dart';
 
 final class ScriptCodegen {
-  static String generate({required SetupResult result}) {
+  static String generate({required SetupResult setup}) {
     final buf = StringBuffer();
-    final src = result.source;
-    final ast = result.rootAst;
+    final src = setup.source;
+    final ast = setup.rootAst;
 
     final vueAliasImports = <String>[]; // e.g. _useSlots, _useModel
-    final userImports = _collectImportLines(ast, src);
-    // collected user imports by source used below for runtime injection
-    final importsBySource = _collectImportsBySource(ast, src);
-    final vueImportedNames = importsBySource['vue'] ?? <String>{};
+    final userImports = setup.setupImportLines ?? _collectImportLines(ast, src);
     final declNames = _collectDeclaredNames(ast, src);
+    final macro = _analyzeMacros(setup.compilation, src, ast);
 
-    final macro = _analyzeMacros(result.compilation, src, ast);
-
-    _validateUsage(
+    validateUsage(
       rootAst: ast,
-      unit: result.compilation,
+      unit: setup.compilation,
       src: src,
-      filename: result.filename,
+      filename: setup.filename,
     );
 
     // do not alias useSlots; inject via runtime imports based on actual usage
-    if (_hasDefineModel(result.compilation)) {
+    if (_hasDefineModel(setup.compilation)) {
       vueAliasImports.add('useModel as _useModel');
     }
     // Pre-compute model props/emits to decide whether to import mergeModels
     final preModelCombined = _collectModelCombinedEntries(
-      result.compilation,
+      setup.compilation,
       src,
     );
-    final preModelEmits = _collectModelEmitEvents(result.compilation);
+    final preModelEmits = _collectModelEmitEvents(setup.compilation);
     final needsMergeModels =
         preModelCombined.isNotEmpty || preModelEmits.isNotEmpty;
     if (needsMergeModels) {
@@ -42,50 +39,53 @@ final class ScriptCodegen {
     }
     // Header imports
     final useDefineComponentHeader = _shouldUseDefineComponentHeader(
-      result.compilation,
+      setup.compilation,
     );
     if (vueAliasImports.isNotEmpty) {
-      buf.writeln('import {');
-      for (var i = 0; i < vueAliasImports.length; i++) {
-        buf.writeln('  ${vueAliasImports[i]},');
-      }
+      final aliases = [...vueAliasImports];
       if (useDefineComponentHeader) {
-        buf.writeln('  defineComponent as _defineComponent,');
+        aliases.add('defineComponent as _defineComponent');
       }
-      buf.writeln('} from "vue";');
+      buf.writeln('import { ${aliases.join(', ')} } from "vue";');
     } else if (useDefineComponentHeader) {
       buf.writeln('import { defineComponent as _defineComponent } from "vue";');
     }
-    for (final line in userImports) {
-      buf.writeln(_fmtImport(line));
-    }
-    // Inject missing runtime API imports based on actual usage
-    final usedRuntime = _collectUsedRuntimeApis(
-      ast,
-      src,
-      declNames,
-      importsBySource,
-    );
-    final missingRuntime = <String>[];
-    for (final r in usedRuntime) {
-      if (!vueImportedNames.contains(r)) {
-        missingRuntime.add(r);
-      }
-    }
-    if (missingRuntime.isNotEmpty) {
+    final setupVueFromLines = _parseVueNamedFromLines(userImports);
+    final setupVueFromSource = _parseVueNamedFromSource(src);
+    final unionNames = <String>{...setupVueFromLines, ...setupVueFromSource};
+    if (unionNames.isNotEmpty) {
+      final ordered = (unionNames.toList());
       buf.writeln('import {');
-      for (final r in missingRuntime) {
-        buf.writeln('  ${r},');
+      for (final r in ordered) {
+        buf.writeln('  $r,');
       }
       buf.writeln('} from "vue";');
     }
+    // Then user imports（仅输出非 vue 源的导入；setup 的 vue 导入由上方按使用输出）
+    for (final line in userImports) {
+      if (!RegExp("from\\s*['\\\"]vue['\\\"]").hasMatch(line)) {
+        buf.writeln(_fmtImport(line));
+      }
+    }
+    // Normal <script> imports (e.g., createApp, namespace imports)
+    final normalImports = setup.normalScriptImportLines ?? const <String>[];
+    for (final line in normalImports) {
+      buf.writeln(_fmtImport(line));
+    }
+    // Always include namespace import for full vue access
     // print type aliases at top-level
     for (final c in ast.children) {
       if (c.type == 'type_alias_declaration') {
-        buf.writeln(src.substring(c.startByte, c.endByte));
+        buf.writeln(_slice(src, c.startByte, c.endByte));
       }
     }
     buf.writeln('');
+    // Define __default__ from normal <script> default export
+    // todo  此处处理逻辑保留， 其余的 normalSpread 逻辑不要
+    final normalSpread = setup.normalScriptSpreadText;
+    if (normalSpread != null && normalSpread.trim().isNotEmpty) {
+      buf.writeln('const __default__ = ${_normalizeObjectText(normalSpread)};');
+    }
 
     // Component options start
     if (useDefineComponentHeader) {
@@ -93,8 +93,10 @@ final class ScriptCodegen {
     } else {
       buf.writeln('export default {');
     }
-
-    // defineOptions spreads first
+    // Spread from normal <script> default export first
+    if (normalSpread != null && normalSpread.trim().isNotEmpty) {
+      buf.writeln('  ...__default__,');
+    }
     for (final spread in macro.optionSpreads) {
       buf.writeln('  ...${_normalizeObjectText(spread)},');
     }
@@ -107,11 +109,11 @@ final class ScriptCodegen {
     if (modelCombined.isNotEmpty) {
       buf.writeln('  props: /*@__PURE__*/ _mergeModels({');
       if (stdPropsInner != null && stdPropsInner.trim().isNotEmpty) {
-        buf.writeln('    ${stdPropsInner.trim()}');
+        buf.writeln(stdPropsInner.trim());
       }
-      buf.writeln('  }, {');
+      buf.writeln('},\n{');
       for (final e in modelCombined) {
-        buf.writeln('    ${e},');
+        buf.writeln('    $e,');
       }
       buf.writeln('  }),');
     } else if (macro.propsOptionText != null) {
@@ -126,9 +128,9 @@ final class ScriptCodegen {
           ? stdEmits.trim()
           : (stdEmits == null ? '[]' : stdEmits.trim());
       final right = '[${modelEmits.join(', ')}]';
-      buf.writeln('  emits: /*@__PURE__*/ _mergeModels(${left}, ${right}),');
+      buf.writeln('emits: /*@__PURE__*/ _mergeModels($left, $right),');
     } else if (stdEmits != null) {
-      buf.writeln('  emits: $stdEmits,');
+      buf.writeln('emits: $stdEmits,');
     }
 
     // setup signature
@@ -140,10 +142,10 @@ final class ScriptCodegen {
     final ctxParams = <String>['expose: __expose'];
     if (needsEmit) ctxParams.add('emit: __emit');
     buf.writeln(
-      '  setup(${setupParams.toString()}, { ${ctxParams.join(', ')} }) {',
+      'setup(${setupParams.toString()}, { ${ctxParams.join(', ')} }) {',
     );
     if (!macro.hasDefineExpose) {
-      buf.writeln('    __expose();');
+      buf.writeln('__expose();');
     }
     buf.writeln('');
 
@@ -176,20 +178,26 @@ final class ScriptCodegen {
       if (!ordered.contains(n)) ordered.add(n);
     }
 
-    buf.writeln('    const __returned__ = { ${ordered.join(', ')} };');
+    buf.writeln('    const __returned__ = {');
+    for (final n in ordered) {
+      buf.writeln('      $n,');
+    }
+    buf.writeln('    };');
     buf.writeln('    Object.defineProperty(__returned__, "__isScriptSetup", {');
     buf.writeln('      enumerable: false,');
     buf.writeln('      value: true,');
     buf.writeln('    });');
-    buf.writeln('    return __returned__;');
-    buf.writeln('  },');
+    buf.writeln('return __returned__;');
+    buf.writeln('},');
     if (useDefineComponentHeader) {
       buf.writeln('});');
     } else {
       buf.writeln('};');
     }
 
-    return buf.toString();
+    final raw = buf.toString();
+    final normalized = raw.split('\n').map((l) => l.trimLeft()).join('\n');
+    return normalized;
   }
 }
 
@@ -228,7 +236,7 @@ _MacroIR _analyzeMacros(CompilationUnit unit, String src, AstNode ast) {
     if (expr is FunctionCallExpression &&
         expr.methodName.name == 'withDefaults') {
       // second arg object as defaults
-      final defaultsObj = _firstObjectArg(expr);
+      final defaultsObj = firstObjectArg(expr);
       if (defaultsObj != null) {
         for (final e in defaultsObj.elements) {
           defaultMap[e.keyText] = _normalizeObjectText(e.value.text);
@@ -245,7 +253,7 @@ _MacroIR _analyzeMacros(CompilationUnit unit, String src, AstNode ast) {
     switch (name) {
       case 'defineProps':
         {
-          final runtimeObj = _firstObjectArg(expr);
+          final runtimeObj = firstObjectArg(expr);
           if (runtimeObj != null) {
             propsText = _fmtInlinePropsObject(runtimeObj);
           } else if (expr.typeArgumentProps.isNotEmpty) {
@@ -265,8 +273,8 @@ _MacroIR _analyzeMacros(CompilationUnit unit, String src, AstNode ast) {
         }
       case 'defineEmits':
         {
-          final arr = _firstArrayArg(expr);
-          final obj = _firstObjectArg(expr);
+          final arr = firstArrayArg(expr);
+          final obj = firstObjectArg(expr);
           final typed = expr.typeArgumentText;
           if (arr != null) {
             emitsText = _fmtStringArray(arr);
@@ -295,7 +303,7 @@ _MacroIR _analyzeMacros(CompilationUnit unit, String src, AstNode ast) {
         }
       case 'defineOptions':
         {
-          final obj = _firstObjectArg(expr);
+          final obj = firstObjectArg(expr);
           if (obj != null) spreads.add(_normalizeObjectText(obj.text));
           break;
         }
@@ -307,16 +315,16 @@ _MacroIR _analyzeMacros(CompilationUnit unit, String src, AstNode ast) {
   }
 
   // Fallback: scan full AST for defineEmits type arguments
-  if (emitsText == null || (emitsText?.isEmpty ?? false)) {
+  if (emitsText == null || (emitsText.isEmpty)) {
     void walk(AstNode n) {
       if (n.type == 'call_expression') {
         final id = _findChildByType(n, 'identifier');
         if (id != null) {
-          final name = src.substring(id.startByte, id.endByte);
+          final name = slice(src, id.startByte, id.endByte);
           if (name == 'defineEmits') {
             final typeArgs = _findChildByType(n, 'type_arguments');
             if (typeArgs != null) {
-              final raw = src.substring(typeArgs.startByte, typeArgs.endByte);
+              final raw = slice(src, typeArgs.startByte, typeArgs.endByte);
               final events = _eventsFromTypeArgs(raw);
               if (events.isNotEmpty) {
                 emitsText = '[${events.map((e) => '"$e"').join(', ')}]';
@@ -325,12 +333,16 @@ _MacroIR _analyzeMacros(CompilationUnit unit, String src, AstNode ast) {
           }
         }
       }
-      for (final c in n.children) walk(c);
+      for (final c in n.children) {
+        walk(c);
+      }
     }
+
     walk(ast);
   }
 
   if (emitsText == null || (emitsText?.isEmpty ?? false)) {
+    // ignore: unnecessary_string_escapes
     final gm = RegExp('defineEmits\s*<([\s\S]*?)>').firstMatch(src);
     if (gm != null) {
       final raw = gm.group(1)!;
@@ -387,6 +399,7 @@ class _RenderedStmt {
     this.text, {
     this.semicolon = true,
     this.names = const [],
+    // ignore: unused_element_parameter
     this.skipNames = const [],
   });
 }
@@ -396,6 +409,7 @@ List<AstNode> _collectTopLevelStatements(AstNode root) {
   for (final c in root.children) {
     if (c.type == 'import_declaration') continue;
     if (c.type == 'type_alias_declaration') continue;
+    if (c.type.contains('export')) continue;
     out.add(c);
   }
   return out;
@@ -418,8 +432,8 @@ _RenderedStmt? _renderStatement(
         final ident = _findChildByType(call, 'identifier');
         final name = ident == null
             ? ''
-            : src.substring(ident.startByte, ident.endByte);
-        final rawStmt = src.substring(stmt.startByte, stmt.endByte).trim();
+            : slice(src, ident.startByte, ident.endByte);
+        final rawStmt = slice(src, stmt.startByte, stmt.endByte).trim();
         if (rawStmt.startsWith('import ') || rawStmt.startsWith('type ')) {
           return null;
         }
@@ -434,24 +448,24 @@ _RenderedStmt? _renderStatement(
         if (name == 'defineExpose') {
           final args = _findChildByType(call, 'arguments');
           if (args != null) {
-            final argsText = src.substring(args.startByte, args.endByte);
+            final argsText = slice(src, args.startByte, args.endByte);
             return _RenderedStmt('__expose${_normalizeObjectText(argsText)}');
           }
         }
       }
-      return _RenderedStmt(src.substring(stmt.startByte, stmt.endByte));
+      return _RenderedStmt(slice(src, stmt.startByte, stmt.endByte));
     case 'function_declaration':
     case 'class_declaration':
       return _RenderedStmt(
-        src.substring(stmt.startByte, stmt.endByte),
+        slice(src, stmt.startByte, stmt.endByte),
         semicolon: false,
       );
     default:
-      final rawStmt = src.substring(stmt.startByte, stmt.endByte).trim();
+      final rawStmt = slice(src, stmt.startByte, stmt.endByte).trim();
       if (rawStmt.startsWith('import ') || rawStmt.startsWith('type ')) {
         return null;
       }
-      return _RenderedStmt(src.substring(stmt.startByte, stmt.endByte));
+      return _RenderedStmt(slice(src, stmt.startByte, stmt.endByte));
   }
 }
 
@@ -468,24 +482,25 @@ _RenderedStmt? _renderVariableDeclaration(AstNode decl, String src) {
   AstNode? lhs;
   AstNode? rhs;
   for (final c in declarator.children) {
-    if (lhs == null && (c.type == 'identifier' || c.type.endsWith('_pattern'))) {
+    if (lhs == null &&
+        (c.type == 'identifier' || c.type.endsWith('_pattern'))) {
       lhs = c;
     }
   }
   rhs = _findChildByType(declarator, 'call_expression');
   if (rhs == null || lhs == null) {
-    return _RenderedStmt(src.substring(decl.startByte, decl.endByte));
+    return _RenderedStmt(slice(src, decl.startByte, decl.endByte));
   }
   final callee = _getCallCalleeName(rhs, src);
-  final lhsText = src.substring(lhs.startByte, lhs.endByte);
+  final lhsText = slice(src, lhs.startByte, lhs.endByte);
   final lhsNames = _extractNamesFromLhs(lhs, src);
 
   if (callee == 'defineProps' || callee == 'withDefaults') {
-    return _RenderedStmt('const $lhsText = __props', names: lhsNames, skipNames: lhsNames);
+    return _RenderedStmt('const $lhsText = __props', names: lhsNames);
   }
   if (callee == 'defineEmits') {
     // ensure identifier lhs
-    return _RenderedStmt('const $lhsText = __emit', names: lhsNames, skipNames: lhsNames);
+    return _RenderedStmt('const $lhsText = __emit', names: lhsNames);
   }
   if (callee == 'defineSlots') {
     return _RenderedStmt('const $lhsText = useSlots()', names: lhsNames);
@@ -494,7 +509,7 @@ _RenderedStmt? _renderVariableDeclaration(AstNode decl, String src) {
     final typeArgs = _findChildByType(rhs, 'type_arguments');
     String? tsType;
     if (typeArgs != null) {
-      var t = src.substring(typeArgs.startByte, typeArgs.endByte);
+      var t = slice(src, typeArgs.startByte, typeArgs.endByte);
       t = t.replaceAll(RegExp(r'[<>]'), '').trim();
       tsType = t;
     }
@@ -505,7 +520,7 @@ _RenderedStmt? _renderVariableDeclaration(AstNode decl, String src) {
       // find first string child as name
       for (final a in args.children) {
         if (a.type == 'string' || a.type == 'template_string') {
-          nameArg = src.substring(a.startByte, a.endByte);
+          nameArg = slice(src, a.startByte, a.endByte);
           break;
         }
       }
@@ -515,7 +530,7 @@ _RenderedStmt? _renderVariableDeclaration(AstNode decl, String src) {
         if (a.type == 'object') {
           objCount++;
           if (objCount >= 2) {
-            optionsArg = src.substring(a.startByte, a.endByte);
+            optionsArg = slice(src, a.startByte, a.endByte);
             break;
           }
         }
@@ -528,19 +543,23 @@ _RenderedStmt? _renderVariableDeclaration(AstNode decl, String src) {
     return _RenderedStmt('const $lhsText = $callText', names: lhsNames);
   }
   // default: preserve
-  return _RenderedStmt(src.substring(decl.startByte, decl.endByte), names: lhsNames);
+  return _RenderedStmt(
+    slice(src, decl.startByte, decl.endByte),
+    names: lhsNames,
+  );
 }
 
 List<String> _extractNamesFromLhs(AstNode lhs, String src) {
   final out = <String>[];
   if (lhs.type == 'identifier') {
-    out.add(src.substring(lhs.startByte, lhs.endByte));
+    out.add(slice(src, lhs.startByte, lhs.endByte));
     return out;
   }
   if (lhs.type.endsWith('_pattern')) {
     for (final sp in lhs.children) {
-      if (sp.type == 'identifier' || sp.type == 'shorthand_property_identifier') {
-        out.add(src.substring(sp.startByte, sp.endByte));
+      if (sp.type == 'identifier' ||
+          sp.type == 'shorthand_property_identifier') {
+        out.add(slice(src, sp.startByte, sp.endByte));
       }
     }
   }
@@ -560,242 +579,36 @@ String _getCallCalleeName(AstNode call, String src) {
   // prefer immediate identifier child
   for (final c in call.children) {
     if (c.type == 'identifier') {
-      return src.substring(c.startByte, c.endByte);
+      return slice(src, c.startByte, c.endByte);
     }
     if (c.type == 'member_expression') {
       for (final mc in c.children) {
         if (mc.type == 'identifier') {
-          return src.substring(mc.startByte, mc.endByte);
+          return slice(src, mc.startByte, mc.endByte);
         }
       }
     }
   }
   final ident = _findChildByType(call, 'identifier');
-  return ident == null ? '' : src.substring(ident.startByte, ident.endByte);
+  return ident == null ? '' : slice(src, ident.startByte, ident.endByte);
 }
 
-Set<String> _collectUsedRuntimeApis(
-  AstNode root,
-  String src,
-  List<String> declNames,
-  Map<String, Set<String>> importsBySource,
-) {
-  final out = <String>{};
-  final allImported = <String>{};
-  for (final v in importsBySource.values) {
-    allImported.addAll(v);
-  }
-  const macroNames = {
-    'defineOptions',
-    'withDefaults',
-    'defineProps',
-    'defineEmits',
-    'defineModel',
-    'defineSlots',
-    'defineExpose',
-  };
-  void walk(AstNode n) {
-    if (n.type == 'call_expression') {
-      final id = _findChildByType(n, 'identifier');
-      if (id != null) {
-        final name = src.substring(id.startByte, id.endByte);
-        if (macroNames.contains(name)) {
-          // skip compile-time macros
-        } else if (declNames.contains(name)) {
-          // local declaration; skip
-        } else if ((importsBySource['vue'] ?? {}).contains(name)) {
-          out.add(name);
-        } else if (!allImported.contains(name)) {
-          // not imported from any module and not declared; treat as vue runtime to inject
-          out.add(name);
-        }
-      }
-    }
-    for (final c in n.children) walk(c);
-  }
-  walk(root);
-  return out;
-}
-
-Map<String, Set<String>> _collectImportsBySource(AstNode root, String src) {
-  final out = <String, Set<String>>{};
-  void walk(AstNode n) {
-    if (n.type == 'import_declaration') {
-      final text = src.substring(n.startByte, n.endByte);
-      final m = RegExp("from\\s+[\"']([^\"']+)[\"']").firstMatch(text);
-      final source = m?.group(1) ?? '';
-      final names = <String>{};
-      final brace = RegExp(r'\{([^}]*)\}').firstMatch(text);
-      if (brace != null) {
-        final inner = brace.group(1)!
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
-        for (final i in inner) {
-          final name = i.split(' as ')[0].trim();
-          if (name.isNotEmpty) names.add(name);
-        }
-      }
-      out[source] = (out[source] ?? <String>{})..addAll(names);
-      return;
-    }
-    for (final c in n.children) walk(c);
-  }
-  walk(root);
-  return out;
-}
-
-void _validateUsage({
-  required AstNode rootAst,
-  required CompilationUnit unit,
-  required String src,
-  required String filename,
-}) {
-  // ES module exports are not allowed in <script setup>
-  int exportStart = -1;
-  int exportEnd = -1;
-  void scan(AstNode n) {
-    if (n.type.contains('export')) {
-      exportStart = n.startByte;
-      exportEnd = n.endByte;
-      return;
-    }
-    for (final c in n.children) scan(c);
-  }
-
-  scan(rootAst);
-  if (exportStart >= 0) {
-    throw SfcCompileError(
-      filename: filename,
-      reason: '<script setup> cannot contain ES module exports.',
-      line1: '1 | <script setup lang="ts">',
-      caret1: '| ^',
-      line2: '2 | export ...',
-      caret2: '| ^^^^^^^^^',
-      line3: '3 | </script>',
-      locStart: exportStart,
-      locEnd: exportEnd,
-    );
-  }
-
-  // defineSlots() cannot accept runtime arguments
-  for (final st in unit.statements) {
-    final e = st.expression;
-    if (e is FunctionCallExpression && e.methodName.name == 'defineSlots') {
-      if (e.argumentList.arguments.isNotEmpty) {
-        final lines = _renderErrorThreeLines(src, 'defineSlots({})');
-        throw SfcCompileError(
-          filename: filename,
-          reason: 'defineSlots() cannot accept arguments',
-          line1: lines[0],
-          caret1: lines[1],
-          line2: lines[2],
-          caret2: lines[3],
-          line3: lines[4],
-          locStart: st.startByte,
-          locEnd: st.endByte,
-        );
-      }
-    }
-  }
-
-  // withDefaults must wrap defineProps with type arguments
-  for (final st in unit.statements) {
-    final e = st.expression;
-    if (e is FunctionCallExpression && e.methodName.name == 'withDefaults') {
-      if (e.argumentList.arguments.isEmpty) {
-        final lines = _renderErrorThreeLines(
-          src,
-          'withDefaults(defineProps(), {})',
-        );
-        throw SfcCompileError(
-          filename: filename,
-          reason: 'withDefaults() expects defineProps() as first argument',
-          line1: lines[0],
-          caret1: lines[1],
-          line2: lines[2],
-          caret2: lines[3],
-          line3: lines[4],
-          locStart: st.startByte,
-          locEnd: st.endByte,
-        );
-      }
-      final first = e.argumentList.arguments.first;
-      if (first is! FunctionCallExpression ||
-          first.methodName.name != 'defineProps') {
-        throw ScriptError(
-          message:
-              'Vue Compile Error: [@vue/compiler-sfc] withDefaults() expects defineProps() as first argument',
-          locStart: st.startByte,
-          locEnd: st.endByte,
-        );
-      }
-      if (first.typeArgumentProps.isEmpty) {
-        final lines = _renderErrorThreeLines(
-          src,
-          'withDefaults(defineProps({}), {})',
-        );
-        throw SfcCompileError(
-          filename: filename,
-          reason: 'withDefaults() only works with typed defineProps()',
-          line1: lines[0],
-          caret1: lines[1],
-          line2: lines[2],
-          caret2: lines[3],
-          line3: lines[4],
-          locStart: st.startByte,
-          locEnd: st.endByte,
-        );
-      }
-    }
-  }
-}
-
-List<String> _renderErrorThreeLines(String src, String focusLine) {
+List<String> renderErrorThreeLines(String src, String focusLine) {
   final l1 = '1 | <script setup lang="ts">';
   final c1 = '| ^';
-  String line2 = '2 | ' + focusLine;
-  String c2 = '| ' + '^' * focusLine.length;
+  String line2 = '2 | $focusLine';
+  String c2 = '| ${'^' * focusLine.length}';
   final l3 = '3 | </script>';
   return [l1, c1, line2, c2, l3];
 }
 
 List<String> _collectImportLines(AstNode root, String src) {
   final out = <String>[];
-  void walk(AstNode n) {
-    if (n.type == 'import_declaration') {
-      out.add(_fmtImport(src.substring(n.startByte, n.endByte)));
-      return;
-    }
-    for (final c in n.children) walk(c);
-  }
-
-  walk(root);
-  return out;
-}
-
-List<String> _collectImportedNames(List<String> importLines) {
-  final out = <String>[];
-  for (final l in importLines) {
-    final brace = RegExp(r'\{([^}]*)\}').firstMatch(l);
-    if (brace != null) {
-      final inner = brace
-          .group(1)!
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
-      for (final i in inner) {
-        final name = i.split(' as ')[0].trim();
-        if (name.isNotEmpty && !out.contains(name)) out.add(name);
-      }
-    }
-    final def = RegExp(r'^\s*import\s+([A-Za-z_$][\w$]*)\s+from').firstMatch(l);
-    if (def != null) {
-      final name = def.group(1)!;
-      if (!out.contains(name)) out.add(name);
-    }
+  final re = RegExp(r'^\s*import[\s\S]*?;', multiLine: true);
+  for (final m in re.allMatches(src)) {
+    final t = (m.group(0) ?? '').trimRight();
+    if (t.isEmpty) continue;
+    out.add(_fmtImport(t));
   }
   return out;
 }
@@ -806,7 +619,7 @@ List<String> _collectDeclaredNames(AstNode root, String src) {
     if (n.type == 'function_declaration' || n.type == 'class_declaration') {
       for (final c in n.children) {
         if (c.type == 'identifier') {
-          final name = src.substring(c.startByte, c.endByte);
+          final name = slice(src, c.startByte, c.endByte);
           if (!out.contains(name)) out.add(name);
         }
       }
@@ -816,13 +629,13 @@ List<String> _collectDeclaredNames(AstNode root, String src) {
         if (c.type == 'variable_declarator') {
           for (final p in c.children) {
             if (p.type == 'identifier') {
-              final name = src.substring(p.startByte, p.endByte);
+              final name = slice(src, p.startByte, p.endByte);
               if (!out.contains(name)) out.add(name);
             } else if (p.type.endsWith('_pattern')) {
               for (final sp in p.children) {
                 if (sp.type == 'identifier' ||
                     sp.type == 'shorthand_property_identifier') {
-                  final name = src.substring(sp.startByte, sp.endByte);
+                  final name = slice(src, sp.startByte, sp.endByte);
                   if (!out.contains(name)) out.add(name);
                 }
               }
@@ -835,14 +648,14 @@ List<String> _collectDeclaredNames(AstNode root, String src) {
   return out;
 }
 
-SetOrMapLiteral? _firstObjectArg(FunctionCallExpression call) {
+SetOrMapLiteral? firstObjectArg(FunctionCallExpression call) {
   for (final a in call.argumentList.arguments) {
     if (a is SetOrMapLiteral) return a;
   }
   return null;
 }
 
-ListLiteral? _firstArrayArg(FunctionCallExpression call) {
+ListLiteral? firstArrayArg(FunctionCallExpression call) {
   for (final a in call.argumentList.arguments) {
     if (a is ListLiteral) return a;
   }
@@ -875,7 +688,7 @@ String _fmtInlinePropsObject(SetOrMapLiteral obj) {
   return text;
 }
 
-String? _firstStringArg(FunctionCallExpression call) {
+String? firstStringArg(FunctionCallExpression call) {
   for (final a in call.argumentList.arguments) {
     if (a is StringLiteral) return '"${a.stringValue}"';
   }
@@ -918,7 +731,7 @@ String _fmtStringArray(ListLiteral arr) {
       .whereType<StringLiteral>()
       .map((s) => '"${s.stringValue}"')
       .join(', ');
-  return '[${items}]';
+  return '[$items]';
 }
 
 String _fmtImport(String line) {
@@ -928,56 +741,104 @@ String _fmtImport(String line) {
   return t;
 }
 
+List<String> _parseVueNamedFromLines(List<String> lines) {
+  final names = <String>{};
+  for (final line in lines) {
+    // 简单解析 vue 源的命名导入行
+    if (!RegExp("from\\s*['\\\"]vue['\\\"]").hasMatch(line)) continue;
+    final brace = RegExp(r'\{([^}]*)\}').firstMatch(line);
+    if (brace != null) {
+      final inner = brace.group(1)!;
+      final parts = inner
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      for (final p in parts) {
+        final name = p.split(' as ')[0].trim();
+        if (name.isNotEmpty) names.add(name);
+      }
+    }
+  }
+  return names.toList();
+}
+
+List<String> _parseVueNamedFromSource(String s) {
+  final names = <String>{};
+  // 简单解析源码内首个 vue 命名导入块
+  final m = RegExp(
+    "import\\s*\\{([\\s\\S]*?)\\}\\s*from\\s*['\\\"]vue['\\\"]",
+    multiLine: true,
+  ).firstMatch(s);
+  if (m != null) {
+    final inner = m.group(1) ?? '';
+    final parts = inner
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    for (final p in parts) {
+      final name = p.split(' as ')[0].trim();
+      if (name.isNotEmpty) names.add(name);
+    }
+  }
+  return names.toList();
+}
+
+List<String> _orderRuntimeImports(List<String> names) {
+  const preferredOrder = [
+    'reactive',
+    'computed',
+    'onMounted',
+    'provide',
+    'inject',
+    'nextTick',
+    'defineAsyncComponent',
+    'useSlots',
+    'useAttrs',
+  ];
+  final orderMap = {
+    for (var i = 0; i < preferredOrder.length; i++) preferredOrder[i]: i,
+  };
+  final sorted = [...names];
+  sorted.sort((a, b) {
+    final ia = orderMap[a];
+    final ib = orderMap[b];
+    if (ia != null && ib != null) return ia.compareTo(ib);
+    if (ia != null) return -1;
+    if (ib != null) return 1;
+    return a.compareTo(b);
+  });
+  return sorted;
+}
+
+String _slice(String src, int startByte, int endByte) {
+  final bytes = utf8.encode(src);
+  final safeStart = startByte.clamp(0, bytes.length);
+  final safeEnd = endByte.clamp(0, bytes.length);
+  if (safeEnd <= safeStart) return '';
+  return utf8.decode(bytes.sublist(safeStart, safeEnd));
+}
+
 String _fmtStmt(String line) {
   var t = line.trimRight();
   if (!t.endsWith(';')) t = '$t;';
-  return '    $t';
+  return t;
 }
 
 String _normalizeObjectText(String text) {
   var t = text.trim();
   t = t.replaceAll("'", '"');
+  t = t.split('\n').map((l) => l.trimLeft()).join('\n');
   return t;
-}
-
-Map<String, String> _extractSecondArgObject(String callLine) {
-  final m = RegExp(
-    r'withDefaults\s*\(\s*defineProps[^,]*,\s*(\{[\s\S]*\})\s*\)',
-  ).firstMatch(callLine);
-  if (m == null) return {};
-  final obj = m.group(1)!;
-  final out = <String, String>{};
-  final pairs = RegExp(r'([A-Za-z_$][\w$]*)\s*:\s*([^,}]+)').allMatches(obj);
-  for (final p in pairs) {
-    final key = p.group(1)!.trim();
-    final val = p.group(2)!.trim();
-    out[key] = val;
-  }
-  return out;
-}
-
-List<String> _findDestructureIdentifiers(List<String> lines, String keyword) {
-  final out = <String>[];
-  for (final l in lines) {
-    final t = l.trim();
-    if (!t.contains(keyword)) continue;
-    final m = RegExp(r'^(const|let|var)\s*\{([^}]*)\}\s*=').firstMatch(t);
-    if (m != null) {
-      final inner = m.group(2)!.trim();
-      for (final part in inner.split(',')) {
-        final name = part.trim().split(':')[0].trim();
-        if (name.isNotEmpty && !out.contains(name)) out.add(name);
-      }
-    }
-  }
-  return out;
 }
 
 bool _hasDefineModel(CompilationUnit unit) {
   for (final st in unit.statements) {
     final e = st.expression;
-    if (e is FunctionCallExpression && e.methodName.name == 'defineModel')
+    if (e is FunctionCallExpression && e.methodName.name == 'defineModel') {
       return true;
+    }
   }
   return false;
 }
@@ -989,8 +850,9 @@ bool _shouldUseDefineComponentHeader(CompilationUnit unit) {
     final e = st.expression;
     if (e is FunctionCallExpression && e.methodName.name == 'defineModel') {
       hasModel = true;
-      if (e.typeArgumentText != null && e.typeArgumentText!.isNotEmpty)
+      if (e.typeArgumentText != null && e.typeArgumentText!.isNotEmpty) {
         anyGeneric = true;
+      }
     }
   }
   if (hasModel && !anyGeneric) return false;
@@ -1003,14 +865,14 @@ List<String> _collectModelPropsEntries(CompilationUnit unit, String src) {
     final e = st.expression;
     if (e is! FunctionCallExpression) continue;
     if (e.methodName.name != 'defineModel') continue;
-    String name = _firstStringArg(e) ?? '"modelValue"';
+    String name = firstStringArg(e) ?? '"modelValue"';
     String typeText = 'Object';
     if (e.typeArgumentText != null && e.typeArgumentText!.isNotEmpty) {
       final tt = e.typeArgumentText!.replaceAll(RegExp(r'[<>]'), '');
       final types = _runtimeTypesFromTypeText(tt);
       typeText = types.isNotEmpty ? types.first : 'Object';
     } else {
-      final obj = _firstObjectArg(e);
+      final obj = firstObjectArg(e);
       if (obj != null) {
         for (final m in obj.elements) {
           if (m.keyText == 'type') {
@@ -1020,23 +882,30 @@ List<String> _collectModelPropsEntries(CompilationUnit unit, String src) {
       }
     }
     String spread = '';
+    String? inlineDefault;
     // first argument object carries extras like default/required/local
     SetOrMapLiteral? obj0;
     if (e.argumentList.arguments.isNotEmpty &&
         e.argumentList.arguments[0] is SetOrMapLiteral) {
       obj0 = e.argumentList.arguments[0] as SetOrMapLiteral;
     }
+    // compute raw name once for decision-making
+    final rawName = name.replaceAll('"', '');
     if (obj0 != null) {
       final extras = <String>[];
       for (final m in obj0.elements) {
         if (m.keyText == 'type') continue;
-        extras.add('${m.keyText}: ${_normalizeObjectText(m.value.text)}');
+        final kv = '${m.keyText}: ${_normalizeObjectText(m.value.text)}';
+        if (m.keyText == 'default' && rawName == 'modelValue') {
+          inlineDefault = _normalizeObjectText(m.value.text);
+          continue;
+        }
+        extras.add(kv);
       }
       if (extras.isNotEmpty) {
         spread = ', ...{ ${extras.join(', ')} }';
       }
     }
-    // if options (second arg) exists but no extras, ensure empty spread
     // merge second arg limited options into spread (default/required/local)
     if (e.argumentList.arguments.length >= 2) {
       final a2 = e.argumentList.arguments[1];
@@ -1046,6 +915,10 @@ List<String> _collectModelPropsEntries(CompilationUnit unit, String src) {
           if (m.keyText == 'default' ||
               m.keyText == 'required' ||
               m.keyText == 'local') {
+            if (m.keyText == 'default' && rawName == 'modelValue') {
+              inlineDefault = _normalizeObjectText(m.value.text);
+              continue;
+            }
             extras2.add('${m.keyText}: ${_normalizeObjectText(m.value.text)}');
           }
         }
@@ -1055,12 +928,16 @@ List<String> _collectModelPropsEntries(CompilationUnit unit, String src) {
           } else {
             spread = spread.replaceFirst(' }', ', ${extras2.join(', ')} }');
           }
-        } else if (spread.isEmpty) {
-          spread = ', ...{ }';
         }
       }
     }
-    out.add('${name}: { type: ${typeText}${spread} }');
+    // inline default for canonical model name "modelValue"
+    final defaultPart = (inlineDefault != null && rawName == 'modelValue')
+        ? ', default: $inlineDefault'
+        : '';
+    final isIdent = RegExp(r'^[A-Za-z_$]\w*$').hasMatch(rawName);
+    final keyText = isIdent ? rawName : name;
+    out.add('$keyText: { type: $typeText$defaultPart$spread }');
   }
   return out;
 }
@@ -1071,10 +948,10 @@ List<String> _collectModelModifiersEntries(CompilationUnit unit, String src) {
     final e = st.expression;
     if (e is! FunctionCallExpression) continue;
     if (e.methodName.name != 'defineModel') continue;
-    final name = _firstStringArg(e) ?? '"modelValue"';
+    final name = firstStringArg(e) ?? '"modelValue"';
     final raw = name.replaceAll('"', '');
     final mod = raw == 'modelValue' ? 'modelModifiers' : '${raw}Modifiers';
-    out.add('"${mod}": {}');
+    out.add('$mod: {}');
   }
   return out;
 }
@@ -1101,7 +978,7 @@ List<String> _collectModelEmitEvents(CompilationUnit unit) {
     final e = st.expression;
     if (e is! FunctionCallExpression) continue;
     if (e.methodName.name != 'defineModel') continue;
-    final name = _firstStringArg(e) ?? '"modelValue"';
+    final name = firstStringArg(e) ?? '"modelValue"';
     final ev = '"update:${name.replaceAll('"', '')}"';
     out.add(ev);
   }
@@ -1125,12 +1002,16 @@ List<String> _eventsFromTypeArgs(String raw) {
   }
   return out;
 }
+
 String? _resolveTypeAliasBody(AstNode root, String src, String ident) {
   String? found;
   void walk(AstNode n) {
     if (n.type == 'type_alias_declaration') {
-      final text = src.substring(n.startByte, n.endByte);
-      final m = RegExp(r"^\\s*(export\\s+)?type\\s+" + ident + r"\\s*=\\s*([\\s\\S]+)$").firstMatch(text);
+      final text = slice(src, n.startByte, n.endByte);
+      // TODO 此处不要用正则，而是 ast
+      final m = RegExp(
+        r"^\\s*(export\\s+)?type\\s+" + ident + r"\\s*=\\s*([\\s\\S]+)$",
+      ).firstMatch(text);
       if (m != null) {
         found = m.group(2);
         return;
@@ -1141,6 +1022,15 @@ String? _resolveTypeAliasBody(AstNode root, String src, String ident) {
       walk(c);
     }
   }
+
   walk(root);
   return found;
+}
+
+String slice(String src, int startByte, int endByte) {
+  final bytes = utf8.encode(src);
+  final safeStart = startByte.clamp(0, bytes.length);
+  final safeEnd = endByte.clamp(0, bytes.length);
+  if (safeEnd <= safeStart) return '';
+  return utf8.decode(bytes.sublist(safeStart, safeEnd));
 }

@@ -1,5 +1,7 @@
 import { compileScript, parse } from "vue/compiler-sfc";
 import { mkdir } from "node:fs/promises";
+
+import {} from "./compiler.js";
 import samples from "./samples.json" with { type: "json" };
 type Compiled = {
   name: string;
@@ -35,6 +37,7 @@ for (const { name, sfc } of samples) {
   } catch (e: any) {
     const errMsg = e?.message ? String(e.message).trim() : String(e);
     compiled.push({ name, sfc, warnings, error: errMsg });
+    console.log(`err ${errMsg}`);
   } finally {
     console.warn = origWarn;
   }
