@@ -1,6 +1,6 @@
 # user_import_script_normal_namespace_vue
 
-```
+```ts
 import * as vue from 'vue'
 import dayjs from 'dayjs'
 export default {

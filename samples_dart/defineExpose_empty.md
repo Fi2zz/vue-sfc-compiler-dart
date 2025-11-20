@@ -1,20 +1,17 @@
 # defineExpose_empty
 
-```
-import { defineComponent as _defineComponent } from "vue";
+```ts
+import { defineComponent as _defineComponent } from 'vue'
+export default /*@__PURE__*/_defineComponent({
+  __name: 'defineExpose_empty',
+setup(__props: any, { expose: __expose }) {
+  __expose();
 
-export default /*@__PURE__*/ _defineComponent({
-setup(__props, { expose: __expose }) {
+const __returned__ = {  }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-__expose();
+return __returned__
+}
 
-const __returned__ = {
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
+})
 ```

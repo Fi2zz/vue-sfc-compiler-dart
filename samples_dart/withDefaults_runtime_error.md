@@ -1,10 +1,21 @@
 # withDefaults_runtime_error
 
-[vue/compiler-sfc] withDefaults() only works with typed defineProps()
+```ts
+import { defineComponent as _defineComponent } from 'vue'
+export default /*@__PURE__*/_defineComponent({
+  __name: 'withDefaults_runtime_error',
+  props: {  },
+setup(__props: any, { expose: __expose }) {
+  __expose();
 
-./withDefaults_runtime_error.vue
-1 | <script setup lang="ts">
-| ^
-2 | withDefaults(defineProps({}), {})
-| ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-3 | </script>
+const const { a } = withDefaults(defineProps({ a: Number }), { a: 1 }) = __props
+const { a } = withDefaults(defineProps({ a: Number }), { a: 1 })
+
+const __returned__ = { a }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+
+return __returned__
+}
+
+})
+```

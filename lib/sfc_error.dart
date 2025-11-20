@@ -24,6 +24,14 @@ class DuplicateBlockError extends SfcError {
   });
 }
 
+class DuplicateDefineSlotsError extends SfcError {
+  @override
+  String? get message =>
+      "Single file component can contain only one defineSlots() call.";
+
+  DuplicateDefineSlotsError({required super.locStart, required super.locEnd});
+}
+
 class ScriptError extends SfcError {
   ScriptError({
     required super.message,
@@ -40,6 +48,8 @@ class SfcCompileError extends SfcError {
   final String line2;
   final String caret2;
   final String line3;
+  final int? line;
+  final int? column;
   SfcCompileError({
     required this.filename,
     required this.reason,
@@ -50,6 +60,8 @@ class SfcCompileError extends SfcError {
     required this.line3,
     required super.locStart,
     required super.locEnd,
+    this.line,
+    this.column,
   }) : super(message: reason);
 
   @override
@@ -59,7 +71,8 @@ class SfcCompileError extends SfcError {
     buf.writeln('');
     String fn = filename;
     if (fn.startsWith('./')) fn = fn.substring(2);
-    buf.writeln('./$fn');
+    final locSuffix = (line != null && column != null) ? ':$line:$column' : '';
+    buf.writeln('./$fn$locSuffix');
     buf.writeln(line1);
     buf.writeln(caret1);
     buf.writeln(line2);

@@ -1,22 +1,24 @@
 # defineProps_runtime_default_fn
 
-```
-import { defineComponent as _defineComponent } from "vue";
-
-export default /*@__PURE__*/ _defineComponent({
-props: { items: { type: Array, default: ()=> [] } },
+```ts
+import { defineComponent as _defineComponent } from 'vue'
+export default /*@__PURE__*/_defineComponent({
+  __name: 'defineProps_runtime_default_fn',
+  props: { 
+    items: { type: { type: Array, required: false },
+    default: { type: ()=> [], required: false }
+   },
 setup(__props: any, { expose: __expose }) {
-__expose();
+  __expose();
 
-const props = __props;
+const props = __props
+const props = defineProps({ items: { type: Array, default: ()=> [] } })
 
-const __returned__ = {
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
+const __returned__ = { props }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+
+return __returned__
+}
+
+})
 ```

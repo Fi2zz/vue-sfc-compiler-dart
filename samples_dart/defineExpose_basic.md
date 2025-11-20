@@ -1,24 +1,19 @@
 # defineExpose_basic
 
-```
-import { defineComponent as _defineComponent } from "vue";
+```ts
+import { defineComponent as _defineComponent } from 'vue'
+export default /*@__PURE__*/_defineComponent({
+  __name: 'defineExpose_basic',
+setup(__props: any, { expose: __expose }) {
+const count = 0
+  __expose();
+const count = 0
 
-export default /*@__PURE__*/ _defineComponent({
-setup(__props, { expose: __expose }) {
+const __returned__ = { count }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-function inc(){}
-const count = 0;
-__expose({ inc, count });
+return __returned__
+}
 
-const __returned__ = {
-inc,
-count,
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
+})
 ```

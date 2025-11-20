@@ -6,7 +6,7 @@ import 'package:vue_sfc_parser/sfc_parser.dart';
 const filename = "./vue_complex.vue";
 // ignore: non_constant_identifier_names
 File vue_complex = File(filename);
-File outfile = File("vue_complex_dart.md");
+File outfile = File("vue_complex_dart.ts");
 
 class Sample {
   final String name;
@@ -24,12 +24,12 @@ Future<void> main() async {
     final descriptor = parser.parse();
     String code = compileScript(descriptor).trim();
 
-    String md =
-        """
-```ts\n$code\n```
-"""
-            .trim();
-    outfile.writeAsString(md);
+    //     String md =
+    //         """
+    // ```ts\n$code\n```
+    // """
+    //             .trim();
+    outfile.writeAsString(code.trim());
     print('vue-compiler-dart ok');
   } catch (error) {
     print('error $error');

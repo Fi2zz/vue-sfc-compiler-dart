@@ -1,10 +1,20 @@
 # defineModel_duplicate_name_error
 
-[vue/compiler-sfc] duplicate defineModel name: count
+```ts
+import { defineComponent as _defineComponent } from 'vue'
+export default /*@__PURE__*/_defineComponent({
+  __name: 'defineModel_duplicate_name_error',
+setup(__props: any, { expose: __expose }) {
+  __expose();
 
-./defineModel_duplicate_name_error.vue
-1 | <script setup lang="ts">
-| ^
-2 | defineModel("count")
-| ^^^^^^^^^^^^^^^^^^^^
-3 | </script>
+const a = defineModel<number>('count')
+const b = defineModel<number>('count')
+
+const __returned__ = { a, b }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+
+return __returned__
+}
+
+})
+```

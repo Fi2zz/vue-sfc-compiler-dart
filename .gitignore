@@ -154,3 +154,6 @@ dist
 token.js
 .DS_Store
 .vscode
+
+# rust project
+native/**/target

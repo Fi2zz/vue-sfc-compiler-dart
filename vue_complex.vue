@@ -14,74 +14,90 @@ import {
   useAttrs,
 } from "vue";
 
+function hellow() {}
+
 defineOptions({ name: "VueComplex", inheritAttrs: false });
 
+const abc: number = 123;
+const abcd = 123,
+  cde = 234;
 type Item = { id: number; label: string };
 
-const $props = withDefaults(
-  defineProps<{
-    title: string;
-    count?: number;
-    items: Item[];
-    config?: { theme: "light" | "dark" };
-  }>(),
-  { items: () => [] }
-);
+// const [items = [], config = "dark"] = defineProps<{
+//   title: string;
+//   count?: number;
+//   items: Item[];
+//   config?: { theme: "light" | "dark" };
+// }>();
 
-const myemit = defineEmits<{
+// const $props = withDefaults(
+//   defineProps<{
+//     title: string;
+//     count?: number;
+//     items: Item[];
+//     config?: { theme: "light" | "dark" };
+//   }>(),
+//   { items: () => [], count: 0, title: "Helloworld" }
+// );
+
+const $emitter = defineEmits<{
   (e: "increment", by: number): void;
   (e: "select", id: number): void;
   (e: "update:count", value: number): void;
 }>();
-
+//@ts-ignore
 const valueModel = defineModel<number>("value", { default: 0 });
+//@ts-ignore
 const checked = defineModel<boolean>("cheched", { default: false });
+const [model, modelModifiers] = defineModel("hello", {
+  type: String,
+  default: "helloworld",
+});
+// defineSlots();
+defineModel();
 
-const modelValue = defineModel({ type: String, default: "helloworld" });
-
-defineSlots<{
+const {
+  header,
+  default: defaultSlot = () => {},
+  footer,
+} = defineSlots<{
   header?(props: { title: string }): any;
   default(props: { items: Item[]; selectedId: number | null }): any;
   footer?(): any;
 }>();
+const de = slots.default;
 
 const attrs = useAttrs();
-const slots = useSlots();
-
+const $slots = useSlots();
 const state = reactive({
   selectedId: null as number | null,
   loading: false,
 });
-
 const doubled = computed(() => (valueModel.value ?? 0) * 2);
-
-function increment() {
+function onIncrement() {
   const by = 1;
-  myemit("increment", by);
-  myemit("update:count", ($props.count ?? 0) + by);
+  $emitter("increment", by);
+  $emitter("update:count", ($props.count ?? 0) + by);
 }
-
-function select(id: number) {
+function onSelect(id: number) {
   state.selectedId = id;
-  myemit("select", id);
+  $emitter("select", id);
 }
-
 onMounted(async () => {
   state.loading = true;
   await nextTick();
   state.loading = false;
 });
-
 provide("theme", $props.config?.theme ?? "light");
 const injectedTheme = inject<string>("theme", "light");
+// defineExpose({
+//   focus: () => {},
+//   reset: () => {
+//     state.selectedId = null;
+//   },
+// });
 
-defineExpose({
-  focus: () => {},
-  reset: () => {
-    state.selectedId = null;
-  },
-});
-
+defineExpose();
 const AsyncChild = defineAsyncComponent(async () => {
   return {
     template: "<div>Async Child</div>",
@@ -91,11 +107,12 @@ const AsyncChild = defineAsyncComponent(async () => {
 <script lang="ts">
 import { createApp } from "vue";
 import * as vue from "vue";
+//@ts-ignore
 import hello from "world";
 // export default {};
 export default {
   name: "TestComplextComponent",
-
+  //@ts-ignore
   data(vm) {
     return { world: "hello" };
   },
@@ -106,14 +123,14 @@ export default {
 
 <template>
   <div class="complex" :data-theme="injectedTheme">
-    <header v-if="slots.header">
+    <header v-if="$slots.header">
       <slot name="header" :title="$props.title" />
     </header>
     <h1>{{ $props.title }}</h1>
     <p v-if="state.loading">Loading...</p>
     <p>Value: {{ valueModel }}</p>
     <p>Doubled: {{ doubled }}</p>
-    <button type="button" @click="increment">Increment</button>
+    <button type="button" @click="onIncrement">Increment</button>
     <ul>
       <li v-for="it in $props.items" :key="it.id">
         <label>
@@ -121,14 +138,14 @@ export default {
             type="radio"
             :value="it.id"
             v-model="state.selectedId"
-            @change="select(it.id)" />
+            @change="onSelect(it.id)" />
           {{ it.label }}
         </label>
       </li>
     </ul>
     <slot :items="$props.items" :selected-id="state.selectedId" />
     <AsyncChild />
-    <footer v-if="slots.footer">
+    <footer v-if="$slots.footer">
       <slot name="footer" />
     </footer>
     <pre v-bind="attrs"></pre>

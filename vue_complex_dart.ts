@@ -1,8 +1,7 @@
-```ts
 import {
+  defineComponent as _defineComponent,
   useModel as _useModel,
   mergeModels as _mergeModels,
-  defineComponent as _defineComponent,
 } from "vue";
 import {
   ref,
@@ -18,61 +17,53 @@ import {
   useSlots,
   useAttrs,
 } from "vue";
+import { createApp } from "vue";
+import * as vue from "vue";
+import hello from "world";
 type Item = { id: number; label: string };
 
-const __default__ = {
-  name: "TestComplextComponent",
-
-  data(vm) {
-    return { world: "hello" };
-  },
-  mounted() {},
-  methods: {},
-};
 export default /*@__PURE__*/ _defineComponent({
-  ...__default__,
   ...{ name: "VueComplex", inheritAttrs: false },
-  props: /*@__PURE__*/ _mergeModels(
+  __name: "vue_complex",
+  props: _mergeModels(
     {
       title: { type: String, required: true },
       count: { type: Number, required: false },
-      items: { type: Array, required: true, default: () => [] },
-      config: { type: Object, required: false },
+      items: { type: Array, required: true },
+      config: { type: String, required: false },
     },
     {
-      value: { type: Number, ...{ default: 0 } },
-      valueModifiers: {},
-      cheched: { type: Boolean, ...{ default: false } },
-      chechedModifiers: {},
-      modelValue: { type: String, default: "helloworld" },
-      modelModifiers: {},
-    }
+      modelValue: { type: Object },
+      modelValue: { type: Object },
+      modelValue: { type: Object },
+    },
   ),
-  emits: /*@__PURE__*/ _mergeModels(
-    ["increment", "select", "update:count"],
-    ["update:value", "update:cheched", "update:modelValue"]
-  ),
+  emits: _mergeModels([], ["update:modelValue"]),
   setup(__props: any, { expose: __expose, emit: __emit }) {
-    const $props = __props;
-    const myemit = __emit;
-    const valueModel = _useModel<number>(__props, "value");
-    const checked = _useModel<boolean>(__props, "cheched");
-    const modelValue = _useModel(__props, "modelValue");
+    function hellow() {}
+    const abc: number = 123;
+    const abcd = 123,
+      cde = 234;
+    const abcd = 123,
+      cde = 234;
+    const [items = [], config = "dark"] = __props;
+    const $emitter = __emit;
+    const de = slots.default;
     const attrs = useAttrs();
-    const slots = useSlots();
+    const $slots = useSlots();
     const state = reactive({
       selectedId: null as number | null,
       loading: false,
     });
     const doubled = computed(() => (valueModel.value ?? 0) * 2);
-    function increment() {
+    function onIncrement() {
       const by = 1;
-      myemit("increment", by);
-      myemit("update:count", ($props.count ?? 0) + by);
+      $emitter("increment", by);
+      $emitter("update:count", ($props.count ?? 0) + by);
     }
-    function select(id: number) {
+    function onSelect(id: number) {
       state.selectedId = id;
-      myemit("select", id);
+      $emitter("select", id);
     }
     onMounted(async () => {
       state.loading = true;
@@ -81,30 +72,29 @@ export default /*@__PURE__*/ _defineComponent({
     });
     provide("theme", $props.config?.theme ?? "light");
     const injectedTheme = inject<string>("theme", "light");
-    __expose({
-      focus: () => {},
-      reset: () => {
-        state.selectedId = null;
-      },
-    });
     const AsyncChild = defineAsyncComponent(async () => {
       return {
         template: "<div>Async Child</div>",
       } as any;
     });
-
     const __returned__ = {
-      $props,
-      myemit,
+      hellow,
+      abc,
+      abcd,
+      cde,
+      items,
+      $emitter,
       valueModel,
       checked,
-      modelValue,
+      model,
+      header,
+      de,
       attrs,
-      slots,
+      $slots,
       state,
       doubled,
-      increment,
-      select,
+      onIncrement,
+      onSelect,
       injectedTheme,
       AsyncChild,
     };
@@ -112,7 +102,7 @@ export default /*@__PURE__*/ _defineComponent({
       enumerable: false,
       value: true,
     });
+
     return __returned__;
   },
 });
-```

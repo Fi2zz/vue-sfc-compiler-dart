@@ -1,658 +1,249 @@
-import 'package:vue_sfc_parser/sfc_compiler.dart';
 import 'dart:convert';
+import 'package:vue_sfc_parser/is_identifier_name.dart';
+import 'package:vue_sfc_parser/logger.dart';
+import 'package:vue_sfc_parser/sfc_compiler.dart';
+import 'package:vue_sfc_parser/sfc_script_codegen_helpers.dart';
 import 'package:vue_sfc_parser/ts_ast.dart';
-import 'package:vue_sfc_parser/ts_parser.dart';
-import 'package:vue_sfc_parser/validate_usage.dart';
 
-final class ScriptCodegen {
-  static String generate({required SetupResult setup}) {
-    final buf = StringBuffer();
-    final src = setup.source;
-    final ast = setup.rootAst;
-
-    final vueAliasImports = <String>[]; // e.g. _useSlots, _useModel
-    final userImports = setup.setupImportLines ?? _collectImportLines(ast, src);
-    final declNames = _collectDeclaredNames(ast, src);
-    final macro = _analyzeMacros(setup.compilation, src, ast);
-
-    validateUsage(
-      rootAst: ast,
-      unit: setup.compilation,
-      src: src,
-      filename: setup.filename,
-    );
-
-    // do not alias useSlots; inject via runtime imports based on actual usage
-    if (_hasDefineModel(setup.compilation)) {
-      vueAliasImports.add('useModel as _useModel');
-    }
-    // Pre-compute model props/emits to decide whether to import mergeModels
-    final preModelCombined = _collectModelCombinedEntries(
-      setup.compilation,
-      src,
-    );
-    final preModelEmits = _collectModelEmitEvents(setup.compilation);
-    final needsMergeModels =
-        preModelCombined.isNotEmpty || preModelEmits.isNotEmpty;
-    if (needsMergeModels) {
-      vueAliasImports.add('mergeModels as _mergeModels');
-    }
-    // Header imports
-    final useDefineComponentHeader = _shouldUseDefineComponentHeader(
-      setup.compilation,
-    );
-    if (vueAliasImports.isNotEmpty) {
-      final aliases = [...vueAliasImports];
-      if (useDefineComponentHeader) {
-        aliases.add('defineComponent as _defineComponent');
-      }
-      buf.writeln('import { ${aliases.join(', ')} } from "vue";');
-    } else if (useDefineComponentHeader) {
-      buf.writeln('import { defineComponent as _defineComponent } from "vue";');
-    }
-    final setupVueFromLines = _parseVueNamedFromLines(userImports);
-    final setupVueFromSource = _parseVueNamedFromSource(src);
-    final unionNames = <String>{...setupVueFromLines, ...setupVueFromSource};
-    if (unionNames.isNotEmpty) {
-      final ordered = (unionNames.toList());
-      buf.writeln('import {');
-      for (final r in ordered) {
-        buf.writeln('  $r,');
-      }
-      buf.writeln('} from "vue";');
-    }
-    // Then user imports（仅输出非 vue 源的导入；setup 的 vue 导入由上方按使用输出）
-    for (final line in userImports) {
-      if (!RegExp("from\\s*['\\\"]vue['\\\"]").hasMatch(line)) {
-        buf.writeln(_fmtImport(line));
-      }
-    }
-    // Normal <script> imports (e.g., createApp, namespace imports)
-    final normalImports = setup.normalScriptImportLines ?? const <String>[];
-    for (final line in normalImports) {
-      buf.writeln(_fmtImport(line));
-    }
-    // Always include namespace import for full vue access
-    // print type aliases at top-level
-    for (final c in ast.children) {
-      if (c.type == 'type_alias_declaration') {
-        buf.writeln(_slice(src, c.startByte, c.endByte));
-      }
-    }
-    buf.writeln('');
-    // Define __default__ from normal <script> default export
-    // todo  此处处理逻辑保留， 其余的 normalSpread 逻辑不要
-    final normalSpread = setup.normalScriptSpreadText;
-    if (normalSpread != null && normalSpread.trim().isNotEmpty) {
-      buf.writeln('const __default__ = ${_normalizeObjectText(normalSpread)};');
-    }
-
-    // Component options start
-    if (useDefineComponentHeader) {
-      buf.writeln('export default /*@__PURE__*/ _defineComponent({');
-    } else {
-      buf.writeln('export default {');
-    }
-    // Spread from normal <script> default export first
-    if (normalSpread != null && normalSpread.trim().isNotEmpty) {
-      buf.writeln('  ...__default__,');
-    }
-    for (final spread in macro.optionSpreads) {
-      buf.writeln('  ...${_normalizeObjectText(spread)},');
-    }
-
-    // omit __name to match official when defineOptions provides name
-
-    // props (use _mergeModels when model exists)
-    final modelCombined = preModelCombined;
-    final stdPropsInner = _stripBraces(macro.propsOptionText);
-    if (modelCombined.isNotEmpty) {
-      buf.writeln('  props: /*@__PURE__*/ _mergeModels({');
-      if (stdPropsInner != null && stdPropsInner.trim().isNotEmpty) {
-        buf.writeln(stdPropsInner.trim());
-      }
-      buf.writeln('},\n{');
-      for (final e in modelCombined) {
-        buf.writeln('    $e,');
-      }
-      buf.writeln('  }),');
-    } else if (macro.propsOptionText != null) {
-      buf.writeln('  props: ${macro.propsOptionText},');
-    }
-
-    // emits (use _mergeModels to combine events)
-    final modelEmits = preModelEmits;
-    final stdEmits = macro.emitsOptionText;
-    if (modelEmits.isNotEmpty) {
-      final left = (stdEmits != null && stdEmits.trim().startsWith('['))
-          ? stdEmits.trim()
-          : (stdEmits == null ? '[]' : stdEmits.trim());
-      final right = '[${modelEmits.join(', ')}]';
-      buf.writeln('emits: /*@__PURE__*/ _mergeModels($left, $right),');
-    } else if (stdEmits != null) {
-      buf.writeln('emits: $stdEmits,');
-    }
-
-    // setup signature
-    final hasProps = macro.propsOptionText != null;
-    final needsEmit = macro.emitsOptionText != null;
-    final setupParams = StringBuffer();
-    setupParams.write('__props');
-    if (hasProps) setupParams.write(': any');
-    final ctxParams = <String>['expose: __expose'];
-    if (needsEmit) ctxParams.add('emit: __emit');
-    buf.writeln(
-      'setup(${setupParams.toString()}, { ${ctxParams.join(', ')} }) {',
-    );
-    if (!macro.hasDefineExpose) {
-      buf.writeln('__expose();');
-    }
-    buf.writeln('');
-
-    // Setup body statements: derive from AST, transform macros
-    final stmts = _collectTopLevelStatements(ast);
-    final skipReturn = <String>{};
-    for (final s in stmts) {
-      final rendered = _renderStatement(s, src, macro, declNames);
-      if (rendered == null) continue;
-      if (rendered.semicolon) {
-        buf.writeln(_fmtStmt(rendered.text));
-      } else {
-        buf.writeln('    ${rendered.text}');
-      }
-      for (final n in rendered.skipNames) {
-        skipReturn.add(n);
-      }
-    }
-    buf.writeln('');
-
-    // __returned__: use declaration order, then append macro bindings, excluding macro-only bindings
-    final ordered = <String>[];
-    final toSkip = {...skipReturn, ...macro.skipBindings};
-    for (final n in declNames) {
-      if (toSkip.contains(n)) continue;
-      if (!ordered.contains(n)) ordered.add(n);
-    }
-    for (final n in macro.returnBindings) {
-      if (toSkip.contains(n)) continue;
-      if (!ordered.contains(n)) ordered.add(n);
-    }
-
-    buf.writeln('    const __returned__ = {');
-    for (final n in ordered) {
-      buf.writeln('      $n,');
-    }
-    buf.writeln('    };');
-    buf.writeln('    Object.defineProperty(__returned__, "__isScriptSetup", {');
-    buf.writeln('      enumerable: false,');
-    buf.writeln('      value: true,');
-    buf.writeln('    });');
-    buf.writeln('return __returned__;');
-    buf.writeln('},');
-    if (useDefineComponentHeader) {
-      buf.writeln('});');
-    } else {
-      buf.writeln('};');
-    }
-
-    final raw = buf.toString();
-    final normalized = raw.split('\n').map((l) => l.trimLeft()).join('\n');
-    return normalized;
+List<String> collectModelCombinedEntries(CompilationUnit unit, String src) {
+  final out = <String>[];
+  final props = collectModelPropsEntries(unit, src);
+  final mods = collectModelModifiersEntries(unit, src);
+  // Build in the order of defineModel statements
+  int pi = 0, mi = 0;
+  for (final st in unit.statements) {
+    final e = st.expression;
+    if (e is! FunctionCallExpression) continue;
+    if (e.methodName.name != 'defineModel') continue;
+    if (pi < props.length) out.add(props[pi++]);
+    if (mi < mods.length) out.add(mods[mi++]);
   }
+  return out;
 }
 
-class _MacroIR {
-  String? propsOptionText;
-  String? emitsOptionText;
-  final List<String> optionSpreads;
-  final List<String> returnBindings;
-  bool needsUseSlots;
-  bool hasDefineExpose = false;
-  bool hasDefineModel = false;
-  bool hasDefineModelGeneric = false;
-  final Set<String> skipBindings;
-  _MacroIR({
-    this.propsOptionText,
-    this.emitsOptionText,
-    this.optionSpreads = const [],
-    this.returnBindings = const [],
-    this.needsUseSlots = false,
-    this.skipBindings = const {},
-  });
+List<String> collectModelEmitEvents(CompilationUnit unit) {
+  final out = <String>[];
+  for (final st in unit.statements) {
+    final e = st.expression;
+    if (e is! FunctionCallExpression) continue;
+    if (e.methodName.name != 'defineModel') continue;
+    final name = firstStringArg(e) ?? '"modelValue"';
+    final ev = '"update:${name.replaceAll('"', '')}"';
+    out.add(ev);
+  }
+  return out;
 }
 
-_MacroIR _analyzeMacros(CompilationUnit unit, String src, AstNode ast) {
-  String? propsText;
-  String? emitsText;
-  final spreads = <String>[];
-  final returns = <String>[];
-  var needsUseSlots = false;
-  final skip = <String>{};
-
-  // Pass 1: collect defaults from withDefaults(defineProps(...), { ... })
-  final defaultMap = <String, String>{};
+List<String> collectModelModifiersEntries(CompilationUnit unit, String src) {
+  final out = <String>[];
   for (final st in unit.statements) {
-    final expr = st.expression;
-    if (expr is FunctionCallExpression &&
-        expr.methodName.name == 'withDefaults') {
-      // second arg object as defaults
-      final defaultsObj = firstObjectArg(expr);
-      if (defaultsObj != null) {
-        for (final e in defaultsObj.elements) {
-          defaultMap[e.keyText] = _normalizeObjectText(e.value.text);
-        }
-      }
-    }
+    final e = st.expression;
+    if (e is! FunctionCallExpression) continue;
+    if (e.methodName.name != 'defineModel') continue;
+    final name = firstStringArg(e) ?? '"modelValue"';
+    final raw = name.replaceAll('"', '');
+    final mod = raw == 'modelValue' ? 'modelModifiers' : '${raw}Modifiers';
+    out.add('$mod: {}');
   }
+  return out;
+}
 
-  // Pass 2: analyze macros from statements only
+/// 1. `const model= defineModel()` → modelValue with optional defaults
+/// 2. `const [model, modelModifiers]= defineModel()` → modelValue with optional defaults
+/// 3. `const name = defineModel('name')` → named model with corresponding modifiers entry
+///
+///
+///
+/// This function walks the AST `CompilationUnit` to locate `defineModel` macro
+/// calls and converts them into a Vue runtime props-object text that can be
+/// merged into the component `props` option. It supports:
+/// - `const model= defineModel()` → modelValue with optional defaults
+/// - `const [model, modelModifiers]= defineModel()` → modelValue with optional defaults
+/// - `const name = defineModel('name')` → named model with corresponding modifiers entry
+/// - `defineModel()` → modelValue with optional defaults
+/// - `defineModel('name')` → named model with corresponding modifiers entry
+/// - `defineModel<T>()` → type mapped to Vue runtime constructors
+/// - `defineModel('name', { type, default, required, local })` → inline options
+/// - `defineModel({ type, default, required, local })` → inline options for default model
+///
+/// Returned string is an object literal text containing both the model prop
+/// entries and the companion modifiers entries, e.g.:
+/// `{
+///     modelValue: { type: String, default: '' },
+///     modelModifiers: {}
+///   }`
+List<String> collectModelPropsEntries(CompilationUnit unit, String src) {
+  final out = <String>[];
   for (final st in unit.statements) {
-    final expr = st.expression;
-    if (expr is! FunctionCallExpression) continue;
-    final name = expr.methodName.name;
-    switch (name) {
-      case 'defineProps':
-        {
-          final runtimeObj = firstObjectArg(expr);
-          if (runtimeObj != null) {
-            propsText = _fmtInlinePropsObject(runtimeObj);
-          } else if (expr.typeArgumentProps.isNotEmpty) {
-            propsText = _fmtPropsFromType(expr.typeArgumentProps, defaultMap);
+    final exp = st.expression;
+    // TODO: implement e is VariableDeclaration
+    if (exp is VariableDeclaration) {
+      // String intText = exp.init?.text ?? '';
+
+      BindingPattern? binding = exp.pattern;
+
+      Expression? intExp = exp.init;
+
+      ///  input:
+      ///    const [model, modelModifiers] = defineModel();
+      ///  output:
+      ///     in props:
+      ///   props: _mergeModel(definedProps ,{ modelValue:{} ,modelModifiers:{} })
+      ///     in setup body
+      ///   const [model,modelModifiers] =_useModel(__props,'modelValue')
+      /// input:
+      ///  const [model, modelModifiers] = defineModel({type:String,default:1});
+      ///  output:
+      ///     in props:
+      ///   props: _mergeModel(definedProps ,{ modelValue:{type:String,default:1} ,modelModifiers:{} })
+      ///     in setup body
+      ///  const [model,modelModifiers] =_useModel(__props,'modelValue')
+      ///
+      /// input:
+      ///  const [model, modelModifiers] = defineModel('modelName', {type:String,default:1});
+      /// output:
+      ///     in props:
+      ///   props: _mergeModel(definedProps ,{ modelName:{type:String,default:1} ,modelNameModifiers:{} })
+      ///     in setup body
+      ///  const [model,modelModifiers] =_useModel(__props,'modelName')
+      if (binding is ArrayBindingPattern && binding.elements.length == 2) {
+        String rawName = 'modelValue';
+        String typeText = 'Object';
+        if (intExp is FunctionCallExpression &&
+            CodegenHelpers.isDefineModel(intExp.methodName.name)) {
+          if (intExp.typeArgumentText != null &&
+              intExp.typeArgumentText!.isNotEmpty) {
+            final tt = intExp.typeArgumentText!
+                .replaceAll('<', '')
+                .replaceAll('>', '');
+            final types = _runtimeTypesFromTypeText(tt);
+            typeText = types.length == 1 ? types[0] : '[${types.join(', ')}]';
           } else {
-            propsText = '{}';
-          }
-          if (!returns.contains('props')) returns.add('props');
-          skip.add('props');
-          break;
-        }
-      case 'withDefaults':
-        {
-          // no direct return identifiers without source pattern; rely on props
-          if (!returns.contains('props')) returns.add('props');
-          break;
-        }
-      case 'defineEmits':
-        {
-          final arr = firstArrayArg(expr);
-          final obj = firstObjectArg(expr);
-          final typed = expr.typeArgumentText;
-          if (arr != null) {
-            emitsText = _fmtStringArray(arr);
-          } else if (obj != null) {
-            emitsText = _normalizeObjectText(obj.text);
-          } else if (typed != null && typed.isNotEmpty) {
-            final events = _eventsFromTypeArgs(typed);
-            emitsText = events.isNotEmpty
-                ? '[${events.map((e) => '"$e"').join(', ')}]'
-                : '[]';
-          }
-          if (!returns.contains('emit')) returns.add('emit');
-          skip.add('emit');
-          break;
-        }
-      case 'defineExpose':
-        {
-          // expose keys are not added to returned bindings
-          break;
-        }
-      case 'defineSlots':
-        {
-          needsUseSlots = true;
-          if (!returns.contains('slots')) returns.add('slots');
-          break;
-        }
-      case 'defineOptions':
-        {
-          final obj = firstObjectArg(expr);
-          if (obj != null) spreads.add(_normalizeObjectText(obj.text));
-          break;
-        }
-      case 'defineModel':
-        {
-          break;
-        }
-    }
-  }
-
-  // Fallback: scan full AST for defineEmits type arguments
-  if (emitsText == null || (emitsText.isEmpty)) {
-    void walk(AstNode n) {
-      if (n.type == 'call_expression') {
-        final id = _findChildByType(n, 'identifier');
-        if (id != null) {
-          final name = slice(src, id.startByte, id.endByte);
-          if (name == 'defineEmits') {
-            final typeArgs = _findChildByType(n, 'type_arguments');
-            if (typeArgs != null) {
-              final raw = slice(src, typeArgs.startByte, typeArgs.endByte);
-              final events = _eventsFromTypeArgs(raw);
-              if (events.isNotEmpty) {
-                emitsText = '[${events.map((e) => '"$e"').join(', ')}]';
-              }
-            }
-          }
-        }
-      }
-      for (final c in n.children) {
-        walk(c);
-      }
-    }
-
-    walk(ast);
-  }
-
-  if (emitsText == null || (emitsText?.isEmpty ?? false)) {
-    // ignore: unnecessary_string_escapes
-    final gm = RegExp('defineEmits\s*<([\s\S]*?)>').firstMatch(src);
-    if (gm != null) {
-      final raw = gm.group(1)!;
-      var events = _eventsFromTypeArgs(raw);
-      if (events.isEmpty) {
-        final ident = raw.trim();
-        if (RegExp(r'^[A-Za-z_$]\w*$').hasMatch(ident)) {
-          final aliasBody = _resolveTypeAliasBody(ast, src, ident);
-          if (aliasBody != null) {
-            events = _eventsFromTypeArgs(aliasBody);
-          }
-        }
-      }
-      if (events.isNotEmpty) {
-        emitsText = '[${events.map((e) => '"$e"').join(', ')}]';
-      }
-    }
-  }
-
-  final ir = _MacroIR(
-    propsOptionText: propsText,
-    emitsOptionText: emitsText,
-    optionSpreads: spreads,
-    returnBindings: returns,
-    needsUseSlots: needsUseSlots,
-    skipBindings: skip,
-  );
-  for (final st in unit.statements) {
-    final expr = st.expression;
-    if (expr is FunctionCallExpression &&
-        expr.methodName.name == 'defineExpose') {
-      ir.hasDefineExpose = true;
-      break;
-    }
-  }
-  for (final st in unit.statements) {
-    final expr = st.expression;
-    if (expr is FunctionCallExpression &&
-        expr.methodName.name == 'defineModel') {
-      ir.hasDefineModel = true;
-      ir.hasDefineModelGeneric =
-          (expr.typeArgumentText != null && expr.typeArgumentText!.isNotEmpty);
-    }
-  }
-  return ir;
-}
-
-class _RenderedStmt {
-  final String text;
-  final bool semicolon;
-  final List<String> names;
-  final List<String> skipNames;
-  _RenderedStmt(
-    this.text, {
-    this.semicolon = true,
-    this.names = const [],
-    // ignore: unused_element_parameter
-    this.skipNames = const [],
-  });
-}
-
-List<AstNode> _collectTopLevelStatements(AstNode root) {
-  final out = <AstNode>[];
-  for (final c in root.children) {
-    if (c.type == 'import_declaration') continue;
-    if (c.type == 'type_alias_declaration') continue;
-    if (c.type.contains('export')) continue;
-    out.add(c);
-  }
-  return out;
-}
-
-_RenderedStmt? _renderStatement(
-  AstNode stmt,
-  String src,
-  _MacroIR ir,
-  List<String> declNames,
-) {
-  // Transform macro-related statements; otherwise preserve original
-  switch (stmt.type) {
-    case 'lexical_declaration':
-    case 'variable_declaration':
-      return _renderVariableDeclaration(stmt, src);
-    case 'expression_statement':
-      final call = _findChildByType(stmt, 'call_expression');
-      if (call != null) {
-        final ident = _findChildByType(call, 'identifier');
-        final name = ident == null
-            ? ''
-            : slice(src, ident.startByte, ident.endByte);
-        final rawStmt = slice(src, stmt.startByte, stmt.endByte).trim();
-        if (rawStmt.startsWith('import ') || rawStmt.startsWith('type ')) {
-          return null;
-        }
-        if (name == 'defineOptions') {
-          return null;
-        }
-        if (name == 'defineSlots') {
-          // avoid duplicate when slots already declared
-          if (declNames.contains('slots')) return null;
-          return _RenderedStmt('const slots = useSlots()');
-        }
-        if (name == 'defineExpose') {
-          final args = _findChildByType(call, 'arguments');
-          if (args != null) {
-            final argsText = slice(src, args.startByte, args.endByte);
-            return _RenderedStmt('__expose${_normalizeObjectText(argsText)}');
-          }
-        }
-      }
-      return _RenderedStmt(slice(src, stmt.startByte, stmt.endByte));
-    case 'function_declaration':
-    case 'class_declaration':
-      return _RenderedStmt(
-        slice(src, stmt.startByte, stmt.endByte),
-        semicolon: false,
-      );
-    default:
-      final rawStmt = slice(src, stmt.startByte, stmt.endByte).trim();
-      if (rawStmt.startsWith('import ') || rawStmt.startsWith('type ')) {
-        return null;
-      }
-      return _RenderedStmt(slice(src, stmt.startByte, stmt.endByte));
-  }
-}
-
-_RenderedStmt? _renderVariableDeclaration(AstNode decl, String src) {
-  AstNode? declarator;
-  for (final c in decl.children) {
-    if (c.type == 'variable_declarator') {
-      declarator = c;
-      break;
-    }
-  }
-  declarator ??= decl;
-
-  AstNode? lhs;
-  AstNode? rhs;
-  for (final c in declarator.children) {
-    if (lhs == null &&
-        (c.type == 'identifier' || c.type.endsWith('_pattern'))) {
-      lhs = c;
-    }
-  }
-  rhs = _findChildByType(declarator, 'call_expression');
-  if (rhs == null || lhs == null) {
-    return _RenderedStmt(slice(src, decl.startByte, decl.endByte));
-  }
-  final callee = _getCallCalleeName(rhs, src);
-  final lhsText = slice(src, lhs.startByte, lhs.endByte);
-  final lhsNames = _extractNamesFromLhs(lhs, src);
-
-  if (callee == 'defineProps' || callee == 'withDefaults') {
-    return _RenderedStmt('const $lhsText = __props', names: lhsNames);
-  }
-  if (callee == 'defineEmits') {
-    // ensure identifier lhs
-    return _RenderedStmt('const $lhsText = __emit', names: lhsNames);
-  }
-  if (callee == 'defineSlots') {
-    return _RenderedStmt('const $lhsText = useSlots()', names: lhsNames);
-  }
-  if (callee == 'defineModel') {
-    final typeArgs = _findChildByType(rhs, 'type_arguments');
-    String? tsType;
-    if (typeArgs != null) {
-      var t = slice(src, typeArgs.startByte, typeArgs.endByte);
-      t = t.replaceAll(RegExp(r'[<>]'), '').trim();
-      tsType = t;
-    }
-    final args = _findChildByType(rhs, 'arguments');
-    String nameArg = '"modelValue"';
-    String? optionsArg;
-    if (args != null) {
-      // find first string child as name
-      for (final a in args.children) {
-        if (a.type == 'string' || a.type == 'template_string') {
-          nameArg = slice(src, a.startByte, a.endByte);
-          break;
-        }
-      }
-      // find second object child as options
-      int objCount = 0;
-      for (final a in args.children) {
-        if (a.type == 'object') {
-          objCount++;
-          if (objCount >= 2) {
-            optionsArg = slice(src, a.startByte, a.endByte);
-            break;
-          }
-        }
-      }
-    }
-    final typeGeneric = tsType != null && tsType.isNotEmpty ? '<$tsType>' : '';
-    final callText = optionsArg == null
-        ? '_useModel$typeGeneric(__props, $nameArg)'
-        : '_useModel$typeGeneric(__props, $nameArg, ${_normalizeObjectText(optionsArg)})';
-    return _RenderedStmt('const $lhsText = $callText', names: lhsNames);
-  }
-  // default: preserve
-  return _RenderedStmt(
-    slice(src, decl.startByte, decl.endByte),
-    names: lhsNames,
-  );
-}
-
-List<String> _extractNamesFromLhs(AstNode lhs, String src) {
-  final out = <String>[];
-  if (lhs.type == 'identifier') {
-    out.add(slice(src, lhs.startByte, lhs.endByte));
-    return out;
-  }
-  if (lhs.type.endsWith('_pattern')) {
-    for (final sp in lhs.children) {
-      if (sp.type == 'identifier' ||
-          sp.type == 'shorthand_property_identifier') {
-        out.add(slice(src, sp.startByte, sp.endByte));
-      }
-    }
-  }
-  return out;
-}
-
-AstNode? _findChildByType(AstNode n, String type) {
-  for (final c in n.children) {
-    if (c.type == type) return c;
-    final r = _findChildByType(c, type);
-    if (r != null) return r;
-  }
-  return null;
-}
-
-String _getCallCalleeName(AstNode call, String src) {
-  // prefer immediate identifier child
-  for (final c in call.children) {
-    if (c.type == 'identifier') {
-      return slice(src, c.startByte, c.endByte);
-    }
-    if (c.type == 'member_expression') {
-      for (final mc in c.children) {
-        if (mc.type == 'identifier') {
-          return slice(src, mc.startByte, mc.endByte);
-        }
-      }
-    }
-  }
-  final ident = _findChildByType(call, 'identifier');
-  return ident == null ? '' : slice(src, ident.startByte, ident.endByte);
-}
-
-List<String> renderErrorThreeLines(String src, String focusLine) {
-  final l1 = '1 | <script setup lang="ts">';
-  final c1 = '| ^';
-  String line2 = '2 | $focusLine';
-  String c2 = '| ${'^' * focusLine.length}';
-  final l3 = '3 | </script>';
-  return [l1, c1, line2, c2, l3];
-}
-
-List<String> _collectImportLines(AstNode root, String src) {
-  final out = <String>[];
-  final re = RegExp(r'^\s*import[\s\S]*?;', multiLine: true);
-  for (final m in re.allMatches(src)) {
-    final t = (m.group(0) ?? '').trimRight();
-    if (t.isEmpty) continue;
-    out.add(_fmtImport(t));
-  }
-  return out;
-}
-
-List<String> _collectDeclaredNames(AstNode root, String src) {
-  final out = <String>[];
-  for (final n in root.children) {
-    if (n.type == 'function_declaration' || n.type == 'class_declaration') {
-      for (final c in n.children) {
-        if (c.type == 'identifier') {
-          final name = slice(src, c.startByte, c.endByte);
-          if (!out.contains(name)) out.add(name);
-        }
-      }
-    }
-    if (n.type == 'lexical_declaration' || n.type == 'variable_declaration') {
-      for (final c in n.children) {
-        if (c.type == 'variable_declarator') {
-          for (final p in c.children) {
-            if (p.type == 'identifier') {
-              final name = slice(src, p.startByte, p.endByte);
-              if (!out.contains(name)) out.add(name);
-            } else if (p.type.endsWith('_pattern')) {
-              for (final sp in p.children) {
-                if (sp.type == 'identifier' ||
-                    sp.type == 'shorthand_property_identifier') {
-                  final name = slice(src, sp.startByte, sp.endByte);
-                  if (!out.contains(name)) out.add(name);
+            final obj = firstObjectArg(intExp);
+            if (obj != null) {
+              for (final m in obj.elements) {
+                if (m.keyText == 'type') {
+                  typeText = normalizeObjectText(m.value.text);
                 }
               }
             }
           }
+          final nm = firstStringArg(intExp);
+          if (nm != null && nm.isNotEmpty) {
+            rawName = nm.replaceAll('"', '');
+          }
+        } else if (intExp is Identifier &&
+            CodegenHelpers.isDefineModel(intExp.name)) {}
+        final isIdent = isIdentifierName(rawName);
+        final keyText = isIdent ? rawName : '"$rawName"';
+        out.add('$keyText: { type: $typeText }');
+      }
+
+      // if (intExp is FunctionCallExpression) {
+      //   print(intExp.methodName.name);
+      // }
+
+      // if (intText.startsWith(CodegenHelpers.defineModel)) {
+      //   print(exp.name.name);
+      // }
+
+      // print(exp.init?.text);
+    }
+
+    if (exp is FunctionCallExpression &&
+        CodegenHelpers.isDefineModel(exp.methodName.name)) {
+      String name = firstStringArg(exp) ?? '"modelValue"';
+      String typeText = 'Object';
+      if (exp.typeArgumentText != null && exp.typeArgumentText!.isNotEmpty) {
+        final tt = exp.typeArgumentText!
+            .replaceAll('<', '')
+            .replaceAll('>', '');
+        final types = _runtimeTypesFromTypeText(tt);
+        typeText = types.length == 1 ? types[0] : '[${types.join(', ')}]';
+      } else {
+        final obj = firstObjectArg(exp);
+        if (obj != null) {
+          for (final m in obj.elements) {
+            if (m.keyText == 'type') {
+              typeText = normalizeObjectText(m.value.text);
+            }
+          }
         }
       }
+      String spread = '';
+      String? inlineDefault;
+      // first argument object carries extras like default/required/local
+      SetOrMapLiteral? obj0;
+      if (exp.argumentList.arguments.isNotEmpty &&
+          exp.argumentList.arguments[0] is SetOrMapLiteral) {
+        obj0 = exp.argumentList.arguments[0] as SetOrMapLiteral;
+      }
+      // compute raw name once for decision-making
+      final rawName = name.replaceAll('"', '');
+      if (obj0 != null) {
+        final extras = <String>[];
+        for (final m in obj0.elements) {
+          if (m.keyText == 'type') continue;
+          final kv = '${m.keyText}: ${normalizeObjectText(m.value.text)}';
+          if (m.keyText == 'default' && rawName == 'modelValue') {
+            inlineDefault = normalizeObjectText(m.value.text);
+            continue;
+          }
+          extras.add(kv);
+        }
+        if (extras.isNotEmpty) {
+          spread = ', ...{ ${extras.join(', ')} }';
+        }
+      }
+      // merge second arg limited options into spread (default/required/local)
+      if (exp.argumentList.arguments.length >= 2) {
+        final a2 = exp.argumentList.arguments[1];
+        if (a2 is SetOrMapLiteral) {
+          final extras2 = <String>[];
+          for (final m in a2.elements) {
+            if (m.keyText == 'default' ||
+                m.keyText == 'required' ||
+                m.keyText == 'local') {
+              if (m.keyText == 'default' && rawName == 'modelValue') {
+                inlineDefault = normalizeObjectText(m.value.text);
+                continue;
+              }
+              extras2.add('${m.keyText}: ${normalizeObjectText(m.value.text)}');
+            }
+          }
+          if (extras2.isNotEmpty) {
+            if (spread.isEmpty) {
+              spread = ', ...{ ${extras2.join(', ')} }';
+            } else {
+              spread = spread.replaceFirst(' }', ', ${extras2.join(', ')} }');
+            }
+          }
+        }
+      }
+      // inline default for canonical model name "modelValue"
+      final defaultPart = (inlineDefault != null && rawName == 'modelValue')
+          ? ', default: $inlineDefault'
+          : '';
+      final isIdent = isIdentifierName(rawName);
+      final keyText = isIdent ? rawName : name;
+      out.add('$keyText: { type: $typeText$defaultPart$spread }');
     }
   }
   return out;
 }
 
-SetOrMapLiteral? firstObjectArg(FunctionCallExpression call) {
-  for (final a in call.argumentList.arguments) {
-    if (a is SetOrMapLiteral) return a;
+List<String> eventsFromTypeArgs(String raw) {
+  final out = <String>[];
+  final re = RegExp('\\(\\s*[A-Za-z_\$]\\w*\\s*:\\s*[\'\"]([^\'\"]+)[\'\"]');
+  for (final m in re.allMatches(raw)) {
+    out.add(m.group(1)!);
   }
-  return null;
+  return out;
+}
+
+String? extractFirstStringArg(String rhs) {
+  final sm = RegExp("\\(\\s*(['\"][^'\"]+['\"])").firstMatch(rhs);
+  return sm?.group(1)!.trim();
 }
 
 ListLiteral? firstArrayArg(FunctionCallExpression call) {
@@ -662,7 +253,34 @@ ListLiteral? firstArrayArg(FunctionCallExpression call) {
   return null;
 }
 
-String _fmtPropsFromType(
+SetOrMapLiteral? firstObjectArg(FunctionCallExpression call) {
+  for (final a in call.argumentList.arguments) {
+    if (a is SetOrMapLiteral) return a;
+  }
+  return null;
+}
+
+String? firstStringArg(FunctionCallExpression call) {
+  for (final a in call.argumentList.arguments) {
+    if (a is StringLiteral) return '"${a.stringValue}"';
+  }
+  return null;
+}
+
+String fmtImport(String line) {
+  var t = line.trim();
+  t = t.replaceAll("'", '"');
+  if (!t.endsWith(';')) t = '$t;';
+  return t;
+}
+
+String fmtInlinePropsObject(SetOrMapLiteral obj) {
+  // Keep as single-line when possible
+  final text = normalizeObjectText(obj.text);
+  return text;
+}
+
+String fmtPropsFromType(
   List<PropSignature> props,
   Map<String, String> defaults,
 ) {
@@ -682,17 +300,80 @@ String _fmtPropsFromType(
   return buf.toString();
 }
 
-String _fmtInlinePropsObject(SetOrMapLiteral obj) {
-  // Keep as single-line when possible
-  final text = _normalizeObjectText(obj.text);
-  return text;
+// removed: legacy runtime import ordering helper (not used)
+
+// removed: unused slice helper (duplicate of sfc_compile_script)
+
+String fmtStmt(String line) {
+  var t = line.trimRight();
+  return t;
 }
 
-String? firstStringArg(FunctionCallExpression call) {
-  for (final a in call.argumentList.arguments) {
-    if (a is StringLiteral) return '"${a.stringValue}"';
+String fmtStringArray(ListLiteral arr) {
+  final items = arr.elements
+      .whereType<StringLiteral>()
+      .map((s) => '"${s.stringValue}"')
+      .join(', ');
+  return '[$items]';
+}
+
+String normalizeObjectText(String text) {
+  var t = text.trim();
+  t = t.replaceAll("'", '"');
+  t = t.split('\n').map((l) => l.trimLeft()).join('\n');
+  return t;
+}
+
+String? resolveTypeAliasBodyFromSource(String src, String ident) {
+  final re = RegExp(
+    r"(^|\n)\s*(export\s+)?type\s+" + ident + r"\s*=\s*([\s\S]+?)\n",
+    multiLine: true,
+  );
+  final m = re.firstMatch(src);
+  return m?.group(3);
+}
+
+bool shouldUseDefineComponentHeader(CompilationUnit unit) {
+  bool hasModel = false;
+  bool anyGeneric = false;
+  for (final st in unit.statements) {
+    final e = st.expression;
+    if (e is FunctionCallExpression && e.methodName.name == 'defineModel') {
+      hasModel = true;
+      if (e.typeArgumentText != null && e.typeArgumentText!.isNotEmpty) {
+        anyGeneric = true;
+      }
+    }
   }
-  return null;
+  if (hasModel && !anyGeneric) return false;
+  return true;
+}
+
+// removed: unused slice helper
+String sliceWithWordBacktrack(String src, int startByte, int endByte) {
+  final bytes = utf8.encode(src);
+  int s = startByte.clamp(0, bytes.length);
+  final e = endByte.clamp(0, bytes.length);
+  // backtrack to include leading word character if needed
+  while (s > 0) {
+    final prev = bytes[s - 1];
+    // A-Z a-z underscore
+    final isAlphaNum =
+        (prev >= 65 && prev <= 90) || (prev >= 97 && prev <= 122) || prev == 95;
+    if (!isAlphaNum) break;
+    s -= 1;
+  }
+  if (e <= s) return '';
+  return utf8.decode(bytes.sublist(s, e));
+}
+
+String? stripBraces(String? obj) {
+  if (obj == null) return null;
+  final t = obj.trim();
+  if (t.startsWith('{') && t.endsWith('}')) {
+    return t.substring(1, t.length - 1);
+  }
+  return obj;
 }
 
 List<String> _runtimeTypesFromTypeText(String t) {
@@ -726,311 +407,404 @@ List<String> _runtimeTypesFromTypeText(String t) {
   return out;
 }
 
-String _fmtStringArray(ListLiteral arr) {
-  final items = arr.elements
-      .whereType<StringLiteral>()
-      .map((s) => '"${s.stringValue}"')
-      .join(', ');
-  return '[$items]';
-}
-
-String _fmtImport(String line) {
-  var t = line.trim();
-  t = t.replaceAll("'", '"');
-  if (!t.endsWith(';')) t = '$t;';
-  return t;
-}
-
-List<String> _parseVueNamedFromLines(List<String> lines) {
-  final names = <String>{};
-  for (final line in lines) {
-    // 简单解析 vue 源的命名导入行
-    if (!RegExp("from\\s*['\\\"]vue['\\\"]").hasMatch(line)) continue;
-    final brace = RegExp(r'\{([^}]*)\}').firstMatch(line);
-    if (brace != null) {
-      final inner = brace.group(1)!;
-      final parts = inner
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
-      for (final p in parts) {
-        final name = p.split(' as ')[0].trim();
-        if (name.isNotEmpty) names.add(name);
+final class ScriptCodegen {
+  /// Collect declared identifiers from a `CompilationUnit` for use in
+  /// returned bindings ordering. Accepts only `CompilationUnit` and returns
+  /// a de-duplicated list of names from variable, function and class declarations.
+  static List<String> walkDeclarations(CompilationUnit unit) {
+    final out = <String>[];
+    for (final st in unit.statements) {
+      final exp = st.expression;
+      if (exp is ExportAllDeclaration) continue;
+      if (exp is ExportDefaultDeclaration) continue;
+      if (exp is ExportNamedDeclaration) continue;
+      if (exp is ImportExpression) continue;
+      if (exp is ImportDeclaration) continue;
+      //  type A =b
+      if (exp is TSTypeAliasDeclaration) continue;
+      //  interface A
+      if (exp is TSInterfaceDeclaration) continue;
+      //  declare function
+      if (exp is TSDeclareFunction) continue;
+      if (exp is VariableDeclaration) {
+        final name = exp.name.name;
+        if (name.isNotEmpty && !out.contains(name)) out.add(name);
       }
     }
+    return out;
   }
-  return names.toList();
-}
 
-List<String> _parseVueNamedFromSource(String s) {
-  final names = <String>{};
-  // 简单解析源码内首个 vue 命名导入块
-  final m = RegExp(
-    "import\\s*\\{([\\s\\S]*?)\\}\\s*from\\s*['\\\"]vue['\\\"]",
-    multiLine: true,
-  ).firstMatch(s);
-  if (m != null) {
-    final inner = m.group(1) ?? '';
-    final parts = inner
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    for (final p in parts) {
-      final name = p.split(' as ')[0].trim();
-      if (name.isNotEmpty) names.add(name);
+  static String generate({required SetupResult setup}) {
+    final buf = StringBuffer();
+    final src = setup.source;
+    final CompilationUnit compilation = setup.compilation;
+    // e.g. _useSlots, _useModel
+    final userImports = setup.setupImportLines ?? const <String>[];
+
+    // TODO: 验证使用是否合法
+    //  defineOptions / defineEmits / defineProps / defineSlots 只能调用一次
+    // validateUsage(unit: setup.compilation, src: src, filename: setup.filename);
+
+    // const a =1
+    // fuction b =c
+
+    WalkedSlots slots = CodegenHelpers.walkDefineSlots(setup.compilation);
+    WalkedModels models = CodegenHelpers.walkDefineModels(setup.compilation);
+    WalkedEmits emits = CodegenHelpers.walkDefineEmits(setup.compilation);
+    WalkedExposes exposes = CodegenHelpers.walkDefineExposes(setup.compilation);
+    final useDefines = walkDeclarations(compilation);
+    bool hasDefineEmits = emits.isNotEmpty;
+    bool hasDefineExpose = exposes.isNotEmpty;
+    bool hasDefineModels = models.isNotEmpty;
+    bool hasDefineProps = CodegenHelpers.hasDefineProps(setup.compilation);
+    bool hasDefineSlots = slots.isNotEmpty;
+    print(
+      'hasDefineModels $hasDefineModels, hasDefineEmits $hasDefineEmits ,hasDefineExpose $hasDefineExpose , $hasDefineModels, hasDefineProps $hasDefineProps ,hasDefineSlots $hasDefineSlots',
+    );
+
+    if (slots.length > 1) {
+      //
+      // SourceLocation loc = slots.last.loc;
+
+      // print(slots.last.loc);
+      // print(slots.last);
+      // throw ScriptError(
+      //   message: '[@vue/compiler-sfc] duplicate defineSlots() call',
+      //   locStart: loc.start.line,
+      //   locEnd: loc.end.column,
+      // );
+
+      // throw SfcError(
+      //   message: 'defineSlots can only be called once',
+      //   filename: setup.filename,
+      // );
     }
-  }
-  return names.toList();
-}
+    List<String> aliases = setup.isTypescript
+        ? [CodegenHelpers.defineComponent]
+        : [];
+    // Precompute body rewrite to decide header aliases
 
-List<String> _orderRuntimeImports(List<String> names) {
-  const preferredOrder = [
-    'reactive',
-    'computed',
-    'onMounted',
-    'provide',
-    'inject',
-    'nextTick',
-    'defineAsyncComponent',
-    'useSlots',
-    'useAttrs',
-  ];
-  final orderMap = {
-    for (var i = 0; i < preferredOrder.length; i++) preferredOrder[i]: i,
-  };
-  final sorted = [...names];
-  sorted.sort((a, b) {
-    final ia = orderMap[a];
-    final ib = orderMap[b];
-    if (ia != null && ib != null) return ia.compareTo(ib);
-    if (ia != null) return -1;
-    if (ib != null) return 1;
-    return a.compareTo(b);
-  });
-  return sorted;
-}
-
-String _slice(String src, int startByte, int endByte) {
-  final bytes = utf8.encode(src);
-  final safeStart = startByte.clamp(0, bytes.length);
-  final safeEnd = endByte.clamp(0, bytes.length);
-  if (safeEnd <= safeStart) return '';
-  return utf8.decode(bytes.sublist(safeStart, safeEnd));
-}
-
-String _fmtStmt(String line) {
-  var t = line.trimRight();
-  if (!t.endsWith(';')) t = '$t;';
-  return t;
-}
-
-String _normalizeObjectText(String text) {
-  var t = text.trim();
-  t = t.replaceAll("'", '"');
-  t = t.split('\n').map((l) => l.trimLeft()).join('\n');
-  return t;
-}
-
-bool _hasDefineModel(CompilationUnit unit) {
-  for (final st in unit.statements) {
-    final e = st.expression;
-    if (e is FunctionCallExpression && e.methodName.name == 'defineModel') {
-      return true;
+    final preModelEmits = collectModelEmitEvents(setup.compilation);
+    final needsMergeModels =
+        hasDefineModels && hasDefineProps || hasDefineEmits;
+    // preModelCombined.isNotEmpty || preModelEmits.isNotEmpty;
+    if (needsMergeModels) aliases.add(CodegenHelpers.mergeModels);
+    // defineModels
+    if (hasDefineModels) aliases.add(CodegenHelpers.useModel);
+    buf.writeln(CodegenHelpers.importFromVue(aliases));
+    buf.writeAll(userImports);
+    // Then user imports（仅输出非 vue 源的导入；setup 的 vue 导入由上方按使用输出）
+    // Normal <script> imports (e.g., createApp, namespace imports)
+    final normalImports = setup.normalScriptImportLines ?? const <String>[];
+    for (final line in normalImports) {
+      buf.writeln(fmtImport(line));
     }
-  }
-  return false;
-}
+    // Always include namespace import for full vue access
+    final maybeTypeDefs = _collectTypeAliasesFromUnit(setup.compilation);
+    if (maybeTypeDefs.isNotEmpty) buf.writeln(maybeTypeDefs);
+    final normalScript = setup.normalScriptSpreadText;
+    if (normalScript != null) {
+      buf.write(CodegenHelpers.defineNormalScriptDefault(normalScript));
+    }
+    // Component options start
+    buf.writeln(CodegenHelpers.exportedLeading(setup.isTypescript));
+    // Spread from normal <script> default export first
+    if (normalScript != null) {
+      buf.writeln('...${CodegenHelpers.normalScriptDefault},');
+    }
+    ArgumentList? defineOptions = CodegenHelpers.walkDefineOptions(
+      setup.compilation,
+    );
+    if (defineOptions != null) {
+      buf.writeln(
+        "...${defineOptions.arguments.map((e) => e.text).join(', ')},",
+      );
+    }
+    buf.writeln("  __name: '${setup.name}',");
 
-bool _shouldUseDefineComponentHeader(CompilationUnit unit) {
-  bool hasModel = false;
-  bool anyGeneric = false;
-  for (final st in unit.statements) {
-    final e = st.expression;
-    if (e is FunctionCallExpression && e.methodName.name == 'defineModel') {
-      hasModel = true;
-      if (e.typeArgumentText != null && e.typeArgumentText!.isNotEmpty) {
-        anyGeneric = true;
+    List<String> finalProps = [];
+
+    // Props from defineProps
+    if (hasDefineProps) {
+      String? props = CodegenHelpers.extractDefineProps(setup.compilation);
+
+      if (props != null) {
+        finalProps.add(props.substring(1, props.length - 1));
       }
     }
-  }
-  if (hasModel && !anyGeneric) return false;
-  return true;
-}
-
-List<String> _collectModelPropsEntries(CompilationUnit unit, String src) {
-  final out = <String>[];
-  for (final st in unit.statements) {
-    final e = st.expression;
-    if (e is! FunctionCallExpression) continue;
-    if (e.methodName.name != 'defineModel') continue;
-    String name = firstStringArg(e) ?? '"modelValue"';
-    String typeText = 'Object';
-    if (e.typeArgumentText != null && e.typeArgumentText!.isNotEmpty) {
-      final tt = e.typeArgumentText!.replaceAll(RegExp(r'[<>]'), '');
-      final types = _runtimeTypesFromTypeText(tt);
-      typeText = types.isNotEmpty ? types.first : 'Object';
-    } else {
-      final obj = firstObjectArg(e);
-      if (obj != null) {
-        for (final m in obj.elements) {
-          if (m.keyText == 'type') {
-            typeText = _normalizeObjectText(m.value.text);
+    // Props from defineModel (AST-only via collectModelPropsEntries)
+    if (hasDefineModels) {
+      final modelPropEntries = collectModelPropsEntries(setup.compilation, src);
+      if (modelPropEntries.isNotEmpty) {
+        finalProps.add(modelPropEntries.join(', '));
+      }
+    }
+    if (finalProps.isNotEmpty) {
+      buf.write(CodegenHelpers.mergeProps(finalProps));
+    }
+    // emits (use _mergeModels to combine events)
+    final modelEmits = preModelEmits;
+    var stdEmits = CodegenHelpers.extractDefineEmits(setup.compilation);
+    if (stdEmits == null) {
+      String? scanEmitsFromSrc(String s) {
+        int idxArr = s.indexOf('defineEmits([');
+        if (idxArr >= 0) {
+          int i = idxArr + 'defineEmits(['.length;
+          int depth = 1;
+          while (i < s.length) {
+            final ch = s[i];
+            if (ch == '[') depth++;
+            if (ch == ']') {
+              depth--;
+              if (depth == 0) break;
+            }
+            i++;
           }
+          if (i >= s.length) return null;
+          final body = s.substring(idxArr + 'defineEmits(['.length, i);
+          final items = body
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
+          if (items.isEmpty) return null;
+          return '[${items.join(', ')}]';
         }
-      }
-    }
-    String spread = '';
-    String? inlineDefault;
-    // first argument object carries extras like default/required/local
-    SetOrMapLiteral? obj0;
-    if (e.argumentList.arguments.isNotEmpty &&
-        e.argumentList.arguments[0] is SetOrMapLiteral) {
-      obj0 = e.argumentList.arguments[0] as SetOrMapLiteral;
-    }
-    // compute raw name once for decision-making
-    final rawName = name.replaceAll('"', '');
-    if (obj0 != null) {
-      final extras = <String>[];
-      for (final m in obj0.elements) {
-        if (m.keyText == 'type') continue;
-        final kv = '${m.keyText}: ${_normalizeObjectText(m.value.text)}';
-        if (m.keyText == 'default' && rawName == 'modelValue') {
-          inlineDefault = _normalizeObjectText(m.value.text);
-          continue;
-        }
-        extras.add(kv);
-      }
-      if (extras.isNotEmpty) {
-        spread = ', ...{ ${extras.join(', ')} }';
-      }
-    }
-    // merge second arg limited options into spread (default/required/local)
-    if (e.argumentList.arguments.length >= 2) {
-      final a2 = e.argumentList.arguments[1];
-      if (a2 is SetOrMapLiteral) {
-        final extras2 = <String>[];
-        for (final m in a2.elements) {
-          if (m.keyText == 'default' ||
-              m.keyText == 'required' ||
-              m.keyText == 'local') {
-            if (m.keyText == 'default' && rawName == 'modelValue') {
-              inlineDefault = _normalizeObjectText(m.value.text);
+        int idxObj = s.indexOf('defineEmits({');
+        if (idxObj >= 0) {
+          int i = idxObj + 'defineEmits({'.length;
+          int depth = 1;
+          bool inStr = false;
+          String quote = '';
+          final keys = <String>[];
+          String readIdent() {
+            final start = i;
+            while (i < s.length) {
+              final c = s.codeUnitAt(i);
+              final ok =
+                  (c >= 65 && c <= 90) ||
+                  (c >= 97 && c <= 122) ||
+                  (c >= 48 && c <= 57) ||
+                  c == 95 ||
+                  c == 36;
+              if (!ok) break;
+              i++;
+            }
+            return s.substring(start, i);
+          }
+
+          String? readString() {
+            final ch = s[i];
+            if (ch != '\'' && ch != '"') return null;
+            quote = ch;
+            inStr = true;
+            i++;
+            final start = i;
+            while (i < s.length) {
+              if (s[i] == quote) {
+                inStr = false;
+                final v = s.substring(start, i);
+                i++;
+                return v;
+              }
+              i++;
+            }
+            return null;
+          }
+
+          void skipWs() {
+            while (i < s.length) {
+              final c = s.codeUnitAt(i);
+              if (c == 32 || c == 9 || c == 10 || c == 13)
+                i++;
+              else
+                break;
+            }
+          }
+
+          while (i < s.length && depth > 0) {
+            skipWs();
+            if (i >= s.length) break;
+            final ch = s[i];
+            if (inStr) {
+              if (ch == quote) inStr = false;
+              i++;
               continue;
             }
-            extras2.add('${m.keyText}: ${_normalizeObjectText(m.value.text)}');
+            if (ch == '\'' || ch == '"') {
+              final k = readString();
+              if (k != null) keys.add(k);
+              skipWs();
+              // skip possible ':' or '('
+              while (i < s.length && s[i] != ',' && s[i] != '}') {
+                i++;
+              }
+              if (i < s.length && s[i] == ',') i++;
+              continue;
+            }
+            if (ch == '{') {
+              depth++;
+              i++;
+              continue;
+            }
+            if (ch == '}') {
+              depth--;
+              i++;
+              continue;
+            }
+            // identifier key
+            final key = readIdent();
+            if (key.isNotEmpty) keys.add(key);
+            // advance to next comma or closing brace
+            while (i < s.length && s[i] != ',' && s[i] != '}') i++;
+            if (i < s.length && s[i] == ',') i++;
+          }
+          if (keys.isNotEmpty) {
+            return '[${keys.map((k) => '\'$k\'').join(', ')}]';
           }
         }
-        if (extras2.isNotEmpty) {
-          if (spread.isEmpty) {
-            spread = ', ...{ ${extras2.join(', ')} }';
-          } else {
-            spread = spread.replaceFirst(' }', ', ${extras2.join(', ')} }');
-          }
+        return null;
+      }
+
+      stdEmits = scanEmitsFromSrc(src);
+    }
+    if (hasDefineModels) {
+      final left = (stdEmits != null && stdEmits.trim().startsWith('['))
+          ? stdEmits.trim()
+          : (stdEmits == null ? '[]' : stdEmits.trim());
+      final right = '[${modelEmits.join(', ')}]';
+
+      /// model update events are appended to standard emits
+      buf.write(CodegenHelpers.mergeEmits([left, right]));
+    } else if (stdEmits != null) {
+      buf.write(CodegenHelpers.mergeEmits([stdEmits]));
+    }
+    buf.writeln(CodegenHelpers.setupStart(setup.isTypescript, hasDefineEmits));
+    if (exposes.isEmpty) {
+      buf.writeln(CodegenHelpers.expose(null));
+      buf.writeln('');
+    }
+
+    List<String> lines = [];
+
+    //  setup body start
+    for (final st in setup.compilation.statements) {
+      final exp = st.expression;
+      // bool isMacro = false;
+      if (exp is FunctionCallExpression) {
+        final nm = exp.methodName.name;
+        bool isMacro = CodegenHelpers.isVueMacro(nm);
+        if (isMacro) continue;
+      } else if (exp is VariableDeclaration && exp.init is Identifier) {
+        //  const props = defineProps
+        //  const emit = defineEmits
+        final callee = (exp.init as Identifier).name;
+        bool isMacro = CodegenHelpers.isVueMacro(callee);
+        if (isMacro) {
+          formatMarcosBindings(lines, exp, callee);
+          continue;
         }
       }
+      final text = sliceWithWordBacktrack(src, st.startByte, st.endByte).trim();
+      if (text.isNotEmpty) lines.add(text);
     }
-    // inline default for canonical model name "modelValue"
-    final defaultPart = (inlineDefault != null && rawName == 'modelValue')
-        ? ', default: $inlineDefault'
-        : '';
-    final isIdent = RegExp(r'^[A-Za-z_$]\w*$').hasMatch(rawName);
-    final keyText = isIdent ? rawName : name;
-    out.add('$keyText: { type: $typeText$defaultPart$spread }');
+
+    buf.writeAll(lines);
+    buf.writeln('');
+    //  setup body end
+    // __returned__: appearance-based ordering from declarations and rewrite lines, excluding macro-only bindings
+    final ordered = <String>[];
+    for (final n in {...useDefines}) {
+      if (!ordered.contains(n)) ordered.add(n);
+    }
+
+    for (final s in CodegenHelpers.returns(ordered)) {
+      buf.writeln(s);
+    }
+    for (final s in CodegenHelpers.defineProperty()) {
+      buf.writeln(s);
+    }
+    buf.writeln(CodegenHelpers.setupReturns);
+    buf.writeln(CodegenHelpers.exportedTrailing(setup.isTypescript));
+    return buf.toString();
   }
-  return out;
+
+  static String _collectTypeAliasesFromUnit(CompilationUnit unit) {
+    return '';
+  }
 }
 
-List<String> _collectModelModifiersEntries(CompilationUnit unit, String src) {
-  final out = <String>[];
-  for (final st in unit.statements) {
-    final e = st.expression;
-    if (e is! FunctionCallExpression) continue;
-    if (e.methodName.name != 'defineModel') continue;
-    final name = firstStringArg(e) ?? '"modelValue"';
-    final raw = name.replaceAll('"', '');
-    final mod = raw == 'modelValue' ? 'modelModifiers' : '${raw}Modifiers';
-    out.add('$mod: {}');
-  }
-  return out;
+String formaltLine(String kind, String id, String bound) {
+  return "$kind $id = $bound;\n";
 }
 
-List<String> _collectModelCombinedEntries(CompilationUnit unit, String src) {
-  final out = <String>[];
-  final props = _collectModelPropsEntries(unit, src);
-  final mods = _collectModelModifiersEntries(unit, src);
-  // Build in the order of defineModel statements
-  int pi = 0, mi = 0;
-  for (final st in unit.statements) {
-    final e = st.expression;
-    if (e is! FunctionCallExpression) continue;
-    if (e.methodName.name != 'defineModel') continue;
-    if (pi < props.length) out.add(props[pi++]);
-    if (mi < mods.length) out.add(mods[mi++]);
-  }
-  return out;
-}
+void formatMarcosBindings(
+  List<String> lines,
+  VariableDeclaration exp,
+  String callee,
+) {
+  switch (callee) {
+    case CodegenHelpers.defineEmits:
+    case CodegenHelpers.defineProps:
+    case CodegenHelpers.withDefaults:
+      {
+        String setupName = CodegenHelpers.marcoNameToSetup(callee);
+        String declKind = exp.declKind!;
+        String? bindings;
+        if (exp.pattern == null) {
+          bindings = exp.name.name;
+        } else {
+          if (callee == CodegenHelpers.withDefaults) {
+            logger.warn("""
+[@vue/compiler-sfc] withDefaults() is unnecessary when using destructure with defineProps().
+Reactive destructure will be disabled when using withDefaults().
+Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...). 
+""");
+          }
+          if (exp.pattern is ObjectBindingPattern) {
+            List<String> properties = (exp.pattern as ObjectBindingPattern)
+                .properties
+                .map((property) {
+                  if (property.defaultValue == null) {
+                    return property.key;
+                  }
+                  String? text = property.defaultValue?.text;
+                  if (text == null) return property.key;
+                  return "${property.key} = $text";
+                })
+                .toList();
 
-List<String> _collectModelEmitEvents(CompilationUnit unit) {
-  final out = <String>[];
-  for (final st in unit.statements) {
-    final e = st.expression;
-    if (e is! FunctionCallExpression) continue;
-    if (e.methodName.name != 'defineModel') continue;
-    final name = firstStringArg(e) ?? '"modelValue"';
-    final ev = '"update:${name.replaceAll('"', '')}"';
-    out.add(ev);
-  }
-  return out;
-}
+            bindings = "{${properties.join(',')}}";
+          } else if (exp.pattern is ArrayBindingPattern) {
+            // const [items = [], config = "dark"] = defineProps<{
+            //   title: string;
+            //   count?: number;
+            //   items: Item[];
+            //   config?: { theme: "light" | "dark" };
+            // }>();
 
-String? _stripBraces(String? obj) {
-  if (obj == null) return null;
-  final t = obj.trim();
-  if (t.startsWith('{') && t.endsWith('}')) {
-    return t.substring(1, t.length - 1);
-  }
-  return obj;
-}
-
-List<String> _eventsFromTypeArgs(String raw) {
-  final out = <String>[];
-  final re = RegExp('\\(\\s*[A-Za-z_\$]\\w*\\s*:\\s*[\'\"]([^\'\"]+)[\'\"]');
-  for (final m in re.allMatches(raw)) {
-    out.add(m.group(1)!);
-  }
-  return out;
-}
-
-String? _resolveTypeAliasBody(AstNode root, String src, String ident) {
-  String? found;
-  void walk(AstNode n) {
-    if (n.type == 'type_alias_declaration') {
-      final text = slice(src, n.startByte, n.endByte);
-      // TODO 此处不要用正则，而是 ast
-      final m = RegExp(
-        r"^\\s*(export\\s+)?type\\s+" + ident + r"\\s*=\\s*([\\s\\S]+)$",
-      ).firstMatch(text);
-      if (m != null) {
-        found = m.group(2);
-        return;
+            List<String> elements = (exp.pattern as ArrayBindingPattern)
+                .elements
+                .map((element) {
+                  if (element.target is Identifier) {
+                    String name = (element.target as Identifier).name;
+                    String? text = element.defaultValue?.text;
+                    if (text == null) return name;
+                    return "$name = $text";
+                  }
+                  return '';
+                })
+                .toList();
+            bindings = "[${elements.join(',')}]";
+          }
+        }
+        lines.add(formaltLine(declKind, bindings!, setupName));
+        break;
       }
-    }
-    for (final c in n.children) {
-      if (found != null) return;
-      walk(c);
-    }
+    case CodegenHelpers.defineModel:
+      break;
+
+    case CodegenHelpers.defineSlots:
+      break;
   }
-
-  walk(root);
-  return found;
-}
-
-String slice(String src, int startByte, int endByte) {
-  final bytes = utf8.encode(src);
-  final safeStart = startByte.clamp(0, bytes.length);
-  final safeEnd = endByte.clamp(0, bytes.length);
-  if (safeEnd <= safeStart) return '';
-  return utf8.decode(bytes.sublist(safeStart, safeEnd));
 }

@@ -63,6 +63,8 @@ class Raw {
 }
 
 class ScriptBlock extends SFCBlock {
+  bool get isSetup => attrs.containsKey('setup');
+
   ScriptBlock({
     required super.content,
     required super.attrs,

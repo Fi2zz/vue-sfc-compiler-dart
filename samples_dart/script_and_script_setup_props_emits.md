@@ -1,35 +1,23 @@
 # script_and_script_setup_props_emits
 
 ```
-import { defineComponent as _defineComponent } from "vue";
+export default /*@__PURE__*/_defineComponent({
+  __name: 'script_and_script_setup_props_emits',
+  props: {  },
+  emits: ['update', 'delete'],
+setup(__props, { expose: __expose }) {
+  __expose();
 
-const __default__ = {
-props: {
-title: String,
-count: {
-type: Number,
-default: 0
+const props = __props
+const emit = __emit
+const props = defineProps(['title', 'count'])
+const emit = __emit
+
+const __returned__ = { props, emit }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+
+return __returned__
 }
-},
-emits: ["update", "delete"]
-};
-export default /*@__PURE__*/ _defineComponent({
-...__default__,
-props: {},
-emits: ["update", "delete"],
-setup(__props: any, { expose: __expose, emit: __emit }) {
-__expose();
 
-const props = __props;
-const emit = __emit;
-
-const __returned__ = {
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
+})
 ```

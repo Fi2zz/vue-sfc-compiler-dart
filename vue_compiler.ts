@@ -1,8 +1,7 @@
 const filename = "./vue_complex.vue";
 const vue_complex = await Bun.file(filename).text();
-const outfile = Bun.file("vue_complex_official.md");
+const outfile = Bun.file("vue_complex_official.ts");
 const outfile2 = Bun.file("vue_complex_template_official.md");
-
 import { compileScript, parseToSFCDescriptor } from "./compiler.js";
 
 const descriptor = parseToSFCDescriptor(vue_complex, filename);
@@ -13,10 +12,6 @@ if (script.type == "error") {
   console.log("vue-compiler fatal");
 } else {
   const code = script.code?.trim();
-  let md = "";
-  md += "```ts\n";
-  md += code;
-  md += "\n```";
-  outfile.write(md);
+  outfile.write(code!);
   console.log("vue-compiler ok");
 }

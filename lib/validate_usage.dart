@@ -1,53 +1,46 @@
+import 'package:vue_sfc_parser/generate_code_frame.dart';
 import 'package:vue_sfc_parser/sfc_error.dart';
 import 'package:vue_sfc_parser/sfc_script_codegen.dart';
 import 'package:vue_sfc_parser/ts_ast.dart';
-import 'package:vue_sfc_parser/ts_parser.dart';
 
 void validateUsage({
-  required AstNode rootAst,
   required CompilationUnit unit,
   required String src,
   required String filename,
 }) {
-  // Only disallow `export default` inside <script setup>; allow named exports
-  int defaultExportStart = -1;
-  int defaultExportEnd = -1;
-  void scanExport(AstNode n) {
-    if (n.type.contains('export')) {
-      final text = slice(src, n.startByte, n.endByte);
-      if (RegExp(r'export\s+default').hasMatch(text)) {
-        defaultExportStart = n.startByte;
-        defaultExportEnd = n.endByte;
-        return;
+  // Validate variable declaration kind presence for SWC-originated declarations
+  for (final st in unit.statements) {
+    final e = st.expression;
+    if (e is VariableDeclaration) {
+      final needsKind = e.init != null || e.pattern != null;
+      if (needsKind) {
+        final k = e.declKind;
+        if (k == null || (k != 'const' && k != 'let' && k != 'var')) {
+          final lc = computeLineCol(src, st.startByte);
+          throw SfcCompileError(
+            filename: filename,
+            reason: 'missing or invalid variable declaration kind (const/let/var)',
+            line1: generateCodeFrame(src, st.startByte, st.endByte)[0],
+            caret1: generateCodeFrame(src, st.startByte, st.endByte)[1],
+            line2: generateCodeFrame(src, st.startByte, st.endByte)[2],
+            caret2: generateCodeFrame(src, st.startByte, st.endByte)[3],
+            line3: generateCodeFrame(src, st.startByte, st.endByte)[4],
+            locStart: st.startByte,
+            locEnd: st.endByte,
+            line: lc[0],
+            column: lc[1],
+          );
+        }
       }
     }
-    for (final c in n.children) {
-      if (defaultExportStart >= 0) return;
-      scanExport(c);
-    }
   }
-
-  scanExport(rootAst);
-  if (defaultExportStart >= 0) {
-    throw SfcCompileError(
-      filename: filename,
-      reason: '<script setup> cannot contain `export default`.',
-      line1: '1 | <script setup lang="ts">',
-      caret1: ' | ^',
-      line2: '2 | export default {...}',
-      caret2: ' | ^^^^^^^^^^^^^^^^^^^^^',
-      line3: '3 | </script>',
-      locStart: defaultExportStart,
-      locEnd: defaultExportEnd,
-    );
-  }
-
   // defineSlots() cannot accept runtime arguments
   for (final st in unit.statements) {
     final e = st.expression;
     if (e is FunctionCallExpression && e.methodName.name == 'defineSlots') {
       if (e.argumentList.arguments.isNotEmpty) {
-        final lines = renderErrorThreeLines(src, 'defineSlots({})');
+        final lines = generateCodeFrame(src, st.startByte, st.endByte);
+        final lc = computeLineCol(src, st.startByte);
         throw SfcCompileError(
           filename: filename,
           reason: 'defineSlots() cannot accept arguments',
@@ -58,6 +51,8 @@ void validateUsage({
           line3: lines[4],
           locStart: st.startByte,
           locEnd: st.endByte,
+          line: lc[0],
+          column: lc[1],
         );
       }
     }
@@ -68,10 +63,8 @@ void validateUsage({
     final e = st.expression;
     if (e is FunctionCallExpression && e.methodName.name == 'withDefaults') {
       if (e.argumentList.arguments.isEmpty) {
-        final lines = renderErrorThreeLines(
-          src,
-          'withDefaults(defineProps(), {})',
-        );
+        final lines = generateCodeFrame(src, st.startByte, st.endByte);
+        final lc = computeLineCol(src, st.startByte);
         throw SfcCompileError(
           filename: filename,
           reason: 'withDefaults() expects defineProps() as first argument',
@@ -82,6 +75,8 @@ void validateUsage({
           line3: lines[4],
           locStart: st.startByte,
           locEnd: st.endByte,
+          line: lc[0],
+          column: lc[1],
         );
       }
       final first = e.argumentList.arguments.first;
@@ -95,10 +90,8 @@ void validateUsage({
         );
       }
       if (first.typeArgumentProps.isEmpty) {
-        final lines = renderErrorThreeLines(
-          src,
-          'withDefaults(defineProps({}), {})',
-        );
+        final lines = generateCodeFrame(src, st.startByte, st.endByte);
+        final lc = computeLineCol(src, st.startByte);
         throw SfcCompileError(
           filename: filename,
           reason: 'withDefaults() only works with typed defineProps()',
@@ -109,6 +102,8 @@ void validateUsage({
           line3: lines[4],
           locStart: st.startByte,
           locEnd: st.endByte,
+          line: lc[0],
+          column: lc[1],
         );
       }
     }
@@ -121,10 +116,8 @@ void validateUsage({
       final hasObj = firstObjectArg(e) != null;
       final hasType = e.typeArgumentProps.isNotEmpty;
       if (hasObj && hasType) {
-        final lines = renderErrorThreeLines(
-          src,
-          'defineProps<{ a: number }>({ a: Number })',
-        );
+        final lines = generateCodeFrame(src, st.startByte, st.endByte);
+        final lc = computeLineCol(src, st.startByte);
         throw SfcCompileError(
           filename: filename,
           reason:
@@ -136,6 +129,8 @@ void validateUsage({
           line3: lines[4],
           locStart: st.startByte,
           locEnd: st.endByte,
+          line: lc[0],
+          column: lc[1],
         );
       }
     }
@@ -163,7 +158,8 @@ void validateUsage({
         final name = firstStringArg(e) ?? '"modelValue"';
         final raw = name.replaceAll('"', '');
         if (modelNames.contains(raw)) {
-          final lines = renderErrorThreeLines(src, 'defineModel("$raw")');
+          final lines = generateCodeFrame(src, st.startByte, st.endByte);
+          final lc = computeLineCol(src, st.startByte);
           throw SfcCompileError(
             filename: filename,
             reason: 'duplicate defineModel name: $raw',
@@ -174,6 +170,8 @@ void validateUsage({
             line3: lines[4],
             locStart: st.startByte,
             locEnd: st.endByte,
+            line: lc[0],
+            column: lc[1],
           );
         }
         modelNames.add(raw);
@@ -181,7 +179,8 @@ void validateUsage({
     }
   }
   if (propsCount > 1) {
-    final lines = renderErrorThreeLines(src, 'defineProps() x 2');
+    final lines = generateCodeFrame(src, unit.startByte, unit.endByte);
+    final lc = computeLineCol(src, unit.startByte);
     throw SfcCompileError(
       filename: filename,
       reason: 'duplicate defineProps() calls are not allowed',
@@ -192,10 +191,13 @@ void validateUsage({
       line3: lines[4],
       locStart: unit.startByte,
       locEnd: unit.endByte,
+      line: lc[0],
+      column: lc[1],
     );
   }
   if (emitsCount > 1) {
-    final lines = renderErrorThreeLines(src, 'defineEmits() x 2');
+    final lines = generateCodeFrame(src, unit.startByte, unit.endByte);
+    final lc = computeLineCol(src, unit.startByte);
     throw SfcCompileError(
       filename: filename,
       reason: 'duplicate defineEmits() calls are not allowed',
@@ -206,10 +208,13 @@ void validateUsage({
       line3: lines[4],
       locStart: unit.startByte,
       locEnd: unit.endByte,
+      line: lc[0],
+      column: lc[1],
     );
   }
   if (optionsCount > 1) {
-    final lines = renderErrorThreeLines(src, 'defineOptions() x 2');
+    final lines = generateCodeFrame(src, unit.startByte, unit.endByte);
+    final lc = computeLineCol(src, unit.startByte);
     throw SfcCompileError(
       filename: filename,
       reason: 'duplicate defineOptions() calls are not allowed',
@@ -220,6 +225,8 @@ void validateUsage({
       line3: lines[4],
       locStart: unit.startByte,
       locEnd: unit.endByte,
+      line: lc[0],
+      column: lc[1],
     );
   }
 
@@ -232,7 +239,8 @@ void validateUsage({
       final hasObj = firstObjectArg(e) != null;
       final hasArr = firstArrayArg(e) != null;
       if (hasType && (hasObj || hasArr)) {
-        final lines = renderErrorThreeLines(src, 'defineEmits<...>(...)');
+        final lines = generateCodeFrame(src, st.startByte, st.endByte);
+        final lc = computeLineCol(src, st.startByte);
         throw SfcCompileError(
           filename: filename,
           reason: 'defineEmits() cannot mix type arguments with runtime args',
@@ -243,6 +251,8 @@ void validateUsage({
           line3: lines[4],
           locStart: st.startByte,
           locEnd: st.endByte,
+          line: lc[0],
+          column: lc[1],
         );
       }
       if (hasType) {
@@ -250,7 +260,8 @@ void validateUsage({
         final hasFnSig = RegExp(r'\(\s*[A-Za-z_\$]').hasMatch(t);
         final hasPropSig = RegExp(r'[A-Za-z_\$]\\w*\s*:').hasMatch(t);
         if (hasPropSig && !hasFnSig) {
-          final lines = renderErrorThreeLines(src, 'defineEmits<{ a: any }>()');
+          final lines = generateCodeFrame(src, st.startByte, st.endByte);
+          final lc = computeLineCol(src, st.startByte);
           throw SfcCompileError(
             filename: filename,
             reason:
@@ -262,6 +273,8 @@ void validateUsage({
             line3: lines[4],
             locStart: st.startByte,
             locEnd: st.endByte,
+            line: lc[0],
+            column: lc[1],
           );
         }
       }
@@ -273,7 +286,8 @@ void validateUsage({
     final e = st.expression;
     if (e is FunctionCallExpression && e.methodName.name == 'defineOptions') {
       if (e.typeArgumentText != null && e.typeArgumentText!.isNotEmpty) {
-        final lines = renderErrorThreeLines(src, 'defineOptions<{}>({})');
+        final lines = generateCodeFrame(src, st.startByte, st.endByte);
+        final lc = computeLineCol(src, st.startByte);
         throw SfcCompileError(
           filename: filename,
           reason: 'defineOptions() does not accept type arguments',
@@ -284,16 +298,16 @@ void validateUsage({
           line3: lines[4],
           locStart: st.startByte,
           locEnd: st.endByte,
+          line: lc[0],
+          column: lc[1],
         );
       }
       final obj = firstObjectArg(e);
       if (obj != null) {
         for (final m in obj.elements) {
           if (m.keyText == 'props' || m.keyText == 'emits') {
-            final lines = renderErrorThreeLines(
-              src,
-              'defineOptions({ props: {...} })',
-            );
+            final lines = generateCodeFrame(src, st.startByte, st.endByte);
+            final lc = computeLineCol(src, st.startByte);
             throw SfcCompileError(
               filename: filename,
               reason: 'defineOptions() cannot contain `props` or `emits` keys',
@@ -304,10 +318,87 @@ void validateUsage({
               line3: lines[4],
               locStart: st.startByte,
               locEnd: st.endByte,
+              line: lc[0],
+              column: lc[1],
             );
           }
         }
       }
+    }
+  }
+
+  _validateDestructureIdentifiers(unit, src, filename);
+}
+
+void _validateDestructureIdentifiers(
+  CompilationUnit unit,
+  String src,
+  String filename,
+) {
+  for (final st in unit.statements) {
+    final exp = st.expression;
+    if (exp is VariableDeclaration && exp.pattern != null) {
+      final pat = exp.pattern!;
+      if (pat is ArrayBindingPattern) _checkArray(pat);
+      if (pat is ObjectBindingPattern) _checkObject(pat);
+    }
+    // Deprecated VariableDeclarator path removed; unified VariableDeclaration covers destructure checks.
+  }
+}
+
+bool _isIdentifierName(String s) {
+  bool isFirstValid(int c) {
+    final isAlpha = (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+    return isAlpha || c == 95 || c == 36;
+  }
+
+  bool isRestValid(int c) {
+    final isAlphaNum =
+        (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57);
+    return isAlphaNum || c == 95 || c == 36;
+  }
+
+  if (s.isEmpty) return false;
+  final bytes = s.codeUnits;
+  if (!isFirstValid(bytes[0])) return false;
+  for (var i = 1; i < bytes.length; i++) {
+    if (!isRestValid(bytes[i])) return false;
+  }
+  return true;
+}
+
+void _checkArray(ArrayBindingPattern p) {
+  for (final el in p.elements) {
+    final id = el.target?.name;
+    if (id != null && !_isIdentifierName(id)) {
+      throw ScriptError(
+        message: 'Vue Compile Error: invalid destructure identifier: $id',
+        locStart: el.startByte,
+        locEnd: el.endByte,
+      );
+    }
+    if (el.nested is ArrayBindingPattern) {
+      _checkArray(el.nested as ArrayBindingPattern);
+    } else if (el.nested is ObjectBindingPattern) {
+      _checkObject(el.nested as ObjectBindingPattern);
+    }
+  }
+}
+
+void _checkObject(ObjectBindingPattern p) {
+  for (final prop in p.properties) {
+    final alias = prop.alias?.name;
+    if (alias != null && !_isIdentifierName(alias)) {
+      throw ScriptError(
+        message: 'Vue Compile Error: invalid destructure identifier: $alias',
+        locStart: prop.startByte,
+        locEnd: prop.endByte,
+      );
+    }
+    if (prop.nested is ArrayBindingPattern) {
+      _checkArray(prop.nested as ArrayBindingPattern);
+    } else if (prop.nested is ObjectBindingPattern) {
+      _checkObject(prop.nested as ObjectBindingPattern);
     }
   }
 }

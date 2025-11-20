@@ -47,7 +47,7 @@ class SfcParser {
             filename: filename,
           );
 
-          if (block.attrs.containsKey('setup')) {
+          if (b.isSetup) {
             if (scriptSetup != null) {
               throw DuplicateBlockError(
                 type: 'script setup',
@@ -55,11 +55,11 @@ class SfcParser {
                 locEnd: block.locEnd,
               );
             }
+
             scriptSetup = b;
             break;
           } else if (script == null) {
             script = b;
-
             break;
           }
         case 'style':

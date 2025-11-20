@@ -1,10 +1,17 @@
 # export_default_error
 
-[vue/compiler-sfc] <script setup> cannot contain `export default`.
+```
+export default /*@__PURE__*/_defineComponent({
+  __name: 'export_default_error',
+setup(__props, { expose: __expose }) {
+  __expose();
 
-./export_default_error.vue
-1 | <script setup lang="ts">
-| ^
-2 | export default {...}
-| ^^^^^^^^^^^^^^^^^^^^^
-3 | </script>
+
+const __returned__ = {  }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+
+return __returned__
+}
+
+})
+```

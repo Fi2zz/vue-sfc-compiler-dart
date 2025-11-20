@@ -1,22 +1,24 @@
 # defineProps_runtime_validator
 
-```
-import { defineComponent as _defineComponent } from "vue";
-
-export default /*@__PURE__*/ _defineComponent({
-props: { count: { type: Number, validator: (v:number)=> v >= 0 } },
+```ts
+import { defineComponent as _defineComponent } from 'vue'
+export default /*@__PURE__*/_defineComponent({
+  __name: 'defineProps_runtime_validator',
+  props: { 
+    count: { type: { type: Number, required: false },
+    validator: { type: (v:number)=> v >= 0, required: false }
+   },
 setup(__props: any, { expose: __expose }) {
-__expose();
+  __expose();
 
-const props = __props;
+const props = __props
+const props = defineProps({ count: { type: Number, validator: (v:number)=> v >= 0 } })
 
-const __returned__ = {
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
+const __returned__ = { props }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+
+return __returned__
+}
+
+})
 ```

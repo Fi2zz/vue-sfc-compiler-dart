@@ -8,15 +8,15 @@ export default {
   setup() {
     const count = ref(0)
     const doubled = computed(() => count.value * 2)
-
+    
     onMounted(() => {
       console.log('component mounted')
     })
-
+    
     function increment() {
       count.value++
     }
-
+    
     return {
       count,
       doubled,

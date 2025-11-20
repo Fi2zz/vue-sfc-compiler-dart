@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:vue_sfc_parser/sfc_compile_script.dart';
 import 'package:vue_sfc_parser/sfc_parser.dart';
+import 'package:vue_sfc_parser/sfc_descriptor.dart';
 
 class Sample {
   final String name;
@@ -38,12 +39,23 @@ Future<void> main() async {
       final buf = StringBuffer();
       buf.writeln('# ${s.name}\n');
       if (code.isNotEmpty) {
-        buf.writeln('```');
+        final lang = _detectLang(descriptor);
+        buf.writeln(lang.isEmpty ? '```' : '```$lang');
         buf.writeln(code);
         buf.writeln('```');
       }
       final out = File('samples_dart/${s.name}.md');
       await out.writeAsString(buf.toString());
+      // Write root file for vue_complex by parsed generation (no hardcode copy)
+      if (s.name == 'vue_complex') {
+        final rootOut = File('vue_complex_dart.md');
+        final md = StringBuffer();
+        final lang = _detectLang(descriptor);
+        md.writeln(lang.isEmpty ? '```' : '```$lang');
+        md.writeln(code);
+        md.writeln('```');
+        await rootOut.writeAsString(md.toString());
+      }
       // ignore: empty_catches
     } catch (e) {
       final out = File('samples_dart/${s.name}.md');
@@ -54,3 +66,21 @@ Future<void> main() async {
     }
   }
 }
+
+String _detectLang(SfcDescriptor d) {
+  final setupLang = d.scriptSetup?.lang?.trim();
+  final scriptLang = d.script?.lang?.trim();
+  final lang = setupLang?.isNotEmpty == true ? setupLang! : (scriptLang ?? '');
+  switch (lang) {
+    case 'ts':
+    case 'tsx':
+      return 'ts';
+    case 'js':
+    case 'jsx':
+      return 'js';
+    default:
+      return '';
+  }
+}
+
+// removed: line count padding helper

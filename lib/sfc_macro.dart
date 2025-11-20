@@ -1,343 +1,533 @@
 import 'ts_ast.dart';
-import 'ts_parser.dart';
+import 'swc_parser.dart';
+import 'swc_ast.dart';
 
-// Alias map for TypeScript type_alias_declaration -> its literal body (if any)
-
-final Map<AstNode, AstNode> _aliasNodes = {};
-final Map<String, AstNode> _aliasTypeLiteral = {};
-
-/* ---------- helpers: TS type arguments (top-level) ---------- */
-List<PropSignature> _extractTypeProps(AstNode typeArgs, String src) {
-  final out = <PropSignature>[];
-  final raw = src.substring(typeArgs.startByte, typeArgs.endByte).trim();
-  final singleIdent = RegExp(r'^<\s*[A-Za-z_$]\w*\s*>$').hasMatch(raw);
-  void walk(AstNode n) {
-    // property_signature nodes define fields in type literals
-    if (n.type == 'property_signature') {
-      String name = '';
-      String? type;
-      bool required = true;
-      for (final c in n.children) {
-        if (c.type == 'property_identifier' || c.type == 'identifier') {
-          name = src.substring(c.startByte, c.endByte);
-        } else if (c.type == 'type_annotation') {
-          final text = src.substring(c.startByte, c.endByte).trim();
-          // strip leading ':' in annotation
-          type = text.startsWith(':') ? text.substring(1).trim() : text;
-        } else if (c.type == '?') {
-          required = false;
-        }
-      }
-      // Fallback: detect optional marker via source text pattern '?:'
-      if (required) {
-        final sigText = src.substring(n.startByte, n.endByte);
-        if (RegExp(r'\?\s*:').hasMatch(sigText)) {
-          required = false;
-        }
-      }
-      if (name.isNotEmpty) {
-        out.add(PropSignature(name: name, type: type, required: required));
-      }
-      return; // done with this property signature
-    }
-    // index_signature, e.g. { [key: string]: any }
-    if (n.type == 'index_signature') {
-      String name = '[index]';
-      String? type;
-      for (final c in n.children) {
-        if (c.type == 'identifier') {
-          final id = src.substring(c.startByte, c.endByte);
-          name = '[$id]';
-        } else if (c.type == 'type_annotation') {
-          final text = src.substring(c.startByte, c.endByte).trim();
-          type = text.startsWith(':') ? text.substring(1).trim() : text;
-        }
-      }
-      out.add(PropSignature(name: name, type: type, required: true));
-      return;
-    }
-    // generic type literal containers
-    for (final ch in n.children) {
-      walk(ch);
-    }
-  }
-
-  // Resolve references like <Props> by looking up collected aliases
-  final refs = <String>[];
-  void collectRefs(AstNode n) {
-    if (n.type == 'type_identifier' || n.type == 'identifier') {
-      refs.add(src.substring(n.startByte, n.endByte));
-    }
-    for (final ch in n.children) {
-      collectRefs(ch);
-    }
-  }
-
-  collectRefs(typeArgs);
-  if (singleIdent) {
-    for (final r in refs) {
-      final alias = _aliasTypeLiteral[r];
-      if (alias != null) {
-        walk(alias);
-      }
-    }
-  }
-
-  // Also walk the raw type arguments to support inline literals <{ foo: string }>
-  walk(typeArgs);
-  return out;
+class MacrosParserResult {
+  final CompilationUnit compilationUnit;
+  final Module rootModule;
+  MacrosParserResult(this.compilationUnit, this.rootModule);
 }
 
-/* ==================== Converter ==================== */
+class Parser {
+  static MacrosParserResult parse(String content, {String language = 'ts'}) {
+    final sp = SwcParser();
+    final Module m = sp.parse(code: content, language: language);
+    final cu = _convertSwc(m, content);
+    return MacrosParserResult(cu, m);
+  }
+}
 
-CompilationUnit converter(AstNode root, String src) {
-  _aliasNodes.clear();
-  _aliasTypeLiteral.clear();
+CompilationUnit _convertSwc(Module m, String src) {
   final statements = <ExpressionStatement>[];
-  void walk(AstNode n) {
-    // collect call expressions anywhere
-    if (n.type == 'call_expression') {
-      final call = toCall(n, src);
-      if (call != null) {
-        statements.add(
-          ExpressionStatement(
-            startByte: n.startByte,
-            endByte: n.endByte,
-            text: src.substring(n.startByte, n.endByte),
-            expression: call,
-          ),
+  final alias = <String, List<PropSignature>>{};
+  for (final item in m.body) {
+    if (item is TSTypeAliasDecl) {
+      final props = <PropSignature>[];
+      for (final p in item.members) {
+        props.add(
+          PropSignature(name: p.key, type: p.typeAnn, required: !p.optional),
         );
       }
-    }
-    // collect type aliases for resolving type arguments
-    if (n.type == 'type_alias_declaration') {
-      String name = '';
-      AstNode? body;
-      for (final c in n.children) {
-        if (c.type == 'type_identifier' || c.type == 'identifier') {
-          name = src.substring(c.startByte, c.endByte);
-        } else if (c.type == 'type_literal' || c.type == 'object_type') {
-          body = c;
-        }
+      alias[item.id] = props;
+    } else if (item is TSInterfaceDecl) {
+      final props = <PropSignature>[];
+      for (final p in item.members) {
+        props.add(
+          PropSignature(name: p.key, type: p.typeAnn, required: !p.optional),
+        );
       }
-      _aliasNodes[n] = body ?? n;
-      if (name.isNotEmpty) _aliasTypeLiteral[name] = body ?? n;
-    }
-    // collect interfaces for resolving type arguments like <Props>
-    if (n.type == 'interface_declaration') {
-      String name = '';
-      AstNode? body;
-      for (final c in n.children) {
-        if (c.type == 'type_identifier' || c.type == 'identifier') {
-          name = src.substring(c.startByte, c.endByte);
-        } else if (c.type == 'interface_body' ||
-            c.type == 'object_type' ||
-            c.type == 'type_literal') {
-          body = c;
-        }
-      }
-      if (name.isNotEmpty) {
-        _aliasTypeLiteral[name] = body ?? n;
-      }
-    }
-    for (final c in n.children) {
-      walk(c);
+      alias[item.id] = props;
     }
   }
+  for (final item in m.body) {
+    if (item is VarDeclItem) {
+      final declText = src.substring(
+        item.node.start.clamp(0, src.length),
+        item.node.end.clamp(0, src.length),
+      );
 
-  walk(root);
+      BindingPattern? pat;
+      if (item.arrayPattern != null) {
+        final els = <ArrayBindingElement>[];
+        for (final e in item.arrayPattern!.elements) {
+          final id = e.name == null
+              ? null
+              : Identifier(
+                  startByte: item.node.start,
+                  endByte: item.node.end,
+                  text: e.name!,
+                );
+          final def = e.defaultText == null
+              ? null
+              : _parseSimpleExpression(
+                  e.defaultText!,
+                  item.node.start,
+                  item.node.end,
+                );
+          els.add(
+            ArrayBindingElement(
+              startByte: item.node.start,
+              endByte: item.node.end,
+              text: declText,
+              target: id,
+              defaultValue: def,
+              isRest: e.isRest,
+              index: e.index,
+            ),
+          );
+        }
+        pat = ArrayBindingPattern(
+          startByte: item.node.start,
+          endByte: item.node.end,
+          text: declText,
+          elements: els,
+          typeIndexMap: const [],
+          typeAnnotationText: item.arrayPattern!.patternTypeAnnText,
+        );
+      } else if (item.objectPattern != null) {
+        ObjectBindingPattern buildObj(SWCObjectBindingPattern op) {
+          final props = <ObjectBindingProperty>[];
+          for (final p in op.properties) {
+            final alias = p.alias == null
+                ? null
+                : Identifier(
+                    startByte: item.node.start,
+                    endByte: item.node.end,
+                    text: p.alias!,
+                  );
+            final def = p.defaultText == null
+                ? null
+                : _parseSimpleExpression(
+                    p.defaultText!,
+                    item.node.start,
+                    item.node.end,
+                  );
+            final nested = p.nested == null ? null : buildObj(p.nested!);
+            props.add(
+              ObjectBindingProperty(
+                startByte: item.node.start,
+                endByte: item.node.end,
+                text: declText,
+                key: p.key,
+                alias: alias,
+                defaultValue: def,
+                nested: nested,
+              ),
+            );
+          }
+          return ObjectBindingPattern(
+            startByte: item.node.start,
+            endByte: item.node.end,
+            text: declText,
+            properties: props,
+            typeKeyMap: const {},
+            typeAnnotationText: op.patternTypeAnnText,
+          );
+        }
+
+        pat = buildObj(item.objectPattern!);
+      }
+
+      final varDecl = VariableDeclaration(
+        item.initExpr,
+        startByte: item.node.start,
+        endByte: item.node.end,
+        text: declText,
+        name: item.nameExpr,
+        pattern: pat,
+        declKind: item.declKind,
+      );
+
+      statements.add(
+        ExpressionStatement(
+          startByte: item.node.start,
+          endByte: item.node.end,
+          text: declText,
+          expression: varDecl,
+        ),
+      );
+
+      // Deprecated VariableDeclarator path removed; unified VariableDeclaration only.
+    }
+
+    if (item is FnDeclItem) {
+      final declText = src.substring(
+        item.node.start.clamp(0, src.length),
+        item.node.end.clamp(0, src.length),
+      );
+      final nameId = Identifier(
+        startByte: item.node.start,
+        endByte: item.node.end,
+        text: item.name,
+      );
+      final varDecl = VariableDeclaration(
+        null,
+        startByte: item.node.start,
+        endByte: item.node.end,
+        text: declText,
+        name: nameId,
+        pattern: null,
+      );
+      statements.add(
+        ExpressionStatement(
+          startByte: item.node.start,
+          endByte: item.node.end,
+          text: declText,
+          expression: varDecl,
+        ),
+      );
+    }
+
+    if (item is ClassDeclItem) {
+      final declText = src.substring(
+        item.node.start.clamp(0, src.length),
+        item.node.end.clamp(0, src.length),
+      );
+      final nameId = Identifier(
+        startByte: item.node.start,
+        endByte: item.node.end,
+        text: item.name,
+      );
+      final varDecl = VariableDeclaration(
+        null,
+        startByte: item.node.start,
+        endByte: item.node.end,
+        text: declText,
+        name: nameId,
+        pattern: null,
+      );
+      statements.add(
+        ExpressionStatement(
+          startByte: item.node.start,
+          endByte: item.node.end,
+          text: declText,
+          expression: varDecl,
+        ),
+      );
+    }
+
+    if (item is CallExpr) {
+      final ident = item.calleeIdent ?? '';
+      final idExpr = Identifier(
+        startByte: item.node.start,
+        endByte: item.node.end,
+        text: ident,
+      );
+      final args = <Expression>[];
+      for (final a in item.args) {
+        final t = a.trim();
+        args.add(_parseSimpleExpression(t, item.node.start, item.node.end));
+      }
+      final argList = ArgumentList(
+        startByte: item.node.start,
+        endByte: item.node.end,
+        text: src.substring(
+          item.node.start.clamp(0, src.length),
+          item.node.end.clamp(0, src.length),
+        ),
+        arguments: args,
+      );
+      final fcall = FunctionCallExpression(
+        startByte: item.node.start,
+        endByte: item.node.end,
+        text: src.substring(
+          item.node.start.clamp(0, src.length),
+          item.node.end.clamp(0, src.length),
+        ),
+        methodName: idExpr,
+        argumentList: argList,
+        typeArgumentText: item.typeArgs == null
+            ? null
+            : '<${item.typeArgs!.join(', ')}>',
+        typeArgumentProps: ident == 'defineProps'
+            ? _extractTypePropsFromSwc(item.typeArgs, alias)
+            : const [],
+      );
+      statements.add(
+        ExpressionStatement(
+          startByte: item.node.start,
+          endByte: item.node.end,
+          text: fcall.text,
+          expression: fcall,
+        ),
+      );
+    }
+  }
   return CompilationUnit(
-    startByte: root.startByte,
-    endByte: root.endByte,
-    text: src.substring(root.startByte, root.endByte),
+    startByte: 0,
+    endByte: src.length,
+    text: src,
     statements: statements,
   );
 }
 
-FunctionCallExpression? toCall(AstNode node, String src) {
-  // Find identifier callee and arguments
-  AstNode? ident;
-  AstNode? typeArgs;
-  AstNode? args;
-  for (final c in node.children) {
-    if (c.type == 'identifier') ident = c;
-    if (c.type == 'type_arguments') typeArgs = c;
-    if (c.type == 'arguments') args = c;
+List<MapLiteralEntry> _parseObjectElements(String objText) {
+  final out = <MapLiteralEntry>[];
+  int depth = 0;
+  bool inStr = false;
+  String quote = '';
+  final parts = <String>[];
+  final buf = StringBuffer();
+  for (int i = 0; i < objText.length; i++) {
+    final ch = objText[i];
+    if (inStr) {
+      buf.write(ch);
+      if (ch == quote) inStr = false;
+      continue;
+    }
+    if (ch == '\'' || ch == '"') {
+      inStr = true;
+      quote = ch;
+      buf.write(ch);
+      continue;
+    }
+    if (ch == '{') {
+      depth++;
+      buf.write(ch);
+      continue;
+    }
+    if (ch == '}') {
+      depth--;
+      buf.write(ch);
+      continue;
+    }
+    if (ch == ',' && depth == 1) {
+      parts.add(buf.toString());
+      buf.clear();
+      continue;
+    }
+    buf.write(ch);
   }
-  if (ident == null || args == null) return null;
-  final methodName = Identifier(
-    startByte: ident.startByte,
-    endByte: ident.endByte,
-    text: src.substring(ident.startByte, ident.endByte),
-  );
-  final argList = toArgumentList(args, src);
-  final rawTypeText = typeArgs == null
-      ? null
-      : src.substring(typeArgs.startByte, typeArgs.endByte);
-  final List<PropSignature> typeProps = typeArgs == null
-      ? const <PropSignature>[]
-      : _extractTypeProps(typeArgs, src);
-  return FunctionCallExpression(
-    startByte: node.startByte,
-    endByte: node.endByte,
-    text: src.substring(node.startByte, node.endByte),
-    methodName: methodName,
-    argumentList: argList,
-    typeArgumentText: rawTypeText,
-    typeArgumentProps: typeProps,
-  );
+  if (buf.isNotEmpty) parts.add(buf.toString());
+  for (var p in parts) {
+    final kv = p.trim();
+    if (kv.isEmpty || kv == '{' || kv == '}') continue;
+    final idx = kv.indexOf(':');
+    if (idx <= 0) continue;
+    var key = kv.substring(0, idx).trim();
+    var val = kv.substring(idx + 1).trim();
+    if (key.startsWith("'") && key.endsWith("'")) {
+      key = key.substring(1, key.length - 1);
+    }
+    final vexp = _parseSimpleExpression(val.trim(), 0, 0);
+    out.add(
+      MapLiteralEntry(
+        startByte: 0,
+        endByte: 0,
+        text: kv,
+        keyText: key,
+        value: vexp,
+      ),
+    );
+  }
+  return out;
 }
 
-ArgumentList toArgumentList(AstNode args, String src) {
-  final list = <Expression>[];
-  for (final c in args.children) {
-    final e = toExpression(c, src);
-    if (e != null) list.add(e);
+Expression _parseSimpleExpression(String t, int start, int end) {
+  if (t == 'null') {
+    return NullLiteral(startByte: start, endByte: end, text: t);
   }
-  return ArgumentList(
-    startByte: args.startByte,
-    endByte: args.endByte,
-    text: src.substring(args.startByte, args.endByte),
-    arguments: list,
-  );
+  if (t == 'true' || t == 'false') {
+    return BooleanLiteral(
+      startByte: start,
+      endByte: end,
+      text: t,
+      value: t == 'true',
+    );
+  }
+  if (t.endsWith('n')) {
+    final body = t.substring(0, t.length - 1);
+    final n = num.tryParse(body);
+    if (n != null) {
+      return BigIntLiteral(
+        startByte: start,
+        endByte: end,
+        text: t,
+        value: BigInt.parse(body),
+      );
+    }
+  }
+  if ((t.isNotEmpty) && (num.tryParse(t) != null)) {
+    return NumberLiteral(
+      startByte: start,
+      endByte: end,
+      text: t,
+      value: num.parse(t),
+    );
+  }
+  if (t.startsWith('"') || t.startsWith('\'')) {
+    final sv = t.length >= 2 ? t.substring(1, t.length - 1) : t;
+    return StringLiteral(
+      startByte: start,
+      endByte: end,
+      text: t,
+      stringValue: sv,
+    );
+  }
+  if (t.startsWith('{') && t.endsWith('}')) {
+    final elements = _parseObjectElements(t);
+    return SetOrMapLiteral(
+      startByte: start,
+      endByte: end,
+      text: t,
+      elements: elements,
+    );
+  }
+  if (t.startsWith('[') && t.endsWith(']')) {
+    return ListLiteral(
+      startByte: start,
+      endByte: end,
+      text: t,
+      elements: const [],
+    );
+  }
+  return Identifier(startByte: start, endByte: end, text: t);
 }
 
-Expression? toExpression(AstNode n, String src) {
-  switch (n.type) {
-    case 'object':
-      return toObject(n, src);
-    case 'array':
-      return toArray(n, src);
-    case 'string':
-    case 'template_string':
-      final text = src.substring(n.startByte, n.endByte);
-      // strip quotes/backticks
-      final value = text.length >= 2
-          ? text.substring(1, text.length - 1)
-          : text;
-      return StringLiteral(
-        startByte: n.startByte,
-        endByte: n.endByte,
-        text: text,
-        stringValue: value,
-      );
-    case 'true':
-      return BooleanLiteral(
-        startByte: n.startByte,
-        endByte: n.endByte,
-        text: 'true',
-        value: true,
-      );
-    case 'false':
-      return BooleanLiteral(
-        startByte: n.startByte,
-        endByte: n.endByte,
-        text: 'false',
-        value: false,
-      );
-    case 'identifier':
-      return Identifier(
-        startByte: n.startByte,
-        endByte: n.endByte,
-        text: src.substring(n.startByte, n.endByte),
-      );
-    case 'call_expression':
-      return toCall(n, src);
+List<PropSignature> _extractTypePropsFromSwc(
+  List<String>? typeArgs,
+  Map<String, List<PropSignature>> alias,
+) {
+  final out = <PropSignature>[];
+  if (typeArgs == null || typeArgs.isEmpty) return out;
+  final raw = typeArgs.first.trim();
+  if (_isSimpleIdentifier(raw)) {
+    final props = alias[raw];
+    if (props != null) out.addAll(props);
+    return out;
   }
-  // Fallback: capture source text for unsupported nodes (e.g., arrow functions)
-  return RawExpression(
-    startByte: n.startByte,
-    endByte: n.endByte,
-    text: src.substring(n.startByte, n.endByte),
-  );
+  final body = _outerBracesBody(raw);
+  if (body == null) return out;
+  out.addAll(_parseTypeLiteralProps(body));
+  return out;
 }
 
-SetOrMapLiteral toObject(AstNode n, String src) {
-  final elements = <MapLiteralEntry>[];
-  for (final c in n.children) {
-    if (c.type == 'pair') {
-      String key = '';
-      bool gotKey = false;
-      Expression? value;
-      for (final p in c.children) {
-        if (!gotKey &&
-            (p.type == 'property_identifier' || p.type == 'string')) {
-          key = src.substring(p.startByte, p.endByte);
-          if (p.type == 'string' && key.length >= 2) {
-            key = key.substring(1, key.length - 1);
-          }
-          gotKey = true;
-          continue;
-        }
-        final v = toExpression(p, src);
-        if (v != null) value = v;
-      }
-      if (key.isNotEmpty && value != null) {
-        elements.add(
-          MapLiteralEntry(
-            startByte: c.startByte,
-            endByte: c.endByte,
-            text: src.substring(c.startByte, c.endByte),
-            keyText: key,
-            value: value,
-          ),
-        );
-      }
-    } else if (c.type == 'shorthand_property_identifier' ||
-        c.type == 'identifier') {
-      final key = src.substring(c.startByte, c.endByte);
-      final value = toExpression(c, src);
-      if (value != null && key.isNotEmpty) {
-        elements.add(
-          MapLiteralEntry(
-            startByte: c.startByte,
-            endByte: c.endByte,
-            text: src.substring(c.startByte, c.endByte),
-            keyText: key,
-            value: value,
-          ),
-        );
+bool _isSimpleIdentifier(String s) {
+  if (s.isEmpty) return false;
+  final c0 = s.codeUnitAt(0);
+  final isAlpha =
+      (c0 >= 65 && c0 <= 90) || (c0 >= 97 && c0 <= 122) || c0 == 95 || c0 == 36;
+  if (!isAlpha) return false;
+  for (int i = 1; i < s.length; i++) {
+    final c = s.codeUnitAt(i);
+    final ok =
+        (c >= 65 && c <= 90) ||
+        (c >= 97 && c <= 122) ||
+        (c >= 48 && c <= 57) ||
+        c == 95 ||
+        c == 36;
+    if (!ok) return false;
+  }
+  return true;
+}
+
+String? _outerBracesBody(String s) {
+  int start = -1;
+  int end = -1;
+  int depth = 0;
+  for (int i = 0; i < s.length; i++) {
+    final ch = s[i];
+    if (ch == '{') {
+      if (depth == 0) start = i + 1;
+      depth++;
+    } else if (ch == '}') {
+      depth--;
+      if (depth == 0) {
+        end = i;
+        break;
       }
     }
   }
-  return SetOrMapLiteral(
-    startByte: n.startByte,
-    endByte: n.endByte,
-    text: src.substring(n.startByte, n.endByte),
-    elements: elements,
-  );
+  if (start >= 0 && end >= start) return s.substring(start, end);
+  return null;
 }
 
-ListLiteral toArray(AstNode n, String src) {
-  final items = <Expression>[];
-  for (final c in n.children) {
-    final e = toExpression(c, src);
-    if (e != null) items.add(e);
+List<PropSignature> _parseTypeLiteralProps(String body) {
+  final out = <PropSignature>[];
+  int i = 0;
+  while (i < body.length) {
+    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) i++;
+    if (i >= body.length) break;
+    final nameStart = i;
+    while (i < body.length && _isIdentChar(body.codeUnitAt(i))) i++;
+    final name = body.substring(nameStart, i);
+    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) i++;
+    bool required = true;
+    if (i < body.length && body[i] == '?') {
+      required = false;
+      i++;
+      while (i < body.length && _isWhitespace(body.codeUnitAt(i))) i++;
+    }
+    if (i >= body.length || body[i] != ':') break;
+    i++;
+    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) i++;
+    final typeStart = i;
+    int depthPar = 0, depthBrack = 0, depthAngle = 0;
+    bool inStr = false;
+    String quote = '';
+    while (i < body.length) {
+      final ch = body[i];
+      if (inStr) {
+        if (ch == quote) inStr = false;
+        i++;
+        continue;
+      }
+      if (ch == '\'' || ch == '"') {
+        inStr = true;
+        quote = ch;
+        i++;
+        continue;
+      }
+      if (ch == '(') {
+        depthPar++;
+        i++;
+        continue;
+      }
+      if (ch == ')') {
+        depthPar--;
+        i++;
+        continue;
+      }
+      if (ch == '[') {
+        depthBrack++;
+        i++;
+        continue;
+      }
+      if (ch == ']') {
+        depthBrack--;
+        i++;
+        continue;
+      }
+      if (ch == '<') {
+        depthAngle++;
+        i++;
+        continue;
+      }
+      if (ch == '>') {
+        depthAngle--;
+        i++;
+        continue;
+      }
+      if (ch == ';' && depthPar == 0 && depthBrack == 0 && depthAngle == 0) {
+        break;
+      }
+      i++;
+    }
+    final typeText = body.substring(typeStart, i).trim();
+    out.add(PropSignature(name: name, type: typeText, required: required));
+    if (i < body.length && body[i] == ';') i++;
   }
-  return ListLiteral(
-    startByte: n.startByte,
-    endByte: n.endByte,
-    text: src.substring(n.startByte, n.endByte),
-    elements: items,
-  );
+  return out;
 }
 
-class MacrosParserResult {
-  final CompilationUnit compilationUnit;
-  final AstNode rootAst;
-  MacrosParserResult(this.compilationUnit, this.rootAst);
+bool _isWhitespace(int c) {
+  return c == 32 || c == 9 || c == 10 || c == 13;
 }
 
-class MacrosParser {
-  // 解析 <script setup> 内容，输出 Result（含 Setup 聚合）
-  static MacrosParserResult parse(String content, {String language = 'ts'}) {
-    final parser = TSParser();
-    final AstNode root = parser.parse(
-      code: content,
-      language: language,
-      namedOnly: true,
-    );
-    final compilationUnit = converter(root, content);
-    return MacrosParserResult(compilationUnit, root);
-  }
+bool _isIdentChar(int c) {
+  return (c >= 65 && c <= 90) ||
+      (c >= 97 && c <= 122) ||
+      (c >= 48 && c <= 57) ||
+      c == 95 ||
+      c == 36;
 }

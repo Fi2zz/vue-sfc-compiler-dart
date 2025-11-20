@@ -8,3 +8,4 @@
 2 | defineOptions() x 2
 | ^^^^^^^^^^^^^^^^^^^
 3 | </script>
+
