@@ -1,32 +1,25 @@
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 
 // import 'package:vue_sfc_parser/result.dart';
-import 'ts_ast.dart';
-import 'swc_ast.dart';
+import 'sfc_ast.dart';
 
-class SetupResult {
-  final CompilationUnit compilation;
-  final Module rootModule;
+class Prepared {
+  final CompilationUnit setup;
+  final CompilationUnit? normal;
+  // final Module setupModule;
+  // final Module? normalModule;
   final String source;
   final String filename;
-  // Normal <script> default export object text to merge into component options
-  final String? normalScriptSpreadText;
-  // Normal <script> import lines to include in output
-  final List<String>? normalScriptImportLines;
   // <script setup> import lines to include in output
-  final List<String>? setupImportLines;
   final String language;
   String get name => _inferComponentName(filename);
   bool get isTypescript => language == 'ts' || language == 'tsx';
-  SetupResult({
+  Prepared({
+    this.normal,
     required this.language,
-    required this.compilation,
-    required this.rootModule,
+    required this.setup,
     required this.source,
     required this.filename,
-    this.normalScriptSpreadText,
-    this.normalScriptImportLines,
-    this.setupImportLines,
   });
 }
 

@@ -1,4 +1,3 @@
-import 'package:vue_sfc_parser/block.dart';
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 import 'package:vue_sfc_parser/sfc_error.dart';
 

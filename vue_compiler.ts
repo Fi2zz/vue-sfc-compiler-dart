@@ -6,6 +6,10 @@ import { compileScript, parseToSFCDescriptor } from "./compiler.js";
 
 const descriptor = parseToSFCDescriptor(vue_complex, filename);
 const script = compileScript(descriptor, filename);
+
+// console.log(descriptor.script);
+// console.log(descriptor.scriptSetup);
+
 if (script.type == "error") {
   outfile.write(`${script.error}`);
   console.log(script.error);

@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:vue_sfc_parser/ts_ast.dart';
+import 'package:vue_sfc_parser/sfc_ast.dart';
 import 'package:vue_sfc_parser/swc_ast.dart' as swc;
 
 void main() {
@@ -13,11 +13,19 @@ void main() {
       expect(id.name, 'defineProps');
     });
     test('member call', () {
-      final id = Identifier(startByte: 0, endByte: 0, text: 'Vue.defineEmits<{}>()');
+      final id = Identifier(
+        startByte: 0,
+        endByte: 0,
+        text: 'Vue.defineEmits<{}>()',
+      );
       expect(id.name, 'defineEmits');
     });
     test('chained call uses current call', () {
-      final id = Identifier(startByte: 0, endByte: 0, text: 'obj.method().another()');
+      final id = Identifier(
+        startByte: 0,
+        endByte: 0,
+        text: 'obj.method().another()',
+      );
       expect(id.name, 'method');
     });
     test('property access', () {
@@ -36,16 +44,16 @@ void main() {
               'start': 0,
               'end': 10,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 10}
+              'loc_end': {'line': 1, 'column': 10},
             },
             'callee_ident': null,
             'args': [],
             'type_args': null,
-            'text': 'Vue.defineProps()'
-          }
-        ]
+            'text': 'Vue.defineProps()',
+          },
+        ],
       };
-      final m = swc.moduleFromJson(json);
+      final m = swc.swcModuleFromJson(json);
       final item = m.body.first as swc.CallExpr;
       expect(item.calleeIdent, 'defineProps');
     });

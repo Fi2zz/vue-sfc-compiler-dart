@@ -10,20 +10,20 @@ export default {
       name: '',
       age: 0
     })
-
+    
     const description = computed(() => {
       return `${state.name} is ${state.age} years old`
     })
-
+    
     watch(() => state.age, (newAge, oldAge) => {
       console.log(`age changed from ${oldAge} to ${newAge}`)
     })
-
+    
     function updateProfile(name, age) {
       state.name = name
       state.age = age
     }
-
+    
     return {
       state,
       description,
@@ -32,3 +32,4 @@ export default {
   }
 }
 ```
+

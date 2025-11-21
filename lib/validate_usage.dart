@@ -1,7 +1,7 @@
 import 'package:vue_sfc_parser/generate_code_frame.dart';
 import 'package:vue_sfc_parser/sfc_error.dart';
 import 'package:vue_sfc_parser/sfc_script_codegen.dart';
-import 'package:vue_sfc_parser/ts_ast.dart';
+import 'package:vue_sfc_parser/sfc_ast.dart';
 
 void validateUsage({
   required CompilationUnit unit,

@@ -16,20 +16,20 @@ export default {
   setup() {
     const productService = new ProductService()
     const { cart, addToCart } = useCart()
-
+    
     const products = ref<Product[]>([])
     const loading = ref(false)
-
+    
     const totalValue = computed(() => {
       return products.value.reduce((sum, product) => {
         return sum + product.price
       }, 0)
     })
-
+    
     const formattedTotal = computed(() => {
       return formatCurrency(totalValue.value)
     })
-
+    
     async function loadProducts() {
       loading.value = true
       try {
@@ -39,7 +39,7 @@ export default {
         loading.value = false
       }
     }
-
+    
     function handleAddToCart(product: Product) {
       const cartItem: CartItem = {
         id: product.id,
@@ -49,11 +49,11 @@ export default {
       }
       addToCart(cartItem)
     }
-
+    
     onMounted(() => {
       loadProducts()
     })
-
+    
     return {
       products,
       cart,
@@ -65,3 +65,4 @@ export default {
   }
 }
 ```
+

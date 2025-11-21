@@ -17,3 +17,4 @@ export default class SecondComponent extends Vue {
   @Prop(Number) count!: number
 }
 ```
+

@@ -21,3 +21,4 @@ export default {
   template: '<div>{{ label }}</div>'
 }
 ```
+

@@ -1,4 +1,4 @@
-import 'ts_ast.dart';
+import 'sfc_ast.dart';
 
 class Loc {
   final int line;
@@ -17,14 +17,98 @@ class Node {
     required this.locStart,
     required this.locEnd,
   });
+
+  int get lineNumber => locStart.line;
+  int get columnNumber => locStart.column;
+  int get endLineNumber => locEnd.line;
+  int get endColumnNumber => locEnd.column;
 }
 
 sealed class ModuleItem {}
 
+sealed class SwcImportSpecifier {}
+
+class SwcImportDefaultSpecifier extends SwcImportSpecifier {
+  final Node span;
+  final String local;
+  SwcImportDefaultSpecifier({required this.span, required this.local});
+}
+
+class SwcImportNamespaceSpecifier extends SwcImportSpecifier {
+  final Node span;
+  final String local;
+  SwcImportNamespaceSpecifier({required this.span, required this.local});
+}
+
+class SwcImportNamedSpecifier extends SwcImportSpecifier {
+  final Node span;
+  final String local;
+  final String? importedIdent;
+  final String? importedStr;
+  final String? importKind;
+  SwcImportNamedSpecifier({
+    required this.span,
+    required this.local,
+    this.importedIdent,
+    this.importedStr,
+    this.importKind,
+  });
+}
+
 class ImportDecl extends ModuleItem {
   final Node node;
   final String src;
-  ImportDecl({required this.node, required this.src});
+  final List<SwcImportSpecifier> specifiers;
+  ImportDecl({required this.node, required this.src, required this.specifiers});
+}
+
+sealed class SwcExportSpecifier {}
+
+class SwcExportNamedSpecifier extends SwcExportSpecifier {
+  final Node span;
+  final String? localIdent;
+  final String? exportedIdent;
+  final String? exportedStr;
+  final String? exportKind;
+  SwcExportNamedSpecifier({
+    required this.span,
+    this.localIdent,
+    this.exportedIdent,
+    this.exportedStr,
+    this.exportKind,
+  });
+}
+
+class SwcExportNamespaceAlias extends SwcExportSpecifier {
+  final Node span;
+  final String exportedIdent;
+  SwcExportNamespaceAlias({required this.span, required this.exportedIdent});
+}
+
+class ExportNamedDecl extends ModuleItem {
+  final Node node;
+  final List<SwcExportSpecifier> specifiers;
+  final String? src;
+  ExportNamedDecl({required this.node, required this.specifiers, this.src});
+}
+
+class ExportAllDecl extends ModuleItem {
+  final Node node;
+  final String src;
+  final String? exportedIdent;
+  ExportAllDecl({required this.node, required this.src, this.exportedIdent});
+}
+
+class ExportFnDeclItem extends ModuleItem {
+  final Node node;
+  final String name;
+  ExportFnDeclItem({required this.node, required this.name});
+}
+
+class ExportClassDeclItem extends ModuleItem {
+  final Node node;
+  final String name;
+  ExportClassDeclItem({required this.node, required this.name});
 }
 
 class ExportDefaultExpr extends ModuleItem {
@@ -44,12 +128,20 @@ class CallExpr extends ModuleItem {
   final List<String> args;
   final List<String>? typeArgs;
   final String? text;
+  final String? typeArgText;
+  final List<String>? typeArgKinds;
+  final List<String>? typeRefIdents;
+  final List<List<TSPropertySignature>>? typeLiteralProps;
   CallExpr({
     required this.node,
     this.calleeIdent,
     required this.args,
     this.typeArgs,
     this.text,
+    this.typeArgText,
+    this.typeArgKinds,
+    this.typeRefIdents,
+    this.typeLiteralProps,
   });
 }
 
@@ -138,13 +230,38 @@ class FnDeclItem extends ModuleItem {
   final Node node;
   final String name;
   final String? text;
-  FnDeclItem({required this.node, required this.name, this.text});
+  final bool? isAsync;
+  final bool? isGenerator;
+  final List<SwcFnParam>? params;
+  final String? returnTypeText;
+  FnDeclItem({required this.node, required this.name, this.text, this.isAsync, this.isGenerator, this.params, this.returnTypeText});
 }
 
 class ClassDeclItem extends ModuleItem {
   final Node node;
   final String name;
-  ClassDeclItem({required this.node, required this.name});
+  final String? superClass;
+  final List<String>? implements;
+  final List<String>? decorators;
+  final List<SwcClassMember>? members;
+  ClassDeclItem({required this.node, required this.name, this.superClass, this.implements, this.decorators, this.members});
+}
+
+class SwcFnParam {
+  final String? name;
+  final String? defaultText;
+  final bool isRest;
+  final String? typeAnnText;
+  SwcFnParam({this.name, this.defaultText, required this.isRest, this.typeAnnText});
+}
+
+class SwcClassMember {
+  final String kind; // Constructor | Method | Getter | Setter | Property | StaticBlock
+  final bool? isStatic;
+  final bool? isAsync;
+  final bool? isGenerator;
+  final String? key;
+  SwcClassMember({required this.kind, this.isStatic, this.isAsync, this.isGenerator, this.key});
 }
 
 class TSDeclareFunctionItem extends ModuleItem {
@@ -168,6 +285,66 @@ class TSModuleBlockItem extends ModuleItem {
 class Module {
   final List<ModuleItem> body;
   Module({required this.body});
+}
+
+String nodeLocationString(Node n) {
+  return '${n.lineNumber}:${n.columnNumber}-${n.endLineNumber}:${n.endColumnNumber}';
+}
+
+String printNodeWithLocation(ModuleItem it) {
+  if (it is ImportDecl) {
+    return 'Import ${it.src} @ ' + nodeLocationString(it.node);
+  } else if (it is ExportNamedDecl) {
+    return 'ExportNamed @ ' + nodeLocationString(it.node);
+  } else if (it is ExportAllDecl) {
+    return 'ExportAll ${it.src} @ ' + nodeLocationString(it.node);
+  } else if (it is ExportDefaultExpr) {
+    return 'ExportDefaultExpr @ ' + nodeLocationString(it.node);
+  } else if (it is ExportDefaultDecl) {
+    return 'ExportDefaultDecl @ ' + nodeLocationString(it.node);
+  } else if (it is ExportFnDeclItem) {
+    return 'ExportFn ${it.name} @ ' + nodeLocationString(it.node);
+  } else if (it is ExportClassDeclItem) {
+    return 'ExportClass ${it.name} @ ' + nodeLocationString(it.node);
+  } else if (it is CallExpr) {
+    return 'Call ${it.calleeIdent ?? ''} @ ' + nodeLocationString(it.node);
+  } else if (it is VarDeclItem) {
+    return 'Var ${it.nameExpr.name} @ ' + nodeLocationString(it.node);
+  } else if (it is FnDeclItem) {
+    return 'Fn ${it.name} @ ' + nodeLocationString(it.node);
+  } else if (it is ClassDeclItem) {
+    return 'Class ${it.name} @ ' + nodeLocationString(it.node);
+  } else if (it is TSDeclareFunctionItem) {
+    return 'TSDeclareFn ${it.name} @ ' + nodeLocationString(it.node);
+  } else if (it is StaticBlockItem) {
+    return 'StaticBlock @ ' + nodeLocationString(it.node);
+  } else if (it is TSModuleBlockItem) {
+    return 'TSModuleBlock @ ' + nodeLocationString(it.node);
+  }
+  return 'Node @ unknown';
+}
+
+List<ModuleItem> findItemsByStartLine(Module m, int line) {
+  final out = <ModuleItem>[];
+  for (final it in m.body) {
+    Node? n;
+    if (it is ImportDecl) n = it.node;
+    else if (it is ExportNamedDecl) n = it.node;
+    else if (it is ExportAllDecl) n = it.node;
+    else if (it is ExportDefaultExpr) n = it.node;
+    else if (it is ExportDefaultDecl) n = it.node;
+    else if (it is ExportFnDeclItem) n = it.node;
+    else if (it is ExportClassDeclItem) n = it.node;
+    else if (it is CallExpr) n = it.node;
+    else if (it is VarDeclItem) n = it.node;
+    else if (it is FnDeclItem) n = it.node;
+    else if (it is ClassDeclItem) n = it.node;
+    else if (it is TSDeclareFunctionItem) n = it.node;
+    else if (it is StaticBlockItem) n = it.node;
+    else if (it is TSModuleBlockItem) n = it.node;
+    if (n != null && n.lineNumber == line) out.add(it);
+  }
+  return out;
 }
 
 bool isSwcClassItem(ModuleItem it) {
@@ -342,9 +519,7 @@ List<SwcDeclaratorAnalysis> analyzeSwcDeclarators(Module m) {
         SwcDeclaratorAnalysis(
           declarationType: 'function_declaration',
           identifier: it.name,
-          initDetails: {
-            'text': it.text,
-          },
+          initDetails: {'text': it.text},
           locStart: it.node.locStart,
           locEnd: it.node.locEnd,
         ),
@@ -400,7 +575,7 @@ Node _nodeFromJson(Map<String, dynamic> m) {
   );
 }
 
-Module moduleFromJson(Map<String, dynamic> m) {
+Module swcModuleFromJson(Map<String, dynamic> m) {
   final items = <ModuleItem>[];
   final body = m['body'] as List<dynamic>? ?? const [];
   for (final it in body) {
@@ -408,14 +583,100 @@ Module moduleFromJson(Map<String, dynamic> m) {
     final t = mm['type'] as String;
     switch (t) {
       case 'ImportDeclaration':
+        final specs = <SwcImportSpecifier>[];
+        for (final s in (mm['specifiers'] as List<dynamic>? ?? const [])) {
+          final sm = s as Map<String, dynamic>;
+          final kind = sm['kind'] as String;
+          switch (kind) {
+            case 'Default':
+              specs.add(
+                SwcImportDefaultSpecifier(
+                  span: _nodeFromJson(sm['span']),
+                  local: sm['local'] as String,
+                ),
+              );
+              break;
+            case 'Namespace':
+              specs.add(
+                SwcImportNamespaceSpecifier(
+                  span: _nodeFromJson(sm['span']),
+                  local: sm['local'] as String,
+                ),
+              );
+              break;
+            case 'Named':
+              specs.add(
+                SwcImportNamedSpecifier(
+                  span: _nodeFromJson(sm['span']),
+                  local: sm['local'] as String,
+                  importedIdent: sm['imported_ident'] as String?,
+                  importedStr: sm['imported_str'] as String?,
+                  importKind: sm['import_kind'] as String?,
+                ),
+              );
+              break;
+          }
+        }
         items.add(
-          ImportDecl(node: _nodeFromJson(mm), src: mm['src'] as String),
+          ImportDecl(
+            node: _nodeFromJson(mm),
+            src: mm['src'] as String,
+            specifiers: specs,
+          ),
         );
         break;
-      case 'ExportDefaultDeclaration':
+      case 'ExportNamedDeclaration':
+        final specs = <SwcExportSpecifier>[];
+        for (final s in (mm['specifiers'] as List<dynamic>? ?? const [])) {
+          final sm = s as Map<String, dynamic>;
+          final kind = sm['kind'] as String;
+          switch (kind) {
+            case 'Named':
+              specs.add(
+                SwcExportNamedSpecifier(
+                  span: _nodeFromJson(sm['span']),
+                  localIdent: sm['local_ident'] as String?,
+                  exportedIdent: sm['exported_ident'] as String?,
+                  exportedStr: sm['exported_str'] as String?,
+                  exportKind: sm['export_kind'] as String?,
+                ),
+              );
+              break;
+            case 'NamespaceAlias':
+              specs.add(
+                SwcExportNamespaceAlias(
+                  span: _nodeFromJson(sm['span']),
+                  exportedIdent: sm['exported_ident'] as String,
+                ),
+              );
+              break;
+          }
+        }
         items.add(
-          ExportDefaultDecl(node: _nodeFromJson(mm)),
+          ExportNamedDecl(
+            node: _nodeFromJson(mm),
+            specifiers: specs,
+            src: mm['source'] as String?,
+          ),
         );
+        break;
+      case 'ExportAllDeclaration':
+        items.add(
+          ExportAllDecl(
+            node: _nodeFromJson(mm),
+            src: mm['src'] as String,
+            exportedIdent: mm['exported_ident'] as String?,
+          ),
+        );
+        break;
+      case 'ExportDeclFn':
+        items.add(ExportFnDeclItem(node: _nodeFromJson(mm), name: mm['name'] as String));
+        break;
+      case 'ExportDeclClass':
+        items.add(ExportClassDeclItem(node: _nodeFromJson(mm), name: mm['name'] as String));
+        break;
+      case 'ExportDefaultDeclaration':
+        items.add(ExportDefaultDecl(node: _nodeFromJson(mm)));
         break;
       case 'CallExpression':
         final args = (mm['args'] as List<dynamic>? ?? const [])
@@ -430,6 +691,35 @@ Module moduleFromJson(Map<String, dynamic> m) {
         if (callee == null || callee.isEmpty) {
           callee = _extractCalleeName(mm['text'] as String?);
         }
+        final typeArgText = mm['type_argument_text'] as String?;
+        List<String>? typeArgKinds;
+        if (mm['type_arg_kinds'] != null) {
+          typeArgKinds = (mm['type_arg_kinds'] as List<dynamic>)
+              .map((e) => e as String)
+              .toList();
+        }
+        List<String>? typeRefIdents;
+        if (mm['type_ref_idents'] != null) {
+          typeRefIdents = (mm['type_ref_idents'] as List<dynamic>)
+              .map((e) => e as String)
+              .toList();
+        }
+        List<List<TSPropertySignature>>? typeLiteralProps;
+        if (mm['type_literal_props'] != null) {
+          final outer = (mm['type_literal_props'] as List<dynamic>);
+          typeLiteralProps = outer.map((lst) {
+            final xs = lst as List<dynamic>;
+            return xs
+                .map(
+                  (pm) => TSPropertySignature(
+                    key: (pm as Map<String, dynamic>)['key'] as String,
+                    typeAnn: pm['type_ann'] as String?,
+                    optional: pm['optional'] as bool? ?? false,
+                  ),
+                )
+                .toList();
+          }).toList();
+        }
         items.add(
           CallExpr(
             node: _nodeFromJson(mm),
@@ -437,6 +727,10 @@ Module moduleFromJson(Map<String, dynamic> m) {
             args: args,
             typeArgs: typeArgs,
             text: mm['text'] as String?,
+            typeArgText: typeArgText,
+            typeArgKinds: typeArgKinds,
+            typeRefIdents: typeRefIdents,
+            typeLiteralProps: typeLiteralProps,
           ),
         );
         break;
@@ -525,6 +819,7 @@ Module moduleFromJson(Map<String, dynamic> m) {
               patternTypeAnnText: op['pattern_type_ann_text'] as String?,
             );
           }
+
           if (mm['object_pattern'] != null) {
             objPat = parseObjPat(mm['object_pattern'] as Map<String, dynamic>);
           }
@@ -578,18 +873,53 @@ Module moduleFromJson(Map<String, dynamic> m) {
         }
         break;
       case 'FunctionDeclaration':
+        List<SwcFnParam>? params;
+        if (mm['params'] != null) {
+          params = (mm['params'] as List<dynamic>).map((p) {
+            final pm = p as Map<String, dynamic>;
+            return SwcFnParam(
+              name: pm['name'] as String?,
+              defaultText: pm['default_text'] as String?,
+              isRest: pm['is_rest'] as bool? ?? false,
+              typeAnnText: pm['type_ann_text'] as String?,
+            );
+          }).toList();
+        }
         items.add(
           FnDeclItem(
             node: _nodeFromJson(mm),
             name: mm['name'] as String,
+            text: mm['text'] as String?,
+            isAsync: mm['async'] as bool?,
+            isGenerator: mm['generator'] as bool?,
+            params: params,
+            returnTypeText: mm['return_type'] as String?,
           ),
         );
         break;
       case 'ClassDeclaration':
+        List<SwcClassMember>? members;
+        if (mm['members'] != null) {
+          members = (mm['members'] as List<dynamic>).map((m) {
+            final mmx = m as Map<String, dynamic>;
+            final kind = mmx['kind'] as String;
+            return SwcClassMember(
+              kind: kind,
+              isStatic: mmx['is_static'] as bool?,
+              isAsync: mmx['async'] as bool?,
+              isGenerator: mmx['generator'] as bool?,
+              key: mmx['key'] as String?,
+            );
+          }).toList();
+        }
         items.add(
           ClassDeclItem(
             node: _nodeFromJson(mm),
             name: mm['name'] as String,
+            superClass: mm['super_class'] as String?,
+            implements: mm['implements'] == null ? null : (mm['implements'] as List<dynamic>).map((e) => e as String).toList(),
+            decorators: mm['decorators'] == null ? null : (mm['decorators'] as List<dynamic>).map((e) => e as String).toList(),
+            members: members,
           ),
         );
         break;
@@ -602,8 +932,90 @@ Module moduleFromJson(Map<String, dynamic> m) {
         );
         break;
       case 'ImportDecl':
+        final specs = <SwcImportSpecifier>[];
+        for (final s in (mm['specifiers'] as List<dynamic>? ?? const [])) {
+          final sm = s as Map<String, dynamic>;
+          final kind = sm['kind'] as String;
+          switch (kind) {
+            case 'Default':
+              specs.add(
+                SwcImportDefaultSpecifier(
+                  span: _nodeFromJson(sm['span']),
+                  local: sm['local'] as String,
+                ),
+              );
+              break;
+            case 'Namespace':
+              specs.add(
+                SwcImportNamespaceSpecifier(
+                  span: _nodeFromJson(sm['span']),
+                  local: sm['local'] as String,
+                ),
+              );
+              break;
+            case 'Named':
+              specs.add(
+                SwcImportNamedSpecifier(
+                  span: _nodeFromJson(sm['span']),
+                  local: sm['local'] as String,
+                  importedIdent: sm['imported_ident'] as String?,
+                  importedStr: sm['imported_str'] as String?,
+                  importKind: sm['import_kind'] as String?,
+                ),
+              );
+              break;
+          }
+        }
         items.add(
-          ImportDecl(node: _nodeFromJson(mm['span']), src: mm['src'] as String),
+          ImportDecl(
+            node: _nodeFromJson(mm['span']),
+            src: mm['src'] as String,
+            specifiers: specs,
+          ),
+        );
+        break;
+      case 'ExportNamedDecl':
+        final specs = <SwcExportSpecifier>[];
+        for (final s in (mm['specifiers'] as List<dynamic>? ?? const [])) {
+          final sm = s as Map<String, dynamic>;
+          final kind = sm['kind'] as String;
+          switch (kind) {
+            case 'Named':
+              specs.add(
+                SwcExportNamedSpecifier(
+                  span: _nodeFromJson(sm['span']),
+                  localIdent: sm['local_ident'] as String?,
+                  exportedIdent: sm['exported_ident'] as String?,
+                  exportedStr: sm['exported_str'] as String?,
+                  exportKind: sm['export_kind'] as String?,
+                ),
+              );
+              break;
+            case 'NamespaceAlias':
+              specs.add(
+                SwcExportNamespaceAlias(
+                  span: _nodeFromJson(sm['span']),
+                  exportedIdent: sm['exported_ident'] as String,
+                ),
+              );
+              break;
+          }
+        }
+        items.add(
+          ExportNamedDecl(
+            node: _nodeFromJson(mm['span']),
+            specifiers: specs,
+            src: mm['src'] as String?,
+          ),
+        );
+        break;
+      case 'ExportAllDecl':
+        items.add(
+          ExportAllDecl(
+            node: _nodeFromJson(mm['span']),
+            src: mm['src'] as String,
+            exportedIdent: mm['exported_ident'] as String?,
+          ),
         );
         break;
       case 'ExportDefaultExpr':
@@ -630,6 +1042,35 @@ Module moduleFromJson(Map<String, dynamic> m) {
         if (callee == null || callee.isEmpty) {
           callee = _extractCalleeName(mm['text'] as String?);
         }
+        final typeArgText = mm['type_argument_text'] as String?;
+        List<String>? typeArgKinds;
+        if (mm['type_arg_kinds'] != null) {
+          typeArgKinds = (mm['type_arg_kinds'] as List<dynamic>)
+              .map((e) => e as String)
+              .toList();
+        }
+        List<String>? typeRefIdents;
+        if (mm['type_ref_idents'] != null) {
+          typeRefIdents = (mm['type_ref_idents'] as List<dynamic>)
+              .map((e) => e as String)
+              .toList();
+        }
+        List<List<TSPropertySignature>>? typeLiteralProps;
+        if (mm['type_literal_props'] != null) {
+          final outer = (mm['type_literal_props'] as List<dynamic>);
+          typeLiteralProps = outer.map((lst) {
+            final xs = lst as List<dynamic>;
+            return xs
+                .map(
+                  (pm) => TSPropertySignature(
+                    key: (pm as Map<String, dynamic>)['key'] as String,
+                    typeAnn: pm['type_ann'] as String?,
+                    optional: pm['optional'] as bool? ?? false,
+                  ),
+                )
+                .toList();
+          }).toList();
+        }
         items.add(
           CallExpr(
             node: _nodeFromJson(mm['span']),
@@ -637,6 +1078,10 @@ Module moduleFromJson(Map<String, dynamic> m) {
             args: args,
             typeArgs: typeArgs,
             text: mm['text'] as String?,
+            typeArgText: typeArgText,
+            typeArgKinds: typeArgKinds,
+            typeRefIdents: typeRefIdents,
+            typeLiteralProps: typeLiteralProps,
           ),
         );
         break;

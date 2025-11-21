@@ -12,9 +12,18 @@ import {
   defineAsyncComponent,
   useSlots,
   useAttrs,
+  unref as _unref,
 } from "vue";
 
+// import * as bug from "vue";
+//@ts-ignore
+// import vue from "vue";
 function hellow() {}
+
+const world = () => {};
+const world2 = function () {};
+const world3 = function named() {};
+// export { hellow };
 
 defineOptions({ name: "VueComplex", inheritAttrs: false });
 
@@ -30,15 +39,15 @@ type Item = { id: number; label: string };
 //   config?: { theme: "light" | "dark" };
 // }>();
 
-// const $props = withDefaults(
-//   defineProps<{
-//     title: string;
-//     count?: number;
-//     items: Item[];
-//     config?: { theme: "light" | "dark" };
-//   }>(),
-//   { items: () => [], count: 0, title: "Helloworld" }
-// );
+const $props = withDefaults(
+  defineProps<{
+    title: string;
+    count?: number;
+    items: Item[];
+    config?: { theme: "light" | "dark" };
+  }>(),
+  { items: () => [], count: 0, title: "Helloworld" }
+);
 
 const $emitter = defineEmits<{
   (e: "increment", by: number): void;
@@ -65,10 +74,10 @@ const {
   default(props: { items: Item[]; selectedId: number | null }): any;
   footer?(): any;
 }>();
-const de = slots.default;
 
 const attrs = useAttrs();
 const $slots = useSlots();
+const de = $slots.default;
 const state = reactive({
   selectedId: null as number | null,
   loading: false,
@@ -104,8 +113,12 @@ const AsyncChild = defineAsyncComponent(async () => {
   } as any;
 });
 </script>
+
 <script lang="ts">
+export const a = 1;
+
 import { createApp } from "vue";
+//@ts-ignore
 import * as vue from "vue";
 //@ts-ignore
 import hello from "world";

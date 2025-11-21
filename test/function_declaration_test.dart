@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:vue_sfc_parser/ts_ast.dart';
+import 'package:vue_sfc_parser/sfc_ast.dart';
 
 void main() {
   group('FunctionDeclaration parsing', () {

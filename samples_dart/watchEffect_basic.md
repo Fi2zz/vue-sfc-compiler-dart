@@ -2,19 +2,14 @@
 
 ```ts
 import { defineComponent as _defineComponent } from 'vue'
-import { ref, watchEffect } from "vue";export default /*@__PURE__*/_defineComponent({
-  __name: 'watchEffect_basic',
+import { ref, watchEffect } from 'vue';
+export default /*@__PURE__*/_defineComponent({  __name: 'watchEffect_basic',
 setup(__props: any, { expose: __expose }) {
   __expose();
-
-watchEffect(() => { v.value })
 const v = ref(0)
-
+watchEffect(() => { v.value })
 const __returned__ = { v }
 Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-return __returned__
-}
-
-})
+return __returned__}});
 ```

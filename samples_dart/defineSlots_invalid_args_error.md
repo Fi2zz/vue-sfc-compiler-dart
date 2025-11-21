@@ -1,11 +1,12 @@
 # defineSlots_invalid_args_error
 
-[vue/compiler-sfc] defineSlots() cannot accept arguments
+```ts
+import { defineComponent as _defineComponent } from 'vue'
+export default /*@__PURE__*/_defineComponent({  __name: 'defineSlots_invalid_args_error',
+setup(__props: any, { expose: __expose }) {
+  __expose();
+const __returned__ = {  }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-./defineSlots_invalid_args_error.vue
-1 | <script setup lang="ts">
-| ^
-2 | defineSlots({})
-| ^^^^^^^^^^^^^^^
-3 | </script>
-
+return __returned__}});
+```

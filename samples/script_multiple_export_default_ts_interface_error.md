@@ -19,3 +19,4 @@ export default {
   template: '<div>{{ title }}</div>'
 }
 ```
+

@@ -632,9 +632,7 @@ final class OptionalMemberExpression extends Expression {
     super.loc,
     super.range,
     super.extra,
-  }) : super(
-         text: text ?? '',
-       );
+  }) : super(text: text ?? '');
   factory OptionalMemberExpression.fromJson(Map<String, dynamic> m) =>
       OptionalMemberExpression(
         object: TsAstFactory.fromJsonExpression(
@@ -679,9 +677,7 @@ final class OptionalCallExpression extends Expression {
     super.loc,
     super.range,
     super.extra,
-  }) : super(
-         text: text ?? '',
-       );
+  }) : super(text: text ?? '');
   factory OptionalCallExpression.fromJson(Map<String, dynamic> m) =>
       OptionalCallExpression(
         callee: TsAstFactory.fromJsonExpression(
@@ -3693,8 +3689,8 @@ final class ListLiteral extends Expression {
   final List<Expression> elements;
   const ListLiteral({
     required this.elements,
-    int? startByte,
-    int? endByte,
+    super.startByte,
+    super.endByte,
     String? text,
     super.leadingComments,
     super.innerComments,
@@ -3704,7 +3700,7 @@ final class ListLiteral extends Expression {
     super.loc,
     super.range,
     super.extra,
-  }) : super(startByte: startByte, endByte: endByte, text: text ?? '');
+  }) : super(text: text ?? '');
 }
 
 /// Helper: set/map literal for codegen utilities with key-value entries.
@@ -3712,8 +3708,8 @@ final class SetOrMapLiteral extends Expression {
   final List<MapLiteralEntry> elements;
   const SetOrMapLiteral({
     required this.elements,
-    int? startByte,
-    int? endByte,
+    super.startByte,
+    super.endByte,
     String? text,
     super.leadingComments,
     super.innerComments,
@@ -3723,7 +3719,7 @@ final class SetOrMapLiteral extends Expression {
     super.loc,
     super.range,
     super.extra,
-  }) : super(startByte: startByte, endByte: endByte, text: text ?? '');
+  }) : super(text: text ?? '');
 }
 
 /// Helper: map literal entry used by SetOrMapLiteral.
@@ -3733,8 +3729,8 @@ final class MapLiteralEntry extends BaseNode {
   const MapLiteralEntry({
     required this.keyText,
     required this.value,
-    int? startByte,
-    int? endByte,
+    super.startByte,
+    super.endByte,
     String? text,
     super.leadingComments,
     super.innerComments,
@@ -3744,7 +3740,7 @@ final class MapLiteralEntry extends BaseNode {
     super.loc,
     super.range,
     super.extra,
-  }) : super(startByte: startByte, endByte: endByte, text: text ?? '');
+  }) : super(text: text ?? '');
 }
 
 /// Helper: argument list wrapper used by FunctionCallExpression.
@@ -3752,8 +3748,8 @@ final class ArgumentList extends BaseNode {
   final List<Expression> arguments;
   const ArgumentList({
     required this.arguments,
-    int? startByte,
-    int? endByte,
+    super.startByte,
+    super.endByte,
     String? text,
     super.leadingComments,
     super.innerComments,
@@ -3763,7 +3759,7 @@ final class ArgumentList extends BaseNode {
     super.loc,
     super.range,
     super.extra,
-  }) : super(startByte: startByte, endByte: endByte, text: text ?? '');
+  }) : super(text: text ?? '');
 }
 
 /// Helper: function call expression enriched with type arguments parsing.
@@ -3974,10 +3970,22 @@ final class NumberLiteral extends Expression {
 }
 
 /// Macro analysis unit wrapper compatible with existing compilation pipeline.
+///
+/// statements: existing expression statements used by macro analysis; kept for
+/// backward compatibility.
+/// moduleDeclarations: ECMAScript module declarations preserved in structured
+/// AST form (ImportDeclaration, ExportAllDeclaration, ExportNamedDeclaration,
+/// ExportDefaultDeclaration). Only these types are accepted.
 final class CompilationUnit extends BaseNode {
   final List<ExpressionStatement> statements;
+  final List<Declaration> imported;
+  final List<Declaration> exported;
+  final List<UserVariable> userVariables;
   const CompilationUnit({
     required this.statements,
+    this.imported = const [],
+    this.exported = const [],
+    this.userVariables = const [],
     super.startByte,
     super.endByte,
     super.text,
@@ -3990,6 +3998,30 @@ final class CompilationUnit extends BaseNode {
     super.range,
     super.extra,
   });
+}
+
+/// Represents a user-defined variable captured during compilation.
+final class UserVariable {
+  final String name;
+  final String? type;
+  final String? defaultValue;
+  const UserVariable({required this.name, this.type, this.defaultValue});
+
+  Map<String, Object?> toJson() {
+    return {
+      'name': name,
+      'type': type,
+      'defaultValue': defaultValue,
+    };
+  }
+
+  static UserVariable fromJson(Map<String, Object?> m) {
+    return UserVariable(
+      name: (m['name'] ?? '') as String,
+      type: m['type'] as String?,
+      defaultValue: m['defaultValue'] as String?,
+    );
+  }
 }
 
 /// Declarator analysis result for macros.
@@ -4148,4 +4180,31 @@ class VariableDeclaration extends Expression {
     super.range,
     super.extra,
   }) : super(text: text ?? '');
+}
+class LocationInfo {
+  final int lineNumber;
+  final int columnNumber;
+  final int endLineNumber;
+  final int endColumnNumber;
+  const LocationInfo({
+    required this.lineNumber,
+    required this.columnNumber,
+    required this.endLineNumber,
+    required this.endColumnNumber,
+  });
+}
+
+String printNodeWithLocationSfc(Object node, LocationInfo? loc) {
+  final type = node.runtimeType.toString();
+  if (loc == null) return '$type @ unknown';
+  return '$type @ ${loc.lineNumber}:${loc.columnNumber}-${loc.endLineNumber}:${loc.endColumnNumber}';
+}
+
+List<Object> findSfcNodesByStartLine(List<Object> nodes, int line, LocationInfo Function(Object) getLoc) {
+  final out = <Object>[];
+  for (final n in nodes) {
+    final loc = getLoc(n);
+    if (loc.lineNumber == line) out.add(n);
+  }
+  return out;
 }

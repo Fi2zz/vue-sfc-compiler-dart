@@ -1,17 +1,12 @@
 # function_basic
 
 ```
-export default /*@__PURE__*/_defineComponent({
-  __name: 'function_basic',
+{  __name: 'function_basic',
 setup(__props, { expose: __expose }) {
   __expose();
-
-
-const __returned__ = {  }
+function foo(){ return 1 }
+const __returned__ = { foo }
 Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-return __returned__
-}
-
-})
+return __returned__}
 ```

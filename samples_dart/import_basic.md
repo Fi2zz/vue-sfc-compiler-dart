@@ -2,19 +2,14 @@
 
 ```ts
 import { defineComponent as _defineComponent } from 'vue'
-import { ref, isRef } from "vue";export default /*@__PURE__*/_defineComponent({
-  __name: 'import_basic',
+import { ref, isRef } from 'vue';
+export default /*@__PURE__*/_defineComponent({  __name: 'import_basic',
 setup(__props: any, { expose: __expose }) {
   __expose();
-
 const a = ref(1)
 const ok = isRef(a)
-
 const __returned__ = { a, ok }
 Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-return __returned__
-}
-
-})
+return __returned__}});
 ```

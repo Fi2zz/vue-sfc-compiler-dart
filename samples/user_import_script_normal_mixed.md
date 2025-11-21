@@ -38,17 +38,17 @@ export default {
   setup(props) {
     const $q = useQuasar()
     const { t, locale } = useI18n()
-
+    
     const reportData = ref<ReportData | null>(null)
     const chartInstance = ref<Chart | null>(null)
     const isGenerating = ref(false)
-
+    
     const formattedDateRange = computed(() => {
       const start = dayjs(props.dateRange.start).locale(locale.value)
       const end = dayjs(props.dateRange.end).locale(locale.value)
       return `${start.format('LL')} - ${end.format('LL')}`
     })
-
+    
     const chartConfig = computed<ChartConfig>(() => ({
       type: 'line',
       data: reportData.value?.chartData || {},
@@ -62,7 +62,7 @@ export default {
         }
       }
     }))
-
+    
     async function generateReportData() {
       isGenerating.value = true
       try {
@@ -78,17 +78,17 @@ export default {
         isGenerating.value = false
       }
     }
-
+    
     function renderChart() {
       const ctx = document.getElementById('report-chart') as HTMLCanvasElement
       if (ctx) {
         chartInstance.value = new Chart(ctx, chartConfig.value)
       }
     }
-
+    
     async function exportReport() {
       if (!reportData.value) return
-
+      
       try {
         await exportToPDF(reportData.value, {
           title: t('reports.export.title'),
@@ -105,11 +105,11 @@ export default {
         })
       }
     }
-
+    
     watch(() => props.reportId, () => {
       generateReportData()
     }, { immediate: true })
-
+    
     return {
       reportData,
       isGenerating,
@@ -121,3 +121,4 @@ export default {
   }
 }
 ```
+

@@ -1,18 +1,14 @@
 # defineModel_default_runtime_type
 
 ```
-export default /*@__PURE__*/_defineComponent({
-  __name: 'defineModel_default_runtime_type',
+import { useModel as _useModel } from 'vue'
+{  __name: 'defineModel_default_runtime_type',
+  emits: _mergeModels([], []),
+
 setup(__props, { expose: __expose }) {
   __expose();
-
-const model = defineModel({ type: String })
-
 const __returned__ = { model }
 Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-return __returned__
-}
-
-})
+return __returned__}
 ```

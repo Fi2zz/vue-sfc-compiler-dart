@@ -17,9 +17,17 @@ import {
   defineAsyncComponent,
   useSlots,
   useAttrs,
+  unref as _unref,
 } from "vue";
 
+// import * as bug from "vue";
+//@ts-ignore
+// import vue from "vue";
+
+export const a = 1;
+
 import { createApp } from "vue";
+//@ts-ignore
 import * as vue from "vue";
 //@ts-ignore
 import hello from "world";
@@ -43,42 +51,47 @@ type Item = { id: number; label: string };
 //   config?: { theme: "light" | "dark" };
 // }>();
 
-// const $props = withDefaults(
-//   defineProps<{
-//     title: string;
-//     count?: number;
-//     items: Item[];
-//     config?: { theme: "light" | "dark" };
-//   }>(),
-//   { items: () => [], count: 0, title: "Helloworld" }
-// );
-
 export default /*@__PURE__*/ _defineComponent({
   ...__default__,
   ...{ name: "VueComplex", inheritAttrs: false },
-  props: {
-    value: { type: Number, ...{ default: 0 } },
-    valueModifiers: {},
-    cheched: { type: Boolean, ...{ default: false } },
-    chechedModifiers: {},
-    hello: {
-      type: String,
-      default: "helloworld",
+  props: /*@__PURE__*/ _mergeModels(
+    {
+      title: { type: String, required: true, default: "Helloworld" },
+      count: { type: Number, required: false, default: 0 },
+      items: { type: Array, required: true, default: () => [] },
+      config: { type: Object, required: false },
     },
-    helloModifiers: {},
-    modelValue: {},
-    modelModifiers: {},
-  },
+    {
+      value: { type: Number, ...{ default: 0 } },
+      valueModifiers: {},
+      cheched: { type: Boolean, ...{ default: false } },
+      chechedModifiers: {},
+      hello: {
+        type: String,
+        default: "helloworld",
+      },
+      helloModifiers: {},
+      modelValue: {},
+      modelModifiers: {},
+    },
+  ),
   emits: /*@__PURE__*/ _mergeModels(
     ["increment", "select", "update:count"],
     ["update:value", "update:cheched", "update:hello", "update:modelValue"],
   ),
-  setup(__props, { expose: __expose, emit: __emit }) {
+  setup(__props: any, { expose: __expose, emit: __emit }) {
     function hellow() {}
+
+    const world = () => {};
+    const world2 = function () {};
+    const world3 = function named() {};
+    // export { hellow };
 
     const abc: number = 123;
     const abcd = 123,
       cde = 234;
+    const $props = __props;
+
     const $emitter = __emit;
     //@ts-ignore
     const valueModel = _useModel<number>(__props, "value");
@@ -89,10 +102,10 @@ export default /*@__PURE__*/ _defineComponent({
     _useModel(__props, "modelValue");
 
     const { header, default: defaultSlot = () => {}, footer } = _useSlots();
-    const de = slots.default;
 
     const attrs = useAttrs();
     const $slots = useSlots();
+    const de = $slots.default;
     const state = reactive({
       selectedId: null as number | null,
       loading: false,
@@ -129,10 +142,15 @@ export default /*@__PURE__*/ _defineComponent({
     });
 
     const __returned__ = {
+      a,
       hellow,
+      world,
+      world2,
+      world3,
       abc,
       abcd,
       cde,
+      $props,
       $emitter,
       valueModel,
       checked,
@@ -141,9 +159,9 @@ export default /*@__PURE__*/ _defineComponent({
       header,
       defaultSlot,
       footer,
-      de,
       attrs,
       $slots,
+      de,
       state,
       doubled,
       onIncrement,

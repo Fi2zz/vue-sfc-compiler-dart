@@ -22,17 +22,17 @@ void main() {
               'start': 0,
               'end': 5,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 5}
+              'loc_end': {'line': 1, 'column': 5},
             },
             'names': ['props'],
             'inited': true,
             'init_text': 'defineProps()',
             'init_callee_ident': 'defineProps',
-            'type_parameters': null
-          }
-        ]
+            'type_parameters': null,
+          },
+        ],
       };
-      final m = swc.moduleFromJson(json);
+      final m = swc.swcModuleFromJson(json);
       final res = swc.analyzeSwcDeclarators(m);
       expect(res.length, 1);
       expect(res.first.declarationType, 'call');

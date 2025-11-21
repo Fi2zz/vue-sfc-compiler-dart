@@ -2,20 +2,15 @@
 
 ```ts
 import { defineComponent as _defineComponent } from 'vue'
-export default /*@__PURE__*/_defineComponent({
-  __name: 'withDefaults_runtime_error',
+export default /*@__PURE__*/_defineComponent({  __name: 'withDefaults_runtime_error',
   props: {  },
+
 setup(__props: any, { expose: __expose }) {
   __expose();
-
-const const { a } = withDefaults(defineProps({ a: Number }), { a: 1 }) = __props
-const { a } = withDefaults(defineProps({ a: Number }), { a: 1 })
+const {a} = __props;
 
 const __returned__ = { a }
 Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-return __returned__
-}
-
-})
+return __returned__}});
 ```

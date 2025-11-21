@@ -4,3 +4,4 @@
 import 'reflect-metadata'
 export default { name: 'SideEffect' }
 ```
+

@@ -1,11 +1,13 @@
 # defineOptions_duplicate_error
 
-[vue/compiler-sfc] duplicate defineOptions() calls are not allowed
+```ts
+import { defineComponent as _defineComponent } from 'vue'
+export default /*@__PURE__*/_defineComponent({...{ name: 'X1' },
+  __name: 'defineOptions_duplicate_error',
+setup(__props: any, { expose: __expose }) {
+  __expose();
+const __returned__ = {  }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-./defineOptions_duplicate_error.vue
-1 | <script setup lang="ts">
-| ^
-2 | defineOptions() x 2
-| ^^^^^^^^^^^^^^^^^^^
-3 | </script>
-
+return __returned__}});
+```

@@ -4,9 +4,9 @@ Vue Compile Error: [@vue/compiler-sfc] <script setup> cannot contain ES module e
 
 ./script_and_script_setup_import_export.vue
 14 |  
-15 | const localValue = ref('local')
+15 |  const localValue = ref('local')
 16 |  
- | ^
-17 | export { localValue }
-| ^^^^^^^^^^^^^^^^^^^^^
-18 | </script>
+   |   ^
+17 |  export { localValue }
+   |  ^^^^^^^^^^^^^^^^^^^^^
+18 |  </script>

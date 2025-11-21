@@ -2,24 +2,19 @@
 
 ```ts
 import { defineComponent as _defineComponent } from 'vue'
-export default /*@__PURE__*/_defineComponent({
-  __name: 'defineProps_runtime',
+export default /*@__PURE__*/_defineComponent({  __name: 'defineProps_runtime',
   props: { 
     msg: { type: String, required: false },
     count: { type: { type: Number, required: false },
     default: { type: 0, required: false }
    },
+
 setup(__props: any, { expose: __expose }) {
   __expose();
-
-const props = __props
-const props = defineProps({ msg: String, count: { type: Number, default: 0 } })
+const props = __props;
 
 const __returned__ = { props }
 Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-return __returned__
-}
-
-})
+return __returned__}});
 ```

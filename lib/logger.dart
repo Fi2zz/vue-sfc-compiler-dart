@@ -6,12 +6,17 @@ class _Logger {
 
   void warn(String message) {
     _pen.yellow(bold: true);
-    stdout.write(_pen.write(message));
+    stdout.write(_pen.write('$message\n'));
   }
 
   void error(String message) {
     _pen.red(bold: true);
-    stdout.write(_pen.write(message));
+    stdout.write(_pen.write('$message\n'));
+  }
+
+  void log(String message) {
+    _pen.white(bold: true);
+    stdout.write(_pen.write('$message\n'));
   }
 }
 

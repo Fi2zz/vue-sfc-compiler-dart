@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:vue_sfc_parser/ts_ast.dart' as ts;
+import 'package:vue_sfc_parser/sfc_ast.dart' as ts;
 import 'package:vue_sfc_parser/swc_ast.dart' as swc;
 
 void main() {
@@ -9,8 +9,17 @@ void main() {
         startByte: 0,
         endByte: 10,
         text: 'defineProps()',
-        methodName: ts.Identifier(startByte: 0, endByte: 12, text: 'defineProps()'),
-        argumentList: ts.ArgumentList(startByte: 0, endByte: 12, text: '()', arguments: const []),
+        methodName: ts.Identifier(
+          startByte: 0,
+          endByte: 12,
+          text: 'defineProps()',
+        ),
+        argumentList: ts.ArgumentList(
+          startByte: 0,
+          endByte: 12,
+          text: '()',
+          arguments: const [],
+        ),
       );
       final decl = ts.VariableDeclaration(
         call,
@@ -19,9 +28,19 @@ void main() {
         text: 'const props = defineProps()',
         name: ts.Identifier(startByte: 0, endByte: 5, text: 'props'),
       );
-      final unit = ts.CompilationUnit(startByte: 0, endByte: 12, text: decl.text, statements: [
-        ts.ExpressionStatement(startByte: 0, endByte: 12, text: decl.text, expression: decl),
-      ]);
+      final unit = ts.CompilationUnit(
+        startByte: 0,
+        endByte: 12,
+        text: decl.text,
+        statements: [
+          ts.ExpressionStatement(
+            startByte: 0,
+            endByte: 12,
+            text: decl.text,
+            expression: decl,
+          ),
+        ],
+      );
       final res = ts.analyzeTsDeclarators(unit);
       expect(res.length, 1);
       expect(res.first.declarationType, 'call');
@@ -34,7 +53,12 @@ void main() {
         endByte: 10,
         text: '(x)=>x',
         functionText: '(x)=>x',
-        argumentList: ts.ArgumentList(startByte: 0, endByte: 10, text: '', arguments: const []),
+        argumentList: ts.ArgumentList(
+          startByte: 0,
+          endByte: 10,
+          text: '',
+          arguments: const [],
+        ),
       );
       final decl = ts.VariableDeclaration(
         inv,
@@ -43,15 +67,30 @@ void main() {
         text: 'const f = (x)=>x',
         name: ts.Identifier(startByte: 0, endByte: 1, text: 'f'),
       );
-      final unit = ts.CompilationUnit(startByte: 0, endByte: 10, text: decl.text, statements: [
-        ts.ExpressionStatement(startByte: 0, endByte: 10, text: decl.text, expression: decl),
-      ]);
+      final unit = ts.CompilationUnit(
+        startByte: 0,
+        endByte: 10,
+        text: decl.text,
+        statements: [
+          ts.ExpressionStatement(
+            startByte: 0,
+            endByte: 10,
+            text: decl.text,
+            expression: decl,
+          ),
+        ],
+      );
       final res = ts.analyzeTsDeclarators(unit);
       expect(res.first.declarationType, 'function_expression');
     });
 
     test('variable literal init', () {
-      final lit = ts.StringLiteral(startByte: 0, endByte: 5, text: '"hi"', stringValue: 'hi');
+      final lit = ts.StringLiteral(
+        startByte: 0,
+        endByte: 5,
+        text: '"hi"',
+        stringValue: 'hi',
+      );
       final decl = ts.VariableDeclaration(
         lit,
         startByte: 0,
@@ -59,9 +98,19 @@ void main() {
         text: 'const s = "hi"',
         name: ts.Identifier(startByte: 0, endByte: 1, text: 's'),
       );
-      final unit = ts.CompilationUnit(startByte: 0, endByte: 5, text: decl.text, statements: [
-        ts.ExpressionStatement(startByte: 0, endByte: 5, text: decl.text, expression: decl),
-      ]);
+      final unit = ts.CompilationUnit(
+        startByte: 0,
+        endByte: 5,
+        text: decl.text,
+        statements: [
+          ts.ExpressionStatement(
+            startByte: 0,
+            endByte: 5,
+            text: decl.text,
+            expression: decl,
+          ),
+        ],
+      );
       final res = ts.analyzeTsDeclarators(unit);
       expect(res.first.declarationType, 'variable');
       expect(res.first.initDetails['valueType'], 'String');
@@ -78,7 +127,7 @@ void main() {
               'start': 0,
               'end': 20,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 20}
+              'loc_end': {'line': 1, 'column': 20},
             },
             'decl_kind': 'const',
             'name': 'props',
@@ -86,17 +135,17 @@ void main() {
               'start': 0,
               'end': 5,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 5}
+              'loc_end': {'line': 1, 'column': 5},
             },
             'names': ['props'],
             'inited': true,
             'init_text': 'defineProps()',
             'init_callee_ident': 'defineProps',
-            'init_type_args': null
-          }
-        ]
+            'init_type_args': null,
+          },
+        ],
       };
-      final m = swc.moduleFromJson(json);
+      final m = swc.swcModuleFromJson(json);
       final res = swc.analyzeSwcDeclarators(m);
       expect(res.length, 1);
       expect(res.first.declarationType, 'call');
@@ -112,7 +161,7 @@ void main() {
               'start': 0,
               'end': 12,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 12}
+              'loc_end': {'line': 1, 'column': 12},
             },
             'decl_kind': 'const',
             'name': 'fn',
@@ -120,15 +169,15 @@ void main() {
               'start': 0,
               'end': 2,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 2}
+              'loc_end': {'line': 1, 'column': 2},
             },
             'names': ['fn'],
             'inited': true,
             'init_text': '(x)=>x',
-          }
-        ]
+          },
+        ],
       };
-      final m = swc.moduleFromJson(json);
+      final m = swc.swcModuleFromJson(json);
       final res = swc.analyzeSwcDeclarators(m);
       expect(res.first.declarationType, 'function_expression');
     });
@@ -142,7 +191,7 @@ void main() {
               'start': 0,
               'end': 12,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 12}
+              'loc_end': {'line': 1, 'column': 12},
             },
             'decl_kind': 'const',
             'name': 'x',
@@ -150,15 +199,15 @@ void main() {
               'start': 0,
               'end': 1,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 1}
+              'loc_end': {'line': 1, 'column': 1},
             },
             'names': ['x'],
             'inited': true,
             'init_text': '"hi"',
-          }
-        ]
+          },
+        ],
       };
-      final m = swc.moduleFromJson(json);
+      final m = swc.swcModuleFromJson(json);
       final res = swc.analyzeSwcDeclarators(m);
       expect(res.first.declarationType, 'variable');
       expect(res.first.initDetails['valueType'], 'String');

@@ -1,265 +1,14 @@
-import 'ts_ast.dart';
-import 'swc_parser.dart';
+import 'dart:convert';
+
+import 'sfc_ast.dart';
 import 'swc_ast.dart';
 
-class MacrosParserResult {
-  final CompilationUnit compilationUnit;
-  final Module rootModule;
-  MacrosParserResult(this.compilationUnit, this.rootModule);
+class ParseResult {
+  final CompilationUnit unit;
+  final Module module;
+  ParseResult(this.unit, this.module);
 }
 
-class Parser {
-  static MacrosParserResult parse(String content, {String language = 'ts'}) {
-    final sp = SwcParser();
-    final Module m = sp.parse(code: content, language: language);
-    final cu = _convertSwc(m, content);
-    return MacrosParserResult(cu, m);
-  }
-}
-
-CompilationUnit _convertSwc(Module m, String src) {
-  final statements = <ExpressionStatement>[];
-  final alias = <String, List<PropSignature>>{};
-  for (final item in m.body) {
-    if (item is TSTypeAliasDecl) {
-      final props = <PropSignature>[];
-      for (final p in item.members) {
-        props.add(
-          PropSignature(name: p.key, type: p.typeAnn, required: !p.optional),
-        );
-      }
-      alias[item.id] = props;
-    } else if (item is TSInterfaceDecl) {
-      final props = <PropSignature>[];
-      for (final p in item.members) {
-        props.add(
-          PropSignature(name: p.key, type: p.typeAnn, required: !p.optional),
-        );
-      }
-      alias[item.id] = props;
-    }
-  }
-  for (final item in m.body) {
-    if (item is VarDeclItem) {
-      final declText = src.substring(
-        item.node.start.clamp(0, src.length),
-        item.node.end.clamp(0, src.length),
-      );
-
-      BindingPattern? pat;
-      if (item.arrayPattern != null) {
-        final els = <ArrayBindingElement>[];
-        for (final e in item.arrayPattern!.elements) {
-          final id = e.name == null
-              ? null
-              : Identifier(
-                  startByte: item.node.start,
-                  endByte: item.node.end,
-                  text: e.name!,
-                );
-          final def = e.defaultText == null
-              ? null
-              : _parseSimpleExpression(
-                  e.defaultText!,
-                  item.node.start,
-                  item.node.end,
-                );
-          els.add(
-            ArrayBindingElement(
-              startByte: item.node.start,
-              endByte: item.node.end,
-              text: declText,
-              target: id,
-              defaultValue: def,
-              isRest: e.isRest,
-              index: e.index,
-            ),
-          );
-        }
-        pat = ArrayBindingPattern(
-          startByte: item.node.start,
-          endByte: item.node.end,
-          text: declText,
-          elements: els,
-          typeIndexMap: const [],
-          typeAnnotationText: item.arrayPattern!.patternTypeAnnText,
-        );
-      } else if (item.objectPattern != null) {
-        ObjectBindingPattern buildObj(SWCObjectBindingPattern op) {
-          final props = <ObjectBindingProperty>[];
-          for (final p in op.properties) {
-            final alias = p.alias == null
-                ? null
-                : Identifier(
-                    startByte: item.node.start,
-                    endByte: item.node.end,
-                    text: p.alias!,
-                  );
-            final def = p.defaultText == null
-                ? null
-                : _parseSimpleExpression(
-                    p.defaultText!,
-                    item.node.start,
-                    item.node.end,
-                  );
-            final nested = p.nested == null ? null : buildObj(p.nested!);
-            props.add(
-              ObjectBindingProperty(
-                startByte: item.node.start,
-                endByte: item.node.end,
-                text: declText,
-                key: p.key,
-                alias: alias,
-                defaultValue: def,
-                nested: nested,
-              ),
-            );
-          }
-          return ObjectBindingPattern(
-            startByte: item.node.start,
-            endByte: item.node.end,
-            text: declText,
-            properties: props,
-            typeKeyMap: const {},
-            typeAnnotationText: op.patternTypeAnnText,
-          );
-        }
-
-        pat = buildObj(item.objectPattern!);
-      }
-
-      final varDecl = VariableDeclaration(
-        item.initExpr,
-        startByte: item.node.start,
-        endByte: item.node.end,
-        text: declText,
-        name: item.nameExpr,
-        pattern: pat,
-        declKind: item.declKind,
-      );
-
-      statements.add(
-        ExpressionStatement(
-          startByte: item.node.start,
-          endByte: item.node.end,
-          text: declText,
-          expression: varDecl,
-        ),
-      );
-
-      // Deprecated VariableDeclarator path removed; unified VariableDeclaration only.
-    }
-
-    if (item is FnDeclItem) {
-      final declText = src.substring(
-        item.node.start.clamp(0, src.length),
-        item.node.end.clamp(0, src.length),
-      );
-      final nameId = Identifier(
-        startByte: item.node.start,
-        endByte: item.node.end,
-        text: item.name,
-      );
-      final varDecl = VariableDeclaration(
-        null,
-        startByte: item.node.start,
-        endByte: item.node.end,
-        text: declText,
-        name: nameId,
-        pattern: null,
-      );
-      statements.add(
-        ExpressionStatement(
-          startByte: item.node.start,
-          endByte: item.node.end,
-          text: declText,
-          expression: varDecl,
-        ),
-      );
-    }
-
-    if (item is ClassDeclItem) {
-      final declText = src.substring(
-        item.node.start.clamp(0, src.length),
-        item.node.end.clamp(0, src.length),
-      );
-      final nameId = Identifier(
-        startByte: item.node.start,
-        endByte: item.node.end,
-        text: item.name,
-      );
-      final varDecl = VariableDeclaration(
-        null,
-        startByte: item.node.start,
-        endByte: item.node.end,
-        text: declText,
-        name: nameId,
-        pattern: null,
-      );
-      statements.add(
-        ExpressionStatement(
-          startByte: item.node.start,
-          endByte: item.node.end,
-          text: declText,
-          expression: varDecl,
-        ),
-      );
-    }
-
-    if (item is CallExpr) {
-      final ident = item.calleeIdent ?? '';
-      final idExpr = Identifier(
-        startByte: item.node.start,
-        endByte: item.node.end,
-        text: ident,
-      );
-      final args = <Expression>[];
-      for (final a in item.args) {
-        final t = a.trim();
-        args.add(_parseSimpleExpression(t, item.node.start, item.node.end));
-      }
-      final argList = ArgumentList(
-        startByte: item.node.start,
-        endByte: item.node.end,
-        text: src.substring(
-          item.node.start.clamp(0, src.length),
-          item.node.end.clamp(0, src.length),
-        ),
-        arguments: args,
-      );
-      final fcall = FunctionCallExpression(
-        startByte: item.node.start,
-        endByte: item.node.end,
-        text: src.substring(
-          item.node.start.clamp(0, src.length),
-          item.node.end.clamp(0, src.length),
-        ),
-        methodName: idExpr,
-        argumentList: argList,
-        typeArgumentText: item.typeArgs == null
-            ? null
-            : '<${item.typeArgs!.join(', ')}>',
-        typeArgumentProps: ident == 'defineProps'
-            ? _extractTypePropsFromSwc(item.typeArgs, alias)
-            : const [],
-      );
-      statements.add(
-        ExpressionStatement(
-          startByte: item.node.start,
-          endByte: item.node.end,
-          text: fcall.text,
-          expression: fcall,
-        ),
-      );
-    }
-  }
-  return CompilationUnit(
-    startByte: 0,
-    endByte: src.length,
-    text: src,
-    statements: statements,
-  );
-}
 
 List<MapLiteralEntry> _parseObjectElements(String objText) {
   final out = <MapLiteralEntry>[];
@@ -446,21 +195,31 @@ List<PropSignature> _parseTypeLiteralProps(String body) {
   final out = <PropSignature>[];
   int i = 0;
   while (i < body.length) {
-    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) i++;
+    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) {
+      i++;
+    }
     if (i >= body.length) break;
     final nameStart = i;
-    while (i < body.length && _isIdentChar(body.codeUnitAt(i))) i++;
+    while (i < body.length && _isIdentChar(body.codeUnitAt(i))) {
+      i++;
+    }
     final name = body.substring(nameStart, i);
-    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) i++;
+    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) {
+      i++;
+    }
     bool required = true;
     if (i < body.length && body[i] == '?') {
       required = false;
       i++;
-      while (i < body.length && _isWhitespace(body.codeUnitAt(i))) i++;
+      while (i < body.length && _isWhitespace(body.codeUnitAt(i))) {
+        i++;
+      }
     }
     if (i >= body.length || body[i] != ':') break;
     i++;
-    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) i++;
+    while (i < body.length && _isWhitespace(body.codeUnitAt(i))) {
+      i++;
+    }
     final typeStart = i;
     int depthPar = 0, depthBrack = 0, depthAngle = 0;
     bool inStr = false;
@@ -530,4 +289,448 @@ bool _isIdentChar(int c) {
       (c >= 48 && c <= 57) ||
       c == 95 ||
       c == 36;
+}
+
+String _slice(String src, int startByte, int endByte) {
+  final bytes = utf8.encode(src);
+  final s = startByte.clamp(0, bytes.length);
+  final e = endByte.clamp(0, bytes.length);
+  if (e <= s) return '';
+  return utf8.decode(bytes.sublist(s, e));
+}
+
+String _formatModuleLine(String line) {
+  var t = line.trimRight();
+  if (!t.endsWith(';')) t = '$t;';
+  t = t.replaceAll("'", '"');
+  return t;
+}
+
+Iterable<String> _collectReExportLines(String src) sync* {
+  final bytes = src.codeUnits;
+  bool inStr = false;
+  int quote = 0;
+  bool inLineComment = false;
+  bool inBlockComment = false;
+  int braceDepth = 0;
+  int i = 0;
+  while (i < bytes.length) {
+    final c = bytes[i];
+    if (inLineComment) {
+      if (c == 10 || c == 13) inLineComment = false;
+      i++;
+      continue;
+    }
+    if (inBlockComment) {
+      if (c == 42 && i + 1 < bytes.length && bytes[i + 1] == 47) {
+        inBlockComment = false;
+        i += 2;
+        continue;
+      }
+      i++;
+      continue;
+    }
+    if (inStr) {
+      if (c == quote) {
+        inStr = false;
+      } else if (c == 92 && i + 1 < bytes.length) {
+        i += 2;
+        continue;
+      }
+      i++;
+      continue;
+    }
+    if (c == 47 && i + 1 < bytes.length) {
+      if (bytes[i + 1] == 47) {
+        inLineComment = true;
+        i += 2;
+        continue;
+      }
+      if (bytes[i + 1] == 42) {
+        inBlockComment = true;
+        i += 2;
+        continue;
+      }
+    }
+    if (c == 34 || c == 39) {
+      inStr = true;
+      quote = c;
+      i++;
+      continue;
+    }
+    if (c == 123) {
+      braceDepth++;
+      i++;
+      continue;
+    }
+    if (c == 125) {
+      braceDepth--;
+      i++;
+      continue;
+    }
+    if (braceDepth == 0 && _matchKeyword(bytes, i, 'export')) {
+      int start = i;
+      i += 'export'.length;
+      while (i < bytes.length) {
+        final d = bytes[i];
+        if (d == 32 || d == 9 || d == 10 || d == 13) {
+          i++;
+        } else {
+          break;
+        }
+      }
+      if (i < bytes.length && (bytes[i] == 123 || bytes[i] == 42)) {
+        int localBrace = 0;
+        while (i < bytes.length) {
+          final d = bytes[i];
+          if (d == 34 || d == 39) {
+            inStr = true;
+            quote = d;
+            i++;
+            while (i < bytes.length) {
+              final s = bytes[i];
+              if (s == quote) {
+                inStr = false;
+                i++;
+                break;
+              }
+              if (s == 92) {
+                i += 2;
+                continue;
+              }
+              i++;
+            }
+            continue;
+          }
+          if (d == 123) {
+            localBrace++;
+            i++;
+            continue;
+          }
+          if (d == 125) {
+            localBrace--;
+            i++;
+            continue;
+          }
+          if (d == 59 && localBrace == 0) {
+            final raw = String.fromCharCodes(bytes.sublist(start, i + 1));
+            final line = _formatModuleLine(raw);
+            if (line.contains(' from ')) yield line;
+            i++;
+            break;
+          }
+          i++;
+        }
+        continue;
+      }
+    }
+    i++;
+  }
+}
+
+bool _matchKeyword(List<int> bytes, int pos, String kw) {
+  final k = kw.codeUnits;
+  if (pos + k.length > bytes.length) return false;
+  for (int i = 0; i < k.length; i++) {
+    if (bytes[pos + i] != k[i]) return false;
+  }
+  return true;
+}
+
+bool _isAllowedModuleDecl(Declaration d) {
+  return d is ImportDeclaration ||
+      d is ExportAllDeclaration ||
+      d is ExportNamedDeclaration ||
+      d is ExportDefaultDeclaration;
+}
+
+ImportDeclaration _parseImportDecl(String line, int start, int end) {
+  final text = line.trim();
+  int i = 'import'.length; // after 'import'
+  String? importKind;
+  List<Object> specifiers = [];
+  Identifier readIdent() {
+    int j = i;
+    while (j < text.length) {
+      final c = text.codeUnitAt(j);
+      final ok =
+          (c >= 65 && c <= 90) ||
+          (c >= 97 && c <= 122) ||
+          (c >= 48 && c <= 57) ||
+          c == 95 ||
+          c == 36;
+      if (!ok) break;
+      j++;
+    }
+    final name = text.substring(i, j);
+    i = j;
+    return Identifier(name: name);
+  }
+
+  void skipWs() {
+    while (i < text.length) {
+      final c = text.codeUnitAt(i);
+      if (c == 32 || c == 9) {
+        i++;
+      } else {
+        break;
+      }
+    }
+  }
+
+  skipWs();
+  // side-effect import: import "module";
+  if (i < text.length &&
+      (text.codeUnitAt(i) == 34 || text.codeUnitAt(i) == 39)) {
+    final quote = text[i];
+    int j = i + 1;
+    while (j < text.length && text[j] != quote) {
+      j++;
+    }
+    if (j >= text.length) {
+      throw StateError('Invalid ImportDeclaration: unterminated source');
+    }
+    final srcVal = text.substring(i + 1, j);
+    return ImportDeclaration(
+      specifiers: const [],
+      source: StringLiteral(stringValue: srcVal),
+      importKind: importKind,
+    );
+  }
+  if (text.startsWith('import type')) {
+    importKind = 'type';
+    i = 'import type'.length;
+    skipWs();
+  }
+  if (i < text.length && text.codeUnitAt(i) == 123) {
+    i++;
+    int guard = 0;
+    while (i < text.length && text.codeUnitAt(i) != 125) {
+      skipWs();
+      final imported = readIdent();
+      if (imported.name.isEmpty) {
+        throw StateError('Invalid ImportDeclaration: empty imported name');
+      }
+      Identifier local = imported;
+      skipWs();
+      if (text.startsWith('as ', i)) {
+        i += 3;
+        skipWs();
+        final alias = readIdent();
+        if (alias.name.isEmpty) {
+          throw StateError('Invalid ImportDeclaration: empty alias name');
+        }
+        local = alias;
+      }
+      specifiers.add(
+        ImportSpecifier(
+          local: local,
+          imported: imported,
+          importKind: importKind,
+        ),
+      );
+      skipWs();
+      if (i < text.length && text.codeUnitAt(i) == 44) {
+        i++;
+      } else if (i < text.length && text.codeUnitAt(i) == 125) {
+        break;
+      } else {
+        throw StateError('Invalid ImportDeclaration: expected "," or "}"');
+      }
+      guard++;
+      if (guard > text.length) {
+        throw StateError('Invalid ImportDeclaration: overflow');
+      }
+    }
+    if (i < text.length && text.codeUnitAt(i) == 125) i++;
+  } else if (i < text.length && text.codeUnitAt(i) == 42) {
+    i++;
+    skipWs();
+    if (text.startsWith('as ', i)) {
+      i += 3;
+      skipWs();
+      final ns = readIdent();
+      if (ns.name.isEmpty) {
+        throw StateError('Invalid ImportDeclaration: empty namespace');
+      }
+      specifiers.add(ImportNamespaceSpecifier(local: ns));
+    } else {
+      throw StateError('Invalid ImportDeclaration: expected "as" after *');
+    }
+  } else {
+    final def = readIdent();
+    if (def.name.isEmpty) {
+      throw StateError('Invalid ImportDeclaration: empty default');
+    }
+    specifiers.add(ImportDefaultSpecifier(local: def));
+    skipWs();
+    if (i < text.length && text.codeUnitAt(i) == 44) {
+      i++;
+      skipWs();
+      if (i < text.length && text.codeUnitAt(i) == 123) {
+        i++;
+        int guard = 0;
+        while (i < text.length && text.codeUnitAt(i) != 125) {
+          skipWs();
+          final imported = readIdent();
+          if (imported.name.isEmpty) {
+            throw StateError('Invalid ImportDeclaration: empty imported');
+          }
+          Identifier local = imported;
+          skipWs();
+          if (text.startsWith('as ', i)) {
+            i += 3;
+            skipWs();
+            final alias = readIdent();
+            if (alias.name.isEmpty) {
+              throw StateError('Invalid ImportDeclaration: empty alias');
+            }
+            local = alias;
+          }
+          specifiers.add(
+            ImportSpecifier(
+              local: local,
+              imported: imported,
+              importKind: importKind,
+            ),
+          );
+          skipWs();
+          if (i < text.length && text.codeUnitAt(i) == 44) {
+            i++;
+          } else if (i < text.length && text.codeUnitAt(i) == 125) {
+            break;
+          } else {
+            throw StateError('Invalid ImportDeclaration: expected "," or "}"');
+          }
+          guard++;
+          if (guard > text.length) {
+            throw StateError('Invalid ImportDeclaration: overflow');
+          }
+        }
+        if (i < text.length && text.codeUnitAt(i) == 125) i++;
+      }
+    }
+  }
+  final fromIdx = text.indexOf(' from ', i);
+  if (fromIdx < 0) throw StateError('Invalid ImportDeclaration: missing from');
+  int q = text.indexOf('"', fromIdx);
+  if (q < 0) q = text.indexOf("'", fromIdx);
+  if (q < 0) throw StateError('Invalid ImportDeclaration: missing source');
+  int q2 = text.indexOf(text[q], q + 1);
+  if (q2 < 0)
+    throw StateError('Invalid ImportDeclaration: unterminated source');
+  final src = text.substring(q + 1, q2);
+  return ImportDeclaration(
+    specifiers: specifiers,
+    source: StringLiteral(stringValue: src),
+    importKind: importKind,
+  );
+}
+
+ExportNamedDeclaration _parseExportNamedDecl(String line, int start, int end) {
+  final text = line.trim();
+  int i = 'export'.length;
+  void skipWs() {
+    while (i < text.length) {
+      final c = text.codeUnitAt(i);
+      if (c == 32 || c == 9)
+        i++;
+      else
+        break;
+    }
+  }
+
+  skipWs();
+  if (i >= text.length || text.codeUnitAt(i) != 123) {
+    throw StateError('Invalid ExportNamedDeclaration');
+  }
+  i++;
+  final specs = <Object>[];
+  while (i < text.length && text.codeUnitAt(i) != 125) {
+    skipWs();
+    int j = i;
+    while (j < text.length) {
+      final c = text.codeUnitAt(j);
+      final ok =
+          (c >= 65 && c <= 90) ||
+          (c >= 97 && c <= 122) ||
+          (c >= 48 && c <= 57) ||
+          c == 95 ||
+          c == 36;
+      if (!ok) break;
+      j++;
+    }
+    final localName = text.substring(i, j);
+    final local = Identifier(name: localName);
+    i = j;
+    skipWs();
+    Object exported = local;
+    if (text.startsWith('as ', i)) {
+      i += 3;
+      skipWs();
+      j = i;
+      while (j < text.length) {
+        final c = text.codeUnitAt(j);
+        final ok =
+            (c >= 65 && c <= 90) ||
+            (c >= 97 && c <= 122) ||
+            (c >= 48 && c <= 57) ||
+            c == 95 ||
+            c == 36;
+        if (!ok) break;
+        j++;
+      }
+      final expName = text.substring(i, j);
+      exported = Identifier(name: expName);
+      i = j;
+    }
+    specs.add(ExportSpecifier(local: local, exported: exported));
+    skipWs();
+    if (i < text.length && text.codeUnitAt(i) == 44) i++;
+  }
+  if (i < text.length && text.codeUnitAt(i) == 125) i++;
+  StringLiteral? source;
+  final fromIdx = text.indexOf(' from ', i);
+  if (fromIdx >= 0) {
+    int q = text.indexOf('"', fromIdx);
+    if (q < 0) q = text.indexOf("'", fromIdx);
+    if (q >= 0) {
+      final q2 = text.indexOf(text[q], q + 1);
+      if (q2 > q)
+        source = StringLiteral(stringValue: text.substring(q + 1, q2));
+    }
+  }
+  return ExportNamedDeclaration(
+    declaration: null,
+    specifiers: specs,
+    source: source,
+  );
+}
+
+ExportAllDeclaration _parseExportAllDecl(String line, int start, int end) {
+  final text = line.trim();
+  final fromIdx = text.indexOf(' from ');
+  if (fromIdx < 0) throw StateError('Invalid ExportAllDeclaration');
+  int q = text.indexOf('"', fromIdx);
+  if (q < 0) q = text.indexOf("'", fromIdx);
+  if (q < 0) throw StateError('Invalid ExportAllDeclaration: missing source');
+  final q2 = text.indexOf(text[q], q + 1);
+  if (q2 < 0)
+    throw StateError('Invalid ExportAllDeclaration: unterminated source');
+  final src = text.substring(q + 1, q2);
+  return ExportAllDeclaration(source: StringLiteral(stringValue: src));
+}
+
+ExportDefaultDeclaration _parseExportDefaultDecl(
+  String line,
+  int start,
+  int end,
+) {
+  final text = line.trim();
+  final idx = text.indexOf('export default');
+  if (idx < 0) throw StateError('Invalid ExportDefaultDeclaration');
+  var body = text.substring(idx + 'export default'.length).trim();
+  if (body.endsWith(';')) body = body.substring(0, body.length - 1);
+  final expr = _parseSimpleExpression(body, start, end);
+  return ExportDefaultDeclaration(declaration: expr);
 }

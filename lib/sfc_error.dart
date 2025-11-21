@@ -32,6 +32,14 @@ class DuplicateDefineSlotsError extends SfcError {
   DuplicateDefineSlotsError({required super.locStart, required super.locEnd});
 }
 
+class NoExportDeclarationError extends SfcError {
+  @override
+  String? get message =>
+      "[@vue/compiler-sfc] <script setup> cannot contain ES module exports. If you are using a previous version of <script setup>, please consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.";
+
+  NoExportDeclarationError({required super.locStart, required super.locEnd});
+}
+
 class ScriptError extends SfcError {
   ScriptError({
     required super.message,

@@ -8,17 +8,17 @@ export default {
   setup() {
     const theme = ref('light')
     const user = inject('currentUser', ref({ name: 'Guest' }))
-
+    
     provide('theme', theme)
     provide('appConfig', {
       version: '1.0.0',
       apiUrl: 'https://api.example.com'
     })
-
+    
     function toggleTheme() {
       theme.value = theme.value === 'light' ? 'dark' : 'light'
     }
-
+    
     return {
       theme,
       user,
@@ -27,3 +27,4 @@ export default {
   }
 }
 ```
+

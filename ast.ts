@@ -1,217 +1,120 @@
-export type ReturnedChild =
-  | JSXSpreadChild
-  | JSXElement
-  | JSXFragment
-  | Expression;
-
-export interface BaseComment {
-  value: string;
-  start?: number;
-  end?: number;
-  loc?: SourceLocation;
-  ignore?: boolean;
-  type: "CommentBlock" | "CommentLine";
-}
-
+// ast-nodes.ts
 export interface Position {
   line: number;
   column: number;
-  index: number;
 }
-
-export interface CommentBlock extends BaseComment {
-  type: "CommentBlock";
-}
-
-export interface CommentLine extends BaseComment {
-  type: "CommentLine";
-}
-
-export type Comment = CommentBlock | CommentLine;
 export interface SourceLocation {
   start: Position;
   end: Position;
-  filename: string;
-  identifierName: string | undefined | null;
 }
+
+export type Node =
+  | Program
+  | VariableDeclaration
+  | FunctionDeclaration
+  | ClassDeclaration
+  | IfStatement
+  | BlockStatement
+  | ExpressionStatement
+  | ReturnStatement
+  | ForStatement
+  | WhileStatement
+  | BreakStatement
+  | ContinueStatement
+  | TryStatement
+  | ThrowStatement
+  | SwitchStatement
+  | SwitchCase
+  | Identifier
+  | Literal
+  | ArrayExpression
+  | ObjectExpression
+  | Property
+  | FunctionExpression
+  | ArrowFunctionExpression
+  | ClassExpression
+  | CallExpression
+  | NewExpression
+  | MemberExpression
+  | UpdateExpression
+  | UnaryExpression
+  | BinaryExpression
+  | LogicalExpression
+  | AssignmentExpression
+  | ConditionalExpression
+  | ThisExpression
+  | TemplateLiteral
+  | TaggedTemplateExpression
+  | TSTypeAnnotation
+  | TSTypeReference
+  | TSAsExpression
+  | TSInterfaceDeclaration
+  | TSEnumDeclaration
+  | TSModuleDeclaration
+  | TSParameterProperty
+  | TSNonNullExpression
+  | TSDeclareFunction
+  | ImportDeclaration
+  | ExportNamedDeclaration
+  | ExportDefaultDeclaration
+  | ExportAllDeclaration
+  | AwaitExpression
+  | ImportExpression
+  | MetaProperty
+  | Decorator
+  | AssertEntry;
 
 export interface BaseNode {
-  leadingComments?: Comment[] | null;
-  innerComments?: Comment[] | null;
-  trailingComments?: Comment[] | null;
-  start?: number | null;
-  end?: number | null;
-  loc?: SourceLocation | null;
+  type: string;
+  loc?: SourceLocation;
   range?: [number, number];
-  extra?: Record<string, unknown>;
 }
 
-export type CommentTypeShorthand = "leading" | "inner" | "trailing";
-
-export interface ArrayExpression extends BaseNode {
-  type: "ArrayExpression";
-  elements: Array<null | Expression | SpreadElement>;
+export interface Program extends BaseNode {
+  type: "Program";
+  sourceType: "script" | "module";
+  body: Statement[];
 }
 
-export interface AssignmentExpression extends BaseNode {
-  type: "AssignmentExpression";
-  operator: string;
-  left: LVal | OptionalMemberExpression;
-  right: Expression;
+export interface VariableDeclaration extends BaseNode {
+  type: "VariableDeclaration";
+  kind: "var" | "let" | "const";
+  declarations: VariableDeclarator[];
 }
 
-export interface BinaryExpression extends BaseNode {
-  type: "BinaryExpression";
-  operator:
-    | "+"
-    | "-"
-    | "/"
-    | "%"
-    | "*"
-    | "**"
-    | "&"
-    | "|"
-    | ">>"
-    | ">>>"
-    | "<<"
-    | "^"
-    | "=="
-    | "==="
-    | "!="
-    | "!=="
-    | "in"
-    | "instanceof"
-    | ">"
-    | "<"
-    | ">="
-    | "<="
-    | "|>";
-  left: Expression | PrivateName;
-  right: Expression;
-}
-
-export interface InterpreterDirective extends BaseNode {
-  type: "InterpreterDirective";
-  value: string;
-}
-
-export interface Directive extends BaseNode {
-  type: "Directive";
-  value: DirectiveLiteral;
-}
-
-export interface DirectiveLiteral extends BaseNode {
-  type: "DirectiveLiteral";
-  value: string;
-}
-
-export interface BlockStatement extends BaseNode {
-  type: "BlockStatement";
-  body: Array<Statement>;
-  directives: Array<Directive>;
-}
-
-export interface BreakStatement extends BaseNode {
-  type: "BreakStatement";
-  label?: Identifier | null;
-}
-
-export interface CallExpression extends BaseNode {
-  type: "CallExpression";
-  callee: Expression | Super | V8IntrinsicIdentifier;
-  arguments: Array<Expression | SpreadElement | ArgumentPlaceholder>;
-  optional?: boolean | null;
-  typeParameters?: TSTypeParameterInstantiation | null;
-}
-
-export interface CatchClause extends BaseNode {
-  type: "CatchClause";
-  param?: Identifier | ArrayPattern | ObjectPattern | null;
-  body: BlockStatement;
-}
-
-export interface ConditionalExpression extends BaseNode {
-  type: "ConditionalExpression";
-  test: Expression;
-  consequent: Expression;
-  alternate: Expression;
-}
-
-export interface ContinueStatement extends BaseNode {
-  type: "ContinueStatement";
-  label?: Identifier | null;
-}
-
-export interface DebuggerStatement extends BaseNode {
-  type: "DebuggerStatement";
-}
-
-export interface DoWhileStatement extends BaseNode {
-  type: "DoWhileStatement";
-  test: Expression;
-  body: Statement;
-}
-
-export interface EmptyStatement extends BaseNode {
-  type: "EmptyStatement";
-}
-
-export interface ExpressionStatement extends BaseNode {
-  type: "ExpressionStatement";
-  expression: Expression;
-}
-
-export interface File extends BaseNode {
-  type: "File";
-  program: Program;
-  comments?: Array<CommentBlock | CommentLine> | null;
-  tokens?: Array<any> | null;
-}
-
-export interface ForInStatement extends BaseNode {
-  type: "ForInStatement";
-  left: VariableDeclaration | LVal;
-  right: Expression;
-  body: Statement;
-}
-
-export interface ForStatement extends BaseNode {
-  type: "ForStatement";
-  init?: VariableDeclaration | Expression | null;
-  test?: Expression | null;
-  update?: Expression | null;
-  body: Statement;
+export interface VariableDeclarator extends BaseNode {
+  type: "VariableDeclarator";
+  id: Identifier;
+  init?: Expression | null;
 }
 
 export interface FunctionDeclaration extends BaseNode {
   type: "FunctionDeclaration";
-  id?: Identifier | null;
-  params: Array<FunctionParameter>;
+  id: Identifier | null;
+  params: Parameter[];
   body: BlockStatement;
-  generator: boolean;
-  async: boolean;
-  declare?: boolean | null;
-  returnType?: TSTypeAnnotation | Noop | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
+  generator?: boolean;
+  async?: boolean;
 }
 
-export interface FunctionExpression extends BaseNode {
-  type: "FunctionExpression";
-  id?: Identifier | null;
-  params: Array<FunctionParameter>;
-  body: BlockStatement;
-  generator: boolean;
-  async: boolean;
-  returnType?: TSTypeAnnotation | Noop | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
+export interface ClassDeclaration extends BaseNode {
+  type: "ClassDeclaration";
+  id: Identifier | null;
+  superClass?: Expression | null;
+  body: ClassBody;
 }
 
-export interface Identifier extends BaseNode {
-  type: "Identifier";
-  name: string;
-  decorators?: Array<Decorator> | null;
-  optional?: boolean | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
+export interface ClassBody extends BaseNode {
+  type: "ClassBody";
+  body: MethodDefinition[];
+}
+
+export interface MethodDefinition extends BaseNode {
+  type: "MethodDefinition";
+  key: Expression;
+  value: FunctionExpression;
+  kind: "constructor" | "method" | "get" | "set";
+  static: boolean;
 }
 
 export interface IfStatement extends BaseNode {
@@ -221,119 +124,14 @@ export interface IfStatement extends BaseNode {
   alternate?: Statement | null;
 }
 
-export interface LabeledStatement extends BaseNode {
-  type: "LabeledStatement";
-  label: Identifier;
-  body: Statement;
+export interface BlockStatement extends BaseNode {
+  type: "BlockStatement";
+  body: Statement[];
 }
 
-export interface StringLiteral extends BaseNode {
-  type: "StringLiteral";
-  value: string;
-}
-
-export interface NumericLiteral extends BaseNode {
-  type: "NumericLiteral";
-  value: number;
-}
-
-export interface NullLiteral extends BaseNode {
-  type: "NullLiteral";
-}
-
-export interface BooleanLiteral extends BaseNode {
-  type: "BooleanLiteral";
-  value: boolean;
-}
-
-export interface RegExpLiteral extends BaseNode {
-  type: "RegExpLiteral";
-  pattern: string;
-  flags: string;
-}
-
-export interface LogicalExpression extends BaseNode {
-  type: "LogicalExpression";
-  operator: "||" | "&&" | "??";
-  left: Expression;
-  right: Expression;
-}
-
-export interface MemberExpression extends BaseNode {
-  type: "MemberExpression";
-  object: Expression | Super;
-  property: Expression | Identifier | PrivateName;
-  computed: boolean;
-  optional?: boolean | null;
-}
-
-export interface NewExpression extends BaseNode {
-  type: "NewExpression";
-  callee: Expression | Super | V8IntrinsicIdentifier;
-  arguments: Array<Expression | SpreadElement | ArgumentPlaceholder>;
-  optional?: boolean | null;
-  typeParameters?: TSTypeParameterInstantiation | null;
-}
-
-export interface Program extends BaseNode {
-  type: "Program";
-  body: Array<Statement>;
-  directives: Array<Directive>;
-  sourceType: "script" | "module";
-  interpreter?: InterpreterDirective | null;
-}
-
-export interface ObjectExpression extends BaseNode {
-  type: "ObjectExpression";
-  properties: Array<ObjectMethod | ObjectProperty | SpreadElement>;
-}
-
-export interface ObjectMethod extends BaseNode {
-  type: "ObjectMethod";
-  kind: "method" | "get" | "set";
-  key: Expression | Identifier | StringLiteral | NumericLiteral | BigIntLiteral;
-  params: Array<FunctionParameter>;
-  body: BlockStatement;
-  computed: boolean;
-  generator: boolean;
-  async: boolean;
-  decorators?: Array<Decorator> | null;
-  returnType?: TSTypeAnnotation | Noop | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
-}
-
-export interface ObjectProperty extends BaseNode {
-  type: "ObjectProperty";
-  key:
-    | Expression
-    | Identifier
-    | StringLiteral
-    | NumericLiteral
-    | BigIntLiteral
-    | DecimalLiteral
-    | PrivateName;
-  value: Expression | PatternLike;
-  computed: boolean;
-  shorthand: boolean;
-  decorators?: Array<Decorator> | null;
-}
-
-export interface RestElement extends BaseNode {
-  type: "RestElement";
-  argument:
-    | Identifier
-    | ArrayPattern
-    | ObjectPattern
-    | MemberExpression
-    | TSAsExpression
-    | TSSatisfiesExpression
-    | TSTypeAssertion
-    | TSNonNullExpression
-    | RestElement
-    | AssignmentPattern;
-  decorators?: Array<Decorator> | null;
-  optional?: boolean | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
+export interface ExpressionStatement extends BaseNode {
+  type: "ExpressionStatement";
+  expression: Expression;
 }
 
 export interface ReturnStatement extends BaseNode {
@@ -341,35 +139,28 @@ export interface ReturnStatement extends BaseNode {
   argument?: Expression | null;
 }
 
-export interface SequenceExpression extends BaseNode {
-  type: "SequenceExpression";
-  expressions: Array<Expression>;
-}
-
-export interface ParenthesizedExpression extends BaseNode {
-  type: "ParenthesizedExpression";
-  expression: Expression;
-}
-
-export interface SwitchCase extends BaseNode {
-  type: "SwitchCase";
+export interface ForStatement extends BaseNode {
+  type: "ForStatement";
+  init?: Expression | VariableDeclaration | null;
   test?: Expression | null;
-  consequent: Array<Statement>;
+  update?: Expression | null;
+  body: Statement;
 }
 
-export interface SwitchStatement extends BaseNode {
-  type: "SwitchStatement";
-  discriminant: Expression;
-  cases: Array<SwitchCase>;
+export interface WhileStatement extends BaseNode {
+  type: "WhileStatement";
+  test: Expression;
+  body: Statement;
 }
 
-export interface ThisExpression extends BaseNode {
-  type: "ThisExpression";
+export interface BreakStatement extends BaseNode {
+  type: "BreakStatement";
+  label?: Identifier | null;
 }
 
-export interface ThrowStatement extends BaseNode {
-  type: "ThrowStatement";
-  argument: Expression;
+export interface ContinueStatement extends BaseNode {
+  type: "ContinueStatement";
+  label?: Identifier | null;
 }
 
 export interface TryStatement extends BaseNode {
@@ -379,11 +170,100 @@ export interface TryStatement extends BaseNode {
   finalizer?: BlockStatement | null;
 }
 
-export interface UnaryExpression extends BaseNode {
-  type: "UnaryExpression";
-  operator: "void" | "throw" | "delete" | "!" | "+" | "-" | "~" | "typeof";
+export interface CatchClause extends BaseNode {
+  type: "CatchClause";
+  param?: Identifier | null;
+  body: BlockStatement;
+}
+
+export interface ThrowStatement extends BaseNode {
+  type: "ThrowStatement";
   argument: Expression;
-  prefix: boolean;
+}
+
+export interface SwitchStatement extends BaseNode {
+  type: "SwitchStatement";
+  discriminant: Expression;
+  cases: SwitchCase[];
+}
+
+export interface SwitchCase extends BaseNode {
+  type: "SwitchCase";
+  test?: Expression | null;
+  consequent: Statement[];
+}
+
+export interface Identifier extends BaseNode {
+  type: "Identifier";
+  name: string;
+}
+
+export interface Literal extends BaseNode {
+  type: "Literal";
+  value: string | number | boolean | RegExp | bigint | null;
+  raw?: string;
+}
+
+export interface ArrayExpression extends BaseNode {
+  type: "ArrayExpression";
+  elements: (Expression | null)[];
+}
+
+export interface ObjectExpression extends BaseNode {
+  type: "ObjectExpression";
+  properties: Property[];
+}
+
+export interface Property extends BaseNode {
+  type: "Property";
+  key: Expression;
+  value: Expression;
+  kind: "init" | "get" | "set";
+  method: boolean;
+  shorthand: boolean;
+  computed: boolean;
+}
+
+export interface FunctionExpression extends BaseNode {
+  type: "FunctionExpression";
+  id: Identifier | null;
+  params: Parameter[];
+  body: BlockStatement;
+  generator?: boolean;
+  async?: boolean;
+}
+
+export interface ArrowFunctionExpression extends BaseNode {
+  type: "ArrowFunctionExpression";
+  params: Parameter[];
+  body: BlockStatement | Expression;
+  async?: boolean;
+}
+
+export interface ClassExpression extends BaseNode {
+  type: "ClassExpression";
+  id: Identifier | null;
+  superClass?: Expression | null;
+  body: ClassBody;
+}
+
+export interface CallExpression extends BaseNode {
+  type: "CallExpression";
+  callee: Expression;
+  arguments: (Expression | SpreadElement)[];
+}
+
+export interface NewExpression extends BaseNode {
+  type: "NewExpression";
+  callee: Expression;
+  arguments: (Expression | SpreadElement)[];
+}
+
+export interface MemberExpression extends BaseNode {
+  type: "MemberExpression";
+  object: Expression;
+  property: Expression;
+  computed: boolean;
 }
 
 export interface UpdateExpression extends BaseNode {
@@ -393,873 +273,112 @@ export interface UpdateExpression extends BaseNode {
   prefix: boolean;
 }
 
-export interface VariableDeclaration extends BaseNode {
-  type: "VariableDeclaration";
-  kind: "var" | "let" | "const" | "using" | "await using";
-  declarations: Array<VariableDeclarator>;
-  declare?: boolean | null;
-}
-
-export interface VariableDeclarator extends BaseNode {
-  type: "VariableDeclarator";
-  id: LVal | VoidPattern;
-  init?: Expression | null;
-  definite?: boolean | null;
-}
-
-export interface WhileStatement extends BaseNode {
-  type: "WhileStatement";
-  test: Expression;
-  body: Statement;
-}
-
-export interface WithStatement extends BaseNode {
-  type: "WithStatement";
-  object: Expression;
-  body: Statement;
-}
-
-export interface AssignmentPattern extends BaseNode {
-  type: "AssignmentPattern";
-  left:
-    | Identifier
-    | ObjectPattern
-    | ArrayPattern
-    | MemberExpression
-    | TSAsExpression
-    | TSSatisfiesExpression
-    | TSTypeAssertion
-    | TSNonNullExpression;
-  right: Expression;
-  decorators?: Array<Decorator> | null;
-  optional?: boolean | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
-}
-
-export interface ArrayPattern extends BaseNode {
-  type: "ArrayPattern";
-  elements: Array<null | PatternLike>;
-  decorators?: Array<Decorator> | null;
-  optional?: boolean | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
-}
-
-export interface ArrowFunctionExpression extends BaseNode {
-  type: "ArrowFunctionExpression";
-  params: Array<FunctionParameter>;
-  body: BlockStatement | Expression;
-  async: boolean;
-  expression: boolean;
-  generator?: boolean;
-  returnType?: TSTypeAnnotation | Noop | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
-}
-
-export interface ClassBody extends BaseNode {
-  type: "ClassBody";
-  body: Array<
-    | ClassMethod
-    | ClassPrivateMethod
-    | ClassProperty
-    | ClassPrivateProperty
-    | ClassAccessorProperty
-    | TSDeclareMethod
-    | TSIndexSignature
-    | StaticBlock
-  >;
-}
-
-export interface ClassExpression extends BaseNode {
-  type: "ClassExpression";
-  id?: Identifier | null;
-  superClass?: Expression | null;
-  body: ClassBody;
-  decorators?: Array<Decorator> | null;
-  implements?: Array<TSExpressionWithTypeArguments> | null;
-  superTypeParameters?: TSTypeParameterInstantiation | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
-}
-
-export interface ClassDeclaration extends BaseNode {
-  type: "ClassDeclaration";
-  id?: Identifier | null;
-  superClass?: Expression | null;
-  body: ClassBody;
-  decorators?: Array<Decorator> | null;
-  abstract?: boolean | null;
-  declare?: boolean | null;
-  implements?: Array<TSExpressionWithTypeArguments> | null;
-  superTypeParameters?: TSTypeParameterInstantiation | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
-}
-
-export interface ExportAllDeclaration extends BaseNode {
-  type: "ExportAllDeclaration";
-  source: StringLiteral;
-  attributes?: Array<ImportAttribute> | null;
-  exportKind?: "type" | "value" | null;
-}
-
-export interface ExportDefaultDeclaration extends BaseNode {
-  type: "ExportDefaultDeclaration";
-  declaration:
-    | TSDeclareFunction
-    | FunctionDeclaration
-    | ClassDeclaration
-    | Expression;
-  exportKind?: "value" | null;
-}
-
-export interface ExportNamedDeclaration extends BaseNode {
-  type: "ExportNamedDeclaration";
-  declaration?: Declaration | null;
-  specifiers: Array<
-    ExportSpecifier | ExportDefaultSpecifier | ExportNamespaceSpecifier
-  >;
-  source?: StringLiteral | null;
-  attributes?: Array<ImportAttribute> | null;
-  exportKind?: "type" | "value" | null;
-}
-
-export interface ExportSpecifier extends BaseNode {
-  type: "ExportSpecifier";
-  local: Identifier;
-  exported: Identifier | StringLiteral;
-  exportKind?: "type" | "value" | null;
-}
-
-export interface ForOfStatement extends BaseNode {
-  type: "ForOfStatement";
-  left: VariableDeclaration | LVal;
-  right: Expression;
-  body: Statement;
-  await: boolean;
-}
-
-export interface ImportDeclaration extends BaseNode {
-  type: "ImportDeclaration";
-  specifiers: Array<
-    ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
-  >;
-  source: StringLiteral;
-  attributes?: Array<ImportAttribute> | null;
-  importKind?: "type" | "typeof" | "value" | null;
-  module?: boolean | null;
-  phase?: "source" | "defer" | null;
-}
-
-export interface ImportDefaultSpecifier extends BaseNode {
-  type: "ImportDefaultSpecifier";
-  local: Identifier;
-}
-
-export interface ImportNamespaceSpecifier extends BaseNode {
-  type: "ImportNamespaceSpecifier";
-  local: Identifier;
-}
-
-export interface ImportSpecifier extends BaseNode {
-  type: "ImportSpecifier";
-  local: Identifier;
-  imported: Identifier | StringLiteral;
-  importKind?: "type" | "typeof" | "value" | null;
-}
-
-export interface ImportExpression extends BaseNode {
-  type: "ImportExpression";
-  source: Expression;
-  options?: Expression | null;
-  phase?: "source" | "defer" | null;
-}
-
-export interface MetaProperty extends BaseNode {
-  type: "MetaProperty";
-  meta: Identifier;
-  property: Identifier;
-}
-
-export interface ClassMethod extends BaseNode {
-  type: "ClassMethod";
-  kind: "get" | "set" | "method" | "constructor";
-  key: Identifier | StringLiteral | NumericLiteral | BigIntLiteral | Expression;
-  params: Array<FunctionParameter | TSParameterProperty>;
-  body: BlockStatement;
-  computed: boolean;
-  static: boolean;
-  generator: boolean;
-  async: boolean;
-  abstract?: boolean | null;
-  access?: "public" | "private" | "protected" | null;
-  accessibility?: "public" | "private" | "protected" | null;
-  decorators?: Array<Decorator> | null;
-  optional?: boolean | null;
-  override?: boolean;
-  returnType?: TSTypeAnnotation | Noop | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
-}
-
-export interface ObjectPattern extends BaseNode {
-  type: "ObjectPattern";
-  properties: Array<RestElement | ObjectProperty>;
-  decorators?: Array<Decorator> | null;
-  optional?: boolean | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
-}
-
-export interface SpreadElement extends BaseNode {
-  type: "SpreadElement";
+export interface UnaryExpression extends BaseNode {
+  type: "UnaryExpression";
+  operator: "+" | "-" | "!" | "~" | "typeof" | "void" | "delete";
   argument: Expression;
+  prefix: boolean;
 }
 
-export interface Super extends BaseNode {
-  type: "Super";
+export interface BinaryExpression extends BaseNode {
+  type: "BinaryExpression";
+  operator:
+    | "=="
+    | "!="
+    | "==="
+    | "!=="
+    | "<"
+    | "<="
+    | ">"
+    | ">="
+    | "<<"
+    | ">>"
+    | ">>>"
+    | "+"
+    | "-"
+    | "*"
+    | "/"
+    | "%"
+    | "**"
+    | "|"
+    | "^"
+    | "&"
+    | "in"
+    | "instanceof";
+  left: Expression;
+  right: Expression;
+}
+
+export interface LogicalExpression extends BaseNode {
+  type: "LogicalExpression";
+  operator: "||" | "&&" | "??";
+  left: Expression;
+  right: Expression;
+}
+
+export interface AssignmentExpression extends BaseNode {
+  type: "AssignmentExpression";
+  operator:
+    | "="
+    | "+="
+    | "-="
+    | "*="
+    | "/="
+    | "%="
+    | "**="
+    | "<<="
+    | ">>="
+    | ">>>="
+    | "|="
+    | "^="
+    | "&=";
+  left: Expression;
+  right: Expression;
+}
+
+export interface ConditionalExpression extends BaseNode {
+  type: "ConditionalExpression";
+  test: Expression;
+  alternate: Expression;
+  consequent: Expression;
+}
+
+export interface ThisExpression extends BaseNode {
+  type: "ThisExpression";
+}
+
+export interface TemplateLiteral extends BaseNode {
+  type: "TemplateLiteral";
+  quasis: TemplateElement[];
+  expressions: Expression[];
+}
+
+export interface TemplateElement extends BaseNode {
+  type: "TemplateElement";
+  value: { cooked: string; raw: string };
+  tail: boolean;
 }
 
 export interface TaggedTemplateExpression extends BaseNode {
   type: "TaggedTemplateExpression";
   tag: Expression;
   quasi: TemplateLiteral;
-  typeParameters?: TSTypeParameterInstantiation | null;
 }
 
-export interface TemplateElement extends BaseNode {
-  type: "TemplateElement";
-  value: {
-    raw: string;
-    cooked?: string;
-  };
-  tail: boolean;
+export interface TSTypeAnnotation extends BaseNode {
+  type: "TSTypeAnnotation";
+  typeAnnotation: TSType;
 }
 
-export interface TemplateLiteral extends BaseNode {
-  type: "TemplateLiteral";
-  quasis: Array<TemplateElement>;
-  expressions: Array<Expression | TSType>;
-}
-
-export interface YieldExpression extends BaseNode {
-  type: "YieldExpression";
-  argument?: Expression | null;
-  delegate: boolean;
-}
-
-export interface AwaitExpression extends BaseNode {
-  type: "AwaitExpression";
-  argument: Expression;
-}
-
-export interface Import extends BaseNode {
-  type: "Import";
-}
-
-export interface BigIntLiteral extends BaseNode {
-  type: "BigIntLiteral";
-  value: string;
-}
-
-export interface ExportNamespaceSpecifier extends BaseNode {
-  type: "ExportNamespaceSpecifier";
-  exported: Identifier;
-}
-
-export interface OptionalMemberExpression extends BaseNode {
-  type: "OptionalMemberExpression";
-  object: Expression;
-  property: Expression | Identifier;
-  computed: boolean;
-  optional: boolean;
-}
-
-export interface OptionalCallExpression extends BaseNode {
-  type: "OptionalCallExpression";
-  callee: Expression;
-  arguments: Array<Expression | SpreadElement | ArgumentPlaceholder>;
-  optional: boolean;
-  typeParameters?: TSTypeParameterInstantiation | null;
-}
-
-export interface ClassProperty extends BaseNode {
-  type: "ClassProperty";
-  key: Identifier | StringLiteral | NumericLiteral | BigIntLiteral | Expression;
-  value?: Expression | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
-  decorators?: Array<Decorator> | null;
-  computed: boolean;
-  static: boolean;
-  abstract?: boolean | null;
-  accessibility?: "public" | "private" | "protected" | null;
-  declare?: boolean | null;
-  definite?: boolean | null;
-  optional?: boolean | null;
-  override?: boolean;
-  readonly?: boolean | null;
-}
-
-export interface ClassAccessorProperty extends BaseNode {
-  type: "ClassAccessorProperty";
-  key:
-    | Identifier
-    | StringLiteral
-    | NumericLiteral
-    | BigIntLiteral
-    | Expression
-    | PrivateName;
-  value?: Expression | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
-  decorators?: Array<Decorator> | null;
-  computed: boolean;
-  static: boolean;
-  abstract?: boolean | null;
-  accessibility?: "public" | "private" | "protected" | null;
-  declare?: boolean | null;
-  definite?: boolean | null;
-  optional?: boolean | null;
-  override?: boolean;
-  readonly?: boolean | null;
-}
-
-export interface ClassPrivateProperty extends BaseNode {
-  type: "ClassPrivateProperty";
-  key: PrivateName;
-  value?: Expression | null;
-  decorators?: Array<Decorator> | null;
-  static: boolean;
-  definite?: boolean | null;
-  optional?: boolean | null;
-  readonly?: boolean | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
-}
-
-export interface ClassPrivateMethod extends BaseNode {
-  type: "ClassPrivateMethod";
-  kind: "get" | "set" | "method";
-  key: PrivateName;
-  params: Array<FunctionParameter | TSParameterProperty>;
-  body: BlockStatement;
-  static: boolean;
-  abstract?: boolean | null;
-  access?: "public" | "private" | "protected" | null;
-  accessibility?: "public" | "private" | "protected" | null;
-  async?: boolean;
-  computed?: boolean;
-  decorators?: Array<Decorator> | null;
-  generator?: boolean;
-  optional?: boolean | null;
-  override?: boolean;
-  returnType?: TSTypeAnnotation | Noop | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
-}
-
-export interface PrivateName extends BaseNode {
-  type: "PrivateName";
-  id: Identifier;
-}
-
-export interface StaticBlock extends BaseNode {
-  type: "StaticBlock";
-  body: Array<Statement>;
-}
-
-export interface ImportAttribute extends BaseNode {
-  type: "ImportAttribute";
-  key: Identifier | StringLiteral;
-  value: StringLiteral;
-}
-
-export interface JSXAttribute extends BaseNode {
-  type: "JSXAttribute";
-  name: JSXIdentifier | JSXNamespacedName;
-  value?:
-    | JSXElement
-    | JSXFragment
-    | StringLiteral
-    | JSXExpressionContainer
-    | null;
-}
-
-export interface JSXClosingElement extends BaseNode {
-  type: "JSXClosingElement";
-  name: JSXIdentifier | JSXMemberExpression | JSXNamespacedName;
-}
-
-export interface JSXElement extends BaseNode {
-  type: "JSXElement";
-  openingElement: JSXOpeningElement;
-  closingElement?: JSXClosingElement | null;
-  children: Array<
-    JSXText | JSXExpressionContainer | JSXSpreadChild | JSXElement | JSXFragment
-  >;
-  selfClosing?: boolean | null;
-}
-
-export interface JSXEmptyExpression extends BaseNode {
-  type: "JSXEmptyExpression";
-}
-
-export interface JSXExpressionContainer extends BaseNode {
-  type: "JSXExpressionContainer";
-  expression: Expression | JSXEmptyExpression;
-}
-
-export interface JSXSpreadChild extends BaseNode {
-  type: "JSXSpreadChild";
-  expression: Expression;
-}
-
-export interface JSXIdentifier extends BaseNode {
-  type: "JSXIdentifier";
-  name: string;
-}
-
-export interface JSXMemberExpression extends BaseNode {
-  type: "JSXMemberExpression";
-  object: JSXMemberExpression | JSXIdentifier;
-  property: JSXIdentifier;
-}
-
-export interface JSXNamespacedName extends BaseNode {
-  type: "JSXNamespacedName";
-  namespace: JSXIdentifier;
-  name: JSXIdentifier;
-}
-
-export interface JSXOpeningElement extends BaseNode {
-  type: "JSXOpeningElement";
-  name: JSXIdentifier | JSXMemberExpression | JSXNamespacedName;
-  attributes: Array<JSXAttribute | JSXSpreadAttribute>;
-  selfClosing: boolean;
-  typeParameters?: TSTypeParameterInstantiation | null;
-}
-
-export interface JSXSpreadAttribute extends BaseNode {
-  type: "JSXSpreadAttribute";
-  argument: Expression;
-}
-
-export interface JSXText extends BaseNode {
-  type: "JSXText";
-  value: string;
-}
-
-export interface JSXFragment extends BaseNode {
-  type: "JSXFragment";
-  openingFragment: JSXOpeningFragment;
-  closingFragment: JSXClosingFragment;
-  children: Array<
-    JSXText | JSXExpressionContainer | JSXSpreadChild | JSXElement | JSXFragment
-  >;
-}
-
-export interface JSXOpeningFragment extends BaseNode {
-  type: "JSXOpeningFragment";
-}
-
-export interface JSXClosingFragment extends BaseNode {
-  type: "JSXClosingFragment";
-}
-
-export interface Noop extends BaseNode {
-  type: "Noop";
-}
-
-export interface Placeholder extends BaseNode {
-  type: "Placeholder";
-  expectedNode:
-    | "Identifier"
-    | "StringLiteral"
-    | "Expression"
-    | "Statement"
-    | "Declaration"
-    | "BlockStatement"
-    | "ClassBody"
-    | "Pattern";
-  name: Identifier;
-  decorators?: Array<Decorator> | null;
-  optional?: boolean | null;
-  typeAnnotation?: TSTypeAnnotation | Noop | null;
-}
-
-export interface V8IntrinsicIdentifier extends BaseNode {
-  type: "V8IntrinsicIdentifier";
-  name: string;
-}
-
-export interface ArgumentPlaceholder extends BaseNode {
-  type: "ArgumentPlaceholder";
-}
-
-export interface BindExpression extends BaseNode {
-  type: "BindExpression";
-  object: Expression;
-  callee: Expression;
-}
-
-export interface Decorator extends BaseNode {
-  type: "Decorator";
-  expression: Expression;
-}
-
-export interface DoExpression extends BaseNode {
-  type: "DoExpression";
-  body: BlockStatement;
-  async: boolean;
-}
-
-export interface ExportDefaultSpecifier extends BaseNode {
-  type: "ExportDefaultSpecifier";
-  exported: Identifier;
-}
-
-export interface RecordExpression extends BaseNode {
-  type: "RecordExpression";
-  properties: Array<ObjectProperty | SpreadElement>;
-}
-
-export interface TupleExpression extends BaseNode {
-  type: "TupleExpression";
-  elements: Array<Expression | SpreadElement>;
-}
-
-export interface DecimalLiteral extends BaseNode {
-  type: "DecimalLiteral";
-  value: string;
-}
-
-export interface ModuleExpression extends BaseNode {
-  type: "ModuleExpression";
-  body: Program;
-}
-
-export interface TopicReference extends BaseNode {
-  type: "TopicReference";
-}
-
-export interface PipelineTopicExpression extends BaseNode {
-  type: "PipelineTopicExpression";
-  expression: Expression;
-}
-
-export interface PipelineBareFunction extends BaseNode {
-  type: "PipelineBareFunction";
-  callee: Expression;
-}
-
-export interface PipelinePrimaryTopicReference extends BaseNode {
-  type: "PipelinePrimaryTopicReference";
-}
-
-export interface VoidPattern extends BaseNode {
-  type: "VoidPattern";
-}
-
-export interface TSParameterProperty extends BaseNode {
-  type: "TSParameterProperty";
-  parameter: Identifier | AssignmentPattern;
-  accessibility?: "public" | "private" | "protected" | null;
-  decorators?: Array<Decorator> | null;
-  override?: boolean | null;
-  readonly?: boolean | null;
-}
-
-export interface TSDeclareFunction extends BaseNode {
-  type: "TSDeclareFunction";
-  id?: Identifier | null;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
-  params: Array<FunctionParameter>;
-  returnType?: TSTypeAnnotation | Noop | null;
-  async?: boolean;
-  declare?: boolean | null;
-  generator?: boolean;
-}
-
-export interface TSDeclareMethod extends BaseNode {
-  type: "TSDeclareMethod";
-  decorators?: Array<Decorator> | null;
-  key: Identifier | StringLiteral | NumericLiteral | BigIntLiteral | Expression;
-  typeParameters?: TSTypeParameterDeclaration | Noop | null;
-  params: Array<FunctionParameter | TSParameterProperty>;
-  returnType?: TSTypeAnnotation | Noop | null;
-  abstract?: boolean | null;
-  access?: "public" | "private" | "protected" | null;
-  accessibility?: "public" | "private" | "protected" | null;
-  async?: boolean;
-  computed?: boolean;
-  generator?: boolean;
-  kind?: "get" | "set" | "method" | "constructor";
-  optional?: boolean | null;
-  override?: boolean;
-  static?: boolean;
-}
-
-export interface TSQualifiedName extends BaseNode {
-  type: "TSQualifiedName";
-  left: TSEntityName;
-  right: Identifier;
-}
-
-export interface TSCallSignatureDeclaration extends BaseNode {
-  type: "TSCallSignatureDeclaration";
-  typeParameters?: TSTypeParameterDeclaration | null;
-  parameters: Array<ArrayPattern | Identifier | ObjectPattern | RestElement>;
-  typeAnnotation?: TSTypeAnnotation | null;
-}
-
-export interface TSConstructSignatureDeclaration extends BaseNode {
-  type: "TSConstructSignatureDeclaration";
-  typeParameters?: TSTypeParameterDeclaration | null;
-  parameters: Array<ArrayPattern | Identifier | ObjectPattern | RestElement>;
-  typeAnnotation?: TSTypeAnnotation | null;
-}
-
-export interface TSPropertySignature extends BaseNode {
-  type: "TSPropertySignature";
-  key: Expression;
-  typeAnnotation?: TSTypeAnnotation | null;
-  computed?: boolean;
-  kind?: "get" | "set" | null;
-  optional?: boolean | null;
-  readonly?: boolean | null;
-}
-
-export interface TSMethodSignature extends BaseNode {
-  type: "TSMethodSignature";
-  key: Expression;
-  typeParameters?: TSTypeParameterDeclaration | null;
-  parameters: Array<ArrayPattern | Identifier | ObjectPattern | RestElement>;
-  typeAnnotation?: TSTypeAnnotation | null;
-  computed?: boolean;
-  kind: "method" | "get" | "set";
-  optional?: boolean | null;
-}
-
-export interface TSIndexSignature extends BaseNode {
-  type: "TSIndexSignature";
-  parameters: Array<Identifier>;
-  typeAnnotation?: TSTypeAnnotation | null;
-  readonly?: boolean | null;
-  static?: boolean | null;
-}
-
-export interface TSAnyKeyword extends BaseNode {
-  type: "TSAnyKeyword";
-}
-
-export interface TSBooleanKeyword extends BaseNode {
-  type: "TSBooleanKeyword";
-}
-
-export interface TSBigIntKeyword extends BaseNode {
-  type: "TSBigIntKeyword";
-}
-
-export interface TSIntrinsicKeyword extends BaseNode {
-  type: "TSIntrinsicKeyword";
-}
-
-export interface TSNeverKeyword extends BaseNode {
-  type: "TSNeverKeyword";
-}
-
-export interface TSNullKeyword extends BaseNode {
-  type: "TSNullKeyword";
-}
-
-export interface TSNumberKeyword extends BaseNode {
-  type: "TSNumberKeyword";
-}
-
-export interface TSObjectKeyword extends BaseNode {
-  type: "TSObjectKeyword";
-}
-
-export interface TSStringKeyword extends BaseNode {
-  type: "TSStringKeyword";
-}
-
-export interface TSSymbolKeyword extends BaseNode {
-  type: "TSSymbolKeyword";
-}
-
-export interface TSUndefinedKeyword extends BaseNode {
-  type: "TSUndefinedKeyword";
-}
-
-export interface TSUnknownKeyword extends BaseNode {
-  type: "TSUnknownKeyword";
-}
-
-export interface TSVoidKeyword extends BaseNode {
-  type: "TSVoidKeyword";
-}
-
-export interface TSThisType extends BaseNode {
-  type: "TSThisType";
-}
-
-export interface TSFunctionType extends BaseNode {
-  type: "TSFunctionType";
-  typeParameters?: TSTypeParameterDeclaration | null;
-  parameters: Array<ArrayPattern | Identifier | ObjectPattern | RestElement>;
-  typeAnnotation?: TSTypeAnnotation | null;
-}
-
-export interface TSConstructorType extends BaseNode {
-  type: "TSConstructorType";
-  typeParameters?: TSTypeParameterDeclaration | null;
-  parameters: Array<ArrayPattern | Identifier | ObjectPattern | RestElement>;
-  typeAnnotation?: TSTypeAnnotation | null;
-  abstract?: boolean | null;
-}
+export type TSType =
+  | TSTypeReference
+  | TSInterfaceDeclaration
+  | TSEnumDeclaration
+  | TSModuleDeclaration;
 
 export interface TSTypeReference extends BaseNode {
   type: "TSTypeReference";
-  typeName: TSEntityName;
-  typeParameters?: TSTypeParameterInstantiation | null;
-}
-
-export interface TSTypePredicate extends BaseNode {
-  type: "TSTypePredicate";
-  parameterName: Identifier | TSThisType;
-  typeAnnotation?: TSTypeAnnotation | null;
-  asserts?: boolean | null;
-}
-
-export interface TSTypeQuery extends BaseNode {
-  type: "TSTypeQuery";
-  exprName: TSEntityName | TSImportType;
-  typeParameters?: TSTypeParameterInstantiation | null;
-}
-
-export interface TSTypeLiteral extends BaseNode {
-  type: "TSTypeLiteral";
-  members: Array<TSTypeElement>;
-}
-
-export interface TSArrayType extends BaseNode {
-  type: "TSArrayType";
-  elementType: TSType;
-}
-
-export interface TSTupleType extends BaseNode {
-  type: "TSTupleType";
-  elementTypes: Array<TSType | TSNamedTupleMember>;
-}
-
-export interface TSOptionalType extends BaseNode {
-  type: "TSOptionalType";
-  typeAnnotation: TSType;
-}
-
-export interface TSRestType extends BaseNode {
-  type: "TSRestType";
-  typeAnnotation: TSType;
-}
-
-export interface TSNamedTupleMember extends BaseNode {
-  type: "TSNamedTupleMember";
-  label: Identifier;
-  elementType: TSType;
-  optional: boolean;
-}
-
-export interface TSUnionType extends BaseNode {
-  type: "TSUnionType";
-  types: Array<TSType>;
-}
-
-export interface TSIntersectionType extends BaseNode {
-  type: "TSIntersectionType";
-  types: Array<TSType>;
-}
-
-export interface TSConditionalType extends BaseNode {
-  type: "TSConditionalType";
-  checkType: TSType;
-  extendsType: TSType;
-  trueType: TSType;
-  falseType: TSType;
-}
-
-export interface TSInferType extends BaseNode {
-  type: "TSInferType";
-  typeParameter: TSTypeParameter;
-}
-
-export interface TSParenthesizedType extends BaseNode {
-  type: "TSParenthesizedType";
-  typeAnnotation: TSType;
-}
-
-export interface TSTypeOperator extends BaseNode {
-  type: "TSTypeOperator";
-  typeAnnotation: TSType;
-  operator: string;
-}
-
-export interface TSIndexedAccessType extends BaseNode {
-  type: "TSIndexedAccessType";
-  objectType: TSType;
-  indexType: TSType;
-}
-
-export interface TSMappedType extends BaseNode {
-  type: "TSMappedType";
-  typeParameter: TSTypeParameter;
-  typeAnnotation?: TSType | null;
-  nameType?: TSType | null;
-  optional?: true | false | "+" | "-" | null;
-  readonly?: true | false | "+" | "-" | null;
-}
-
-export interface TSTemplateLiteralType extends BaseNode {
-  type: "TSTemplateLiteralType";
-  quasis: Array<TemplateElement>;
-  types: Array<TSType>;
-}
-
-export interface TSLiteralType extends BaseNode {
-  type: "TSLiteralType";
-  literal:
-    | NumericLiteral
-    | StringLiteral
-    | BooleanLiteral
-    | BigIntLiteral
-    | TemplateLiteral
-    | UnaryExpression;
-}
-
-export interface TSExpressionWithTypeArguments extends BaseNode {
-  type: "TSExpressionWithTypeArguments";
-  expression: TSEntityName;
-  typeParameters?: TSTypeParameterInstantiation | null;
-}
-
-export interface TSInterfaceDeclaration extends BaseNode {
-  type: "TSInterfaceDeclaration";
-  id: Identifier;
-  typeParameters?: TSTypeParameterDeclaration | null;
-  extends?: Array<TSExpressionWithTypeArguments> | null;
-  body: TSInterfaceBody;
-  declare?: boolean | null;
-}
-
-export interface TSInterfaceBody extends BaseNode {
-  type: "TSInterfaceBody";
-  body: Array<TSTypeElement>;
-}
-
-export interface TSTypeAliasDeclaration extends BaseNode {
-  type: "TSTypeAliasDeclaration";
-  id: Identifier;
-  typeParameters?: TSTypeParameterDeclaration | null;
-  typeAnnotation: TSType;
-  declare?: boolean | null;
-}
-
-export interface TSInstantiationExpression extends BaseNode {
-  type: "TSInstantiationExpression";
-  expression: Expression;
-  typeParameters?: TSTypeParameterInstantiation | null;
+  typeName: Identifier;
 }
 
 export interface TSAsExpression extends BaseNode {
@@ -1268,72 +387,49 @@ export interface TSAsExpression extends BaseNode {
   typeAnnotation: TSType;
 }
 
-export interface TSSatisfiesExpression extends BaseNode {
-  type: "TSSatisfiesExpression";
-  expression: Expression;
-  typeAnnotation: TSType;
+export interface TSInterfaceDeclaration extends BaseNode {
+  type: "TSInterfaceDeclaration";
+  id: Identifier;
+  body: TSInterfaceBody;
 }
 
-export interface TSTypeAssertion extends BaseNode {
-  type: "TSTypeAssertion";
-  typeAnnotation: TSType;
-  expression: Expression;
+export interface TSInterfaceBody extends BaseNode {
+  type: "TSInterfaceBody";
+  body: TSPropertySignature[];
 }
 
-export interface TSEnumBody extends BaseNode {
-  type: "TSEnumBody";
-  members: Array<TSEnumMember>;
+export interface TSPropertySignature extends BaseNode {
+  type: "TSPropertySignature";
+  key: Identifier;
+  typeAnnotation?: TSTypeAnnotation;
 }
 
 export interface TSEnumDeclaration extends BaseNode {
   type: "TSEnumDeclaration";
   id: Identifier;
-  members: Array<TSEnumMember>;
-  body?: TSEnumBody | null;
-  const?: boolean | null;
-  declare?: boolean | null;
-  initializer?: Expression | null;
+  members: TSEnumMember[];
 }
 
 export interface TSEnumMember extends BaseNode {
   type: "TSEnumMember";
-  id: Identifier | StringLiteral;
-  initializer?: Expression | null;
+  id: Identifier;
+  initializer?: Expression;
 }
 
 export interface TSModuleDeclaration extends BaseNode {
   type: "TSModuleDeclaration";
-  id: Identifier | StringLiteral;
-  body: TSModuleBlock | TSModuleDeclaration;
-  declare?: boolean | null;
-  global?: boolean | null;
-  kind: "global" | "module" | "namespace";
+  id: Identifier;
+  body: TSModuleBlock;
 }
 
 export interface TSModuleBlock extends BaseNode {
   type: "TSModuleBlock";
-  body: Array<Statement>;
+  body: Statement[];
 }
 
-export interface TSImportType extends BaseNode {
-  type: "TSImportType";
-  argument: StringLiteral;
-  qualifier?: TSEntityName | null;
-  typeParameters?: TSTypeParameterInstantiation | null;
-  options?: ObjectExpression | null;
-}
-
-export interface TSImportEqualsDeclaration extends BaseNode {
-  type: "TSImportEqualsDeclaration";
-  id: Identifier;
-  moduleReference: TSEntityName | TSExternalModuleReference;
-  importKind?: "type" | "value" | null;
-  isExport: boolean;
-}
-
-export interface TSExternalModuleReference extends BaseNode {
-  type: "TSExternalModuleReference";
-  expression: StringLiteral;
+export interface TSParameterProperty extends BaseNode {
+  type: "TSParameterProperty";
+  parameter: Identifier;
 }
 
 export interface TSNonNullExpression extends BaseNode {
@@ -1341,513 +437,175 @@ export interface TSNonNullExpression extends BaseNode {
   expression: Expression;
 }
 
-export interface TSExportAssignment extends BaseNode {
-  type: "TSExportAssignment";
+export interface TSDeclareFunction extends BaseNode {
+  type: "TSDeclareFunction";
+  id: Identifier | null;
+  params: Parameter[];
+  returnType?: TSTypeAnnotation;
+}
+
+export interface ImportDeclaration extends BaseNode {
+  type: "ImportDeclaration";
+  specifiers: ImportSpecifier[];
+  source: Literal;
+}
+
+export interface ImportSpecifier extends BaseNode {
+  type:
+    | "ImportSpecifier"
+    | "ImportDefaultSpecifier"
+    | "ImportNamespaceSpecifier";
+  imported?: Identifier;
+  local: Identifier;
+}
+
+export interface ExportNamedDeclaration extends BaseNode {
+  type: "ExportNamedDeclaration";
+  declaration?: Declaration | null;
+  specifiers: ExportSpecifier[];
+  source?: Literal | null;
+}
+
+export interface ExportDefaultDeclaration extends BaseNode {
+  type: "ExportDefaultDeclaration";
+  declaration: Declaration | Expression;
+}
+
+export interface ExportAllDeclaration extends BaseNode {
+  type: "ExportAllDeclaration";
+  source: Literal;
+  exported?: Identifier | null;
+}
+
+export interface ExportSpecifier extends BaseNode {
+  type: "ExportSpecifier";
+  exported: Identifier;
+  local: Identifier;
+}
+
+export interface AwaitExpression extends BaseNode {
+  type: "AwaitExpression";
+  argument: Expression;
+}
+
+export interface ImportExpression extends BaseNode {
+  type: "ImportExpression";
+  source: Expression;
+}
+
+export interface MetaProperty extends BaseNode {
+  type: "MetaProperty";
+  meta: Identifier;
+  property: Identifier;
+}
+
+export interface Decorator extends BaseNode {
+  type: "Decorator";
   expression: Expression;
 }
 
-export interface TSNamespaceExportDeclaration extends BaseNode {
-  type: "TSNamespaceExportDeclaration";
-  id: Identifier;
+export interface AssertEntry extends BaseNode {
+  type: "AssertEntry";
+  key: Identifier;
+  value: Literal;
 }
 
-export interface TSTypeAnnotation extends BaseNode {
-  type: "TSTypeAnnotation";
-  typeAnnotation: TSType;
+// 通用参数节点
+export type Parameter = Identifier | AssignmentPattern | RestElement;
+export interface AssignmentPattern extends BaseNode {
+  type: "AssignmentPattern";
+  left: Identifier;
+  right: Expression;
+}
+export interface RestElement extends BaseNode {
+  type: "RestElement";
+  argument: Identifier;
+}
+export interface SpreadElement extends BaseNode {
+  type: "SpreadElement";
+  argument: Expression;
 }
 
-export interface TSTypeParameterInstantiation extends BaseNode {
-  type: "TSTypeParameterInstantiation";
-  params: Array<TSType>;
+// -------------- 语句补充 --------------
+export interface EmptyStatement extends BaseNode {
+  type: "EmptyStatement";
 }
 
-export interface TSTypeParameterDeclaration extends BaseNode {
-  type: "TSTypeParameterDeclaration";
-  params: Array<TSTypeParameter>;
+export interface DebuggerStatement extends BaseNode {
+  type: "DebuggerStatement";
 }
 
-export interface TSTypeParameter extends BaseNode {
-  type: "TSTypeParameter";
-  constraint?: TSType | null;
-  default?: TSType | null;
-  name: string;
-  const?: boolean | null;
-  in?: boolean | null;
-  out?: boolean | null;
+export interface ForInStatement extends BaseNode {
+  type: "ForInStatement";
+  left: VariableDeclaration | Identifier | AssignmentPattern | MemberExpression;
+  right: Expression;
+  body: Statement;
 }
 
-export type Standardized =
-  | ArrayExpression
-  | AssignmentExpression
-  | BinaryExpression
-  | InterpreterDirective
-  | Directive
-  | DirectiveLiteral
-  | BlockStatement
-  | BreakStatement
-  | CallExpression
-  | CatchClause
-  | ConditionalExpression
-  | ContinueStatement
-  | DebuggerStatement
-  | DoWhileStatement
-  | EmptyStatement
+export interface ForOfStatement extends BaseNode {
+  type: "ForOfStatement";
+  left: VariableDeclaration | Identifier | AssignmentPattern | MemberExpression;
+  right: Expression;
+  body: Statement;
+  await: boolean;
+}
+
+// 语句 & 表达式总称
+export type Statement =
   | ExpressionStatement
-  | File
-  | ForInStatement
-  | ForStatement
-  | FunctionDeclaration
-  | FunctionExpression
-  | Identifier
-  | IfStatement
-  | LabeledStatement
-  | StringLiteral
-  | NumericLiteral
-  | NullLiteral
-  | BooleanLiteral
-  | RegExpLiteral
-  | LogicalExpression
-  | MemberExpression
-  | NewExpression
-  | Program
-  | ObjectExpression
-  | ObjectMethod
-  | ObjectProperty
-  | RestElement
+  | BlockStatement
+  | EmptyStatement
+  | DebuggerStatement
   | ReturnStatement
-  | SequenceExpression
-  | ParenthesizedExpression
-  | SwitchCase
+  | BreakStatement
+  | ContinueStatement
+  | IfStatement
   | SwitchStatement
-  | ThisExpression
   | ThrowStatement
   | TryStatement
-  | UnaryExpression
-  | UpdateExpression
-  | VariableDeclaration
-  | VariableDeclarator
   | WhileStatement
-  | WithStatement
-  | AssignmentPattern
-  | ArrayPattern
-  | ArrowFunctionExpression
-  | ClassBody
-  | ClassExpression
-  | ClassDeclaration
-  | ExportAllDeclaration
-  | ExportDefaultDeclaration
-  | ExportNamedDeclaration
-  | ExportSpecifier
+  | ForStatement
+  | ForInStatement
   | ForOfStatement
+  | VariableDeclaration
+  | FunctionDeclaration
+  | ClassDeclaration
   | ImportDeclaration
-  | ImportDefaultSpecifier
-  | ImportNamespaceSpecifier
-  | ImportSpecifier
-  | ImportExpression
-  | MetaProperty
-  | ClassMethod
-  | ObjectPattern
-  | SpreadElement
-  | Super
-  | TaggedTemplateExpression
-  | TemplateElement
-  | TemplateLiteral
-  | YieldExpression
-  | AwaitExpression
-  | Import
-  | BigIntLiteral
-  | ExportNamespaceSpecifier
-  | OptionalMemberExpression
-  | OptionalCallExpression
-  | ClassProperty
-  | ClassAccessorProperty
-  | ClassPrivateProperty
-  | ClassPrivateMethod
-  | PrivateName
-  | StaticBlock
-  | ImportAttribute;
+  | ExportNamedDeclaration
+  | ExportDefaultDeclaration
+  | ExportAllDeclaration;
 
 export type Expression =
-  | ArrayExpression
-  | AssignmentExpression
-  | BinaryExpression
-  | CallExpression
-  | ConditionalExpression
-  | FunctionExpression
   | Identifier
-  | StringLiteral
-  | NumericLiteral
-  | NullLiteral
-  | BooleanLiteral
-  | RegExpLiteral
-  | LogicalExpression
-  | MemberExpression
-  | NewExpression
+  | Literal
+  | ArrayExpression
   | ObjectExpression
-  | SequenceExpression
-  | ParenthesizedExpression
-  | ThisExpression
-  | UnaryExpression
-  | UpdateExpression
+  | FunctionExpression
   | ArrowFunctionExpression
   | ClassExpression
+  | CallExpression
+  | NewExpression
+  | MemberExpression
+  | UpdateExpression
+  | UnaryExpression
+  | BinaryExpression
+  | LogicalExpression
+  | AssignmentExpression
+  | ConditionalExpression
+  | ThisExpression
+  | TemplateLiteral
+  | TaggedTemplateExpression
+  | AwaitExpression
   | ImportExpression
   | MetaProperty
-  | Super
-  | TaggedTemplateExpression
-  | TemplateLiteral
-  | YieldExpression
-  | AwaitExpression
-  | Import
-  | BigIntLiteral
-  | OptionalMemberExpression
-  | OptionalCallExpression
-  | JSXElement
-  | JSXFragment
-  | BindExpression
-  | DoExpression
-  | RecordExpression
-  | TupleExpression
-  | DecimalLiteral
-  | ModuleExpression
-  | TopicReference
-  | PipelineTopicExpression
-  | PipelineBareFunction
-  | PipelinePrimaryTopicReference
-  | TSInstantiationExpression
   | TSAsExpression
-  | TSSatisfiesExpression
-  | TSTypeAssertion
   | TSNonNullExpression;
-
-export type Binary = BinaryExpression | LogicalExpression;
-
-export type Scopable =
-  | BlockStatement
-  | CatchClause
-  | DoWhileStatement
-  | ForInStatement
-  | ForStatement
-  | FunctionDeclaration
-  | FunctionExpression
-  | Program
-  | ObjectMethod
-  | SwitchStatement
-  | WhileStatement
-  | ArrowFunctionExpression
-  | ClassExpression
-  | ClassDeclaration
-  | ForOfStatement
-  | ClassMethod
-  | ClassPrivateMethod
-  | StaticBlock
-  | TSModuleBlock;
-
-export type BlockParent =
-  | BlockStatement
-  | CatchClause
-  | DoWhileStatement
-  | ForInStatement
-  | ForStatement
-  | FunctionDeclaration
-  | FunctionExpression
-  | Program
-  | ObjectMethod
-  | SwitchStatement
-  | WhileStatement
-  | ArrowFunctionExpression
-  | ForOfStatement
-  | ClassMethod
-  | ClassPrivateMethod
-  | StaticBlock
-  | TSModuleBlock;
-
-export type Block = BlockStatement | Program | TSModuleBlock;
-
-export type Statement =
-  | BlockStatement
-  | BreakStatement
-  | ContinueStatement
-  | DebuggerStatement
-  | DoWhileStatement
-  | EmptyStatement
-  | ExpressionStatement
-  | ForInStatement
-  | ForStatement
-  | FunctionDeclaration
-  | IfStatement
-  | LabeledStatement
-  | ReturnStatement
-  | SwitchStatement
-  | ThrowStatement
-  | TryStatement
-  | VariableDeclaration
-  | WhileStatement
-  | WithStatement
-  | ClassDeclaration
-  | ExportAllDeclaration
-  | ExportDefaultDeclaration
-  | ExportNamedDeclaration
-  | ForOfStatement
-  | ImportDeclaration
-  | TSDeclareFunction
-  | TSInterfaceDeclaration
-  | TSTypeAliasDeclaration
-  | TSEnumDeclaration
-  | TSModuleDeclaration
-  | TSImportEqualsDeclaration
-  | TSExportAssignment
-  | TSNamespaceExportDeclaration;
-
-export type Terminatorless =
-  | BreakStatement
-  | ContinueStatement
-  | ReturnStatement
-  | ThrowStatement
-  | YieldExpression
-  | AwaitExpression;
-
-export type CompletionStatement =
-  | BreakStatement
-  | ContinueStatement
-  | ReturnStatement
-  | ThrowStatement;
-
-export type Conditional = ConditionalExpression | IfStatement;
-
-export type Loop =
-  | DoWhileStatement
-  | ForInStatement
-  | ForStatement
-  | WhileStatement
-  | ForOfStatement;
-
-export type While = DoWhileStatement | WhileStatement;
-
-export type ExpressionWrapper = ExpressionStatement | ParenthesizedExpression;
-
-export type For = ForInStatement | ForStatement | ForOfStatement;
-
-export type ForXStatement = ForInStatement | ForOfStatement;
-
-export type Function =
-  | FunctionDeclaration
-  | FunctionExpression
-  | ObjectMethod
-  | ArrowFunctionExpression
-  | ClassMethod
-  | ClassPrivateMethod;
-
-export type FunctionParent =
-  | FunctionDeclaration
-  | FunctionExpression
-  | ObjectMethod
-  | ArrowFunctionExpression
-  | ClassMethod
-  | ClassPrivateMethod
-  | StaticBlock
-  | TSModuleBlock;
-
-export type Pureish =
-  | FunctionDeclaration
-  | FunctionExpression
-  | StringLiteral
-  | NumericLiteral
-  | NullLiteral
-  | BooleanLiteral
-  | RegExpLiteral
-  | ArrowFunctionExpression
-  | BigIntLiteral
-  | DecimalLiteral;
 
 export type Declaration =
-  | FunctionDeclaration
   | VariableDeclaration
+  | FunctionDeclaration
   | ClassDeclaration
-  | ExportAllDeclaration
-  | ExportDefaultDeclaration
-  | ExportNamedDeclaration
-  | ImportDeclaration
-  | TSDeclareFunction
   | TSInterfaceDeclaration
-  | TSTypeAliasDeclaration
   | TSEnumDeclaration
   | TSModuleDeclaration
-  | TSImportEqualsDeclaration;
-
-export type FunctionParameter =
-  | Identifier
-  | RestElement
-  | AssignmentPattern
-  | ArrayPattern
-  | ObjectPattern
-  | VoidPattern;
-
-export type PatternLike =
-  | Identifier
-  | MemberExpression
-  | RestElement
-  | AssignmentPattern
-  | ArrayPattern
-  | ObjectPattern
-  | VoidPattern
-  | TSAsExpression
-  | TSSatisfiesExpression
-  | TSTypeAssertion
-  | TSNonNullExpression;
-
-export type LVal =
-  | Identifier
-  | MemberExpression
-  | RestElement
-  | AssignmentPattern
-  | ArrayPattern
-  | ObjectPattern
-  | TSParameterProperty
-  | TSAsExpression
-  | TSSatisfiesExpression
-  | TSTypeAssertion
-  | TSNonNullExpression;
-
-export type TSEntityName = Identifier | TSQualifiedName;
-
-export type Literal =
-  | StringLiteral
-  | NumericLiteral
-  | NullLiteral
-  | BooleanLiteral
-  | RegExpLiteral
-  | TemplateLiteral
-  | BigIntLiteral
-  | DecimalLiteral;
-
-export type Immutable =
-  | StringLiteral
-  | NumericLiteral
-  | NullLiteral
-  | BooleanLiteral
-  | BigIntLiteral
-  | JSXAttribute
-  | JSXClosingElement
-  | JSXElement
-  | JSXExpressionContainer
-  | JSXSpreadChild
-  | JSXOpeningElement
-  | JSXText
-  | JSXFragment
-  | JSXOpeningFragment
-  | JSXClosingFragment
-  | DecimalLiteral;
-
-export type UserWhitespacable = ObjectMethod | ObjectProperty;
-
-export type Method = ObjectMethod | ClassMethod | ClassPrivateMethod;
-
-export type ObjectMember = ObjectMethod | ObjectProperty;
-
-export type Property =
-  | ObjectProperty
-  | ClassProperty
-  | ClassAccessorProperty
-  | ClassPrivateProperty;
-
-export type UnaryLike = UnaryExpression | SpreadElement;
-
-export type Pattern =
-  | AssignmentPattern
-  | ArrayPattern
-  | ObjectPattern
-  | VoidPattern;
-
-export type Class = ClassExpression | ClassDeclaration;
-export type ImportOrExportDeclaration =
-  | ExportAllDeclaration
-  | ExportDefaultDeclaration
-  | ExportNamedDeclaration
-  | ImportDeclaration;
-
-export type ExportDeclaration =
-  | ExportAllDeclaration
-  | ExportDefaultDeclaration
-  | ExportNamedDeclaration;
-
-export type ModuleSpecifier =
-  | ExportSpecifier
-  | ImportDefaultSpecifier
-  | ImportNamespaceSpecifier
-  | ImportSpecifier
-  | ExportNamespaceSpecifier
-  | ExportDefaultSpecifier;
-
-export type Accessor = ClassAccessorProperty;
-
-export type Private = ClassPrivateProperty | ClassPrivateMethod | PrivateName;
-
-export type TSTypeElement =
-  | TSCallSignatureDeclaration
-  | TSConstructSignatureDeclaration
-  | TSPropertySignature
-  | TSMethodSignature
-  | TSIndexSignature;
-
-export type TSType =
-  | TSAnyKeyword
-  | TSBooleanKeyword
-  | TSBigIntKeyword
-  | TSIntrinsicKeyword
-  | TSNeverKeyword
-  | TSNullKeyword
-  | TSNumberKeyword
-  | TSObjectKeyword
-  | TSStringKeyword
-  | TSSymbolKeyword
-  | TSUndefinedKeyword
-  | TSUnknownKeyword
-  | TSVoidKeyword
-  | TSThisType
-  | TSFunctionType
-  | TSConstructorType
-  | TSTypeReference
-  | TSTypePredicate
-  | TSTypeQuery
-  | TSTypeLiteral
-  | TSArrayType
-  | TSTupleType
-  | TSOptionalType
-  | TSRestType
-  | TSUnionType
-  | TSIntersectionType
-  | TSConditionalType
-  | TSInferType
-  | TSParenthesizedType
-  | TSTypeOperator
-  | TSIndexedAccessType
-  | TSMappedType
-  | TSTemplateLiteralType
-  | TSLiteralType
-  | TSExpressionWithTypeArguments
-  | TSImportType;
-
-export type TSBaseType =
-  | TSAnyKeyword
-  | TSBooleanKeyword
-  | TSBigIntKeyword
-  | TSIntrinsicKeyword
-  | TSNeverKeyword
-  | TSNullKeyword
-  | TSNumberKeyword
-  | TSObjectKeyword
-  | TSStringKeyword
-  | TSSymbolKeyword
-  | TSUndefinedKeyword
-  | TSUnknownKeyword
-  | TSVoidKeyword
-  | TSThisType
-  | TSTemplateLiteralType
-  | TSLiteralType;
-
-export type ModuleDeclaration =
-  | ExportAllDeclaration
-  | ExportDefaultDeclaration
-  | ExportNamedDeclaration
-  | ImportDeclaration;
+  | TSDeclareFunction;

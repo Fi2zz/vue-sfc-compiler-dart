@@ -2,18 +2,13 @@
 
 ```ts
 import { defineComponent as _defineComponent } from 'vue'
-import { getCurrentScope } from "vue";export default /*@__PURE__*/_defineComponent({
-  __name: 'getCurrentScope_basic',
+import { getCurrentScope } from 'vue';
+export default /*@__PURE__*/_defineComponent({  __name: 'getCurrentScope_basic',
 setup(__props: any, { expose: __expose }) {
   __expose();
-
 const scope = getCurrentScope()
-
 const __returned__ = { scope }
 Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-return __returned__
-}
-
-})
+return __returned__}});
 ```

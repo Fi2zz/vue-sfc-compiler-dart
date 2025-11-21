@@ -1,5 +1,5 @@
 import 'package:vue_sfc_parser/swc_ast.dart';
-import 'package:vue_sfc_parser/ts_ast.dart';
+import 'package:vue_sfc_parser/sfc_ast.dart';
 
 class Walked {
   SourceLocation? loc;
@@ -101,6 +101,18 @@ class CodegenHelpers {
 
   static String exportedTrailing(bool isTypescript) {
     return '}\n\n})';
+  }
+
+  static String component(bool isTypescript, List<String> body) {
+    String leading = '';
+    String trailing = '}';
+    if (isTypescript) {
+      leading = "export default /*@__PURE__*/_defineComponent({";
+      trailing += '});';
+    } else {
+      leading = '{';
+    }
+    return leading + body.join('\n') + trailing;
   }
 
   static String mergeProps(List<String> props) {
@@ -830,6 +842,7 @@ class CodegenHelpers {
 
           bool isWs(int c) => c == 32 || c == 9 || c == 10 || c == 13;
           void skipWs() {
+            // ignore: curly_braces_in_flow_control_structures
             while (i < arg.length && isWs(arg.codeUnitAt(i))) i++;
           }
 
@@ -851,6 +864,7 @@ class CodegenHelpers {
             skipWs();
             if (key.isNotEmpty) keys.add(key);
             // advance to next comma or closing brace at same depth
+            // ignore: curly_braces_in_flow_control_structures
             while (i < arg.length && arg[i] != ',' && arg[i] != '}') i++;
             if (i < arg.length && arg[i] == ',') i++;
           }
@@ -928,6 +942,7 @@ class CodegenHelpers {
           if (s != null && s.isNotEmpty) out.add(s);
         }
         // advance to next ')' or ','
+        // ignore: curly_braces_in_flow_control_structures
         while (i < raw.length && raw[i] != ')' && raw[i] != ',') i++;
         if (i < raw.length && (raw[i] == ')' || raw[i] == ',')) i++;
         continue;

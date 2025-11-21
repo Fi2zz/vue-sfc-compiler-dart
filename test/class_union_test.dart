@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:vue_sfc_parser/ts_ast.dart';
+import 'package:vue_sfc_parser/sfc_ast.dart';
 import 'package:vue_sfc_parser/swc_ast.dart' as swc;
 
 void main() {
@@ -35,13 +35,13 @@ void main() {
               'start': 0,
               'end': 1,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 1}
+              'loc_end': {'line': 1, 'column': 1},
             },
-            'name': 'Foo'
-          }
-        ]
+            'name': 'Foo',
+          },
+        ],
       };
-      final m = swc.moduleFromJson(json);
+      final m = swc.swcModuleFromJson(json);
       expect(m.body.length, 1);
       expect(swc.isSwcClassItem(m.body.first), isTrue);
     });

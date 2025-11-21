@@ -2,18 +2,13 @@
 
 ```ts
 import { defineComponent as _defineComponent } from 'vue'
-import { shallowReactive } from "vue";export default /*@__PURE__*/_defineComponent({
-  __name: 'shallowReactive_basic',
+import { shallowReactive } from 'vue';
+export default /*@__PURE__*/_defineComponent({  __name: 'shallowReactive_basic',
 setup(__props: any, { expose: __expose }) {
   __expose();
-
 const obj = shallowReactive({ a: 1 })
-
 const __returned__ = { obj }
 Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
 
-return __returned__
-}
-
-})
+return __returned__}});
 ```

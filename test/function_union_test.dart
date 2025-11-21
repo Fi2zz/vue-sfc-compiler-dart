@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:vue_sfc_parser/ts_ast.dart';
+import 'package:vue_sfc_parser/sfc_ast.dart';
 import 'package:vue_sfc_parser/swc_ast.dart' as swc;
 
 void main() {
@@ -10,11 +10,7 @@ void main() {
         'params': [
           {'type': 'Identifier', 'name': 'x'},
         ],
-        'body': {
-          'type': 'BlockStatement',
-          'body': [],
-          'directives': [],
-        },
+        'body': {'type': 'BlockStatement', 'body': [], 'directives': []},
         'async': true,
         'expression': false,
       };
@@ -35,14 +31,14 @@ void main() {
               'start': 0,
               'end': 10,
               'loc_start': {'line': 1, 'column': 0},
-              'loc_end': {'line': 1, 'column': 10}
+              'loc_end': {'line': 1, 'column': 10},
             },
             'name': 'foo',
             'text': 'function foo(){}',
-          }
-        ]
+          },
+        ],
       };
-      final m = swc.moduleFromJson(json);
+      final m = swc.swcModuleFromJson(json);
       final res = swc.analyzeSwcDeclarators(m);
       expect(res.length, 1);
       expect(res.first.declarationType, 'function_declaration');

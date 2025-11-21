@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:vue_sfc_parser/ts_ast.dart' as ts;
+import 'package:vue_sfc_parser/sfc_ast.dart' as ts;
 
 void main() {
   group('TsAstFactory union coverage', () {

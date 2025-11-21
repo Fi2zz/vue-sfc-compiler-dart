@@ -16,3 +16,4 @@ function createComponent<T>(name: string, initialValue: T) {
 export default createComponent('GenericComponent1', 'hello')
 export default createComponent('GenericComponent2', 42)
 ```
+

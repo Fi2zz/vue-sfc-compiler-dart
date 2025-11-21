@@ -1,7 +1,7 @@
 import {
   defineComponent as _defineComponent,
-  useModel as _useModel,
   mergeModels as _mergeModels,
+  useModel as _useModel,
 } from "vue";
 import {
   ref,
@@ -16,41 +16,52 @@ import {
   defineAsyncComponent,
   useSlots,
   useAttrs,
+  unref as _unref,
 } from "vue";
 import { createApp } from "vue";
 import * as vue from "vue";
 import hello from "world";
-type Item = { id: number; label: string };
-
+const __default__ = {
+  name: "TestComplextComponent",
+  //@ts-ignore
+  data(vm) {
+    return { world: "hello" };
+  },
+  mounted() {},
+  methods: {},
+};
 export default /*@__PURE__*/ _defineComponent({
+  ...__default__,
   ...{ name: "VueComplex", inheritAttrs: false },
-  __name: "vue_complex",
   props: _mergeModels(
     {
-      title: { type: String, required: true },
-      count: { type: Number, required: false },
-      items: { type: Array, required: true },
+      title: { type: String, required: true, default: "Helloworld" },
+      count: { type: Number, required: false, default: 0 },
+      items: { type: Array, required: true, default: () => [] },
       config: { type: String, required: false },
     },
-    {
-      modelValue: { type: Object },
-      modelValue: { type: Object },
-      modelValue: { type: Object },
-    },
+    { modelValue: { type: Object }, modelValue: { type: Object } },
   ),
+
   emits: _mergeModels([], ["update:modelValue"]),
+
   setup(__props: any, { expose: __expose, emit: __emit }) {
     function hellow() {}
+    const world = () => {};
+    const world2 = function () {};
+    const world3 = function named() {};
     const abc: number = 123;
     const abcd = 123,
       cde = 234;
     const abcd = 123,
       cde = 234;
-    const [items = [], config = "dark"] = __props;
+    const $props = __props;
+
     const $emitter = __emit;
-    const de = slots.default;
+
     const attrs = useAttrs();
     const $slots = useSlots();
+    const de = $slots.default;
     const state = reactive({
       selectedId: null as number | null,
       loading: false,
@@ -79,18 +90,21 @@ export default /*@__PURE__*/ _defineComponent({
     });
     const __returned__ = {
       hellow,
+      world,
+      world2,
+      world3,
       abc,
       abcd,
       cde,
-      items,
+      $props,
       $emitter,
       valueModel,
       checked,
       model,
       header,
-      de,
       attrs,
       $slots,
+      de,
       state,
       doubled,
       onIncrement,
