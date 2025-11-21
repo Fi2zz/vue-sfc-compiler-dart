@@ -1,5 +1,7 @@
 # dart_vue_compiler (WIP)
 
+Status: WIP
+
 当前进度
 
 - 实现 `compileScript` 编译宏阶段

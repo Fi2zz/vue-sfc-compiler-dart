@@ -37,3 +37,22 @@ Files impacted:
 Verification:
 - `make all` succeeds; SWC FFI builds.
 - `dart test` passes all tests; no regressions observed.
+
+Date: 2025-11-21
+
+Highlights:
+- Switch setup body codegen from source slicing to AST StatementPrinter
+- Remove pre-scan logic for normal `<script>`; use `prepared.normal` AST only
+- Derive `__default__` from normal script `ExportDefaultDeclaration` and spread into component options
+- Filter normal script `export default` lines from output to avoid duplicates
+- Remove `__name` from component options to match official output
+- Add null-safety checks around `prepared.normal` usage and default extraction
+
+Files impacted:
+- `lib/sfc_script_codegen.dart`: use `prepared.normal.exported` for default object; filter default export; AST-driven statement printing
+- `lib/sfc_compile_script.dart`: eliminate pre-scan helpers and fields; expose `getSlice` only for validators
+- `lib/sfc_compiler.dart`: remove pre-scan fields from `Prepared`
+
+Verification:
+- `dart test -r compact` passes all tests
+- `dart run ./vue_compiler.dart` rebuilds complex sample; non-macro differences aligned
