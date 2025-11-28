@@ -1,4 +1,4 @@
-.PHONY: run build-js build-core build-ts build-swc clean-native test all debug ts
+.PHONY: run build-js build-core build-ts build-swc clean-native test all debug ts  parse
 
 
 
@@ -63,4 +63,7 @@ debug:
 	dart run ./vue_compiler.dart && prettier --write vue_complex_dart.ts && cat vue_complex_dart.ts
 
 ts:
-	bun run ./vue_compiler.ts && prettier --write vue_complex_official.ts && cat vue_complex_official.ts
+	bun run ./vue_compiler.ts && prettier --write vue_complex_official.ts && cat vue_complex_official.ts 
+
+parse: 
+	dart run tool/parse.dart

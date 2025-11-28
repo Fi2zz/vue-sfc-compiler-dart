@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:async';
 
-import 'package:vue_sfc_parser/sfc_compile_script.dart';
+import 'package:vue_sfc_parser/compile_script.dart';
 import 'package:vue_sfc_parser/sfc_parser.dart';
 
 const filename = "./vue_complex.vue";
@@ -83,7 +83,7 @@ Future<void> _logResources(String stage) async {
     final cpuMem = (res.stdout is String)
         ? (res.stdout as String).trim()
         : '${res.stdout}';
-    _log('resources [$stage] rss=${_fmtBytes(rss)} cpu/mem/rss=${cpuMem}');
+    _log('resources [$stage] rss=${_fmtBytes(rss)} cpu/mem/rss=$cpuMem');
   } catch (_) {
     // best-effort; ignore failures on platforms without ps
   }

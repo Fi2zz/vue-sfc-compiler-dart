@@ -50,6 +50,11 @@ Status: WIP
   - 优先通过 AST 收集/合并，避免硬编码常量
   - 运行时导入按实际使用注入；宏调用全部视为编译期行为
 
+## 迁移与基准
+
+- 迁移脚本：运行 `dart run tool/migrate_comments.dart <repo_root>` 输出需替换的三类注释访问与命名参数位置，按建议替换为统一 `comments` 访问与过滤（基于 `placement`）。
+- 基准：运行 `dart run tool/benchmark_comments.dart`，查看解析与打印耗时与注释数量等指标。
+
 ## 常见问题
 
 - 问：为什么不会导入 `defineProps/defineEmits/...` 这些宏？
@@ -58,3 +63,15 @@ Status: WIP
 ## 许可
 
 - 本仓库未显式声明许可证，如需发布请先补充 License 信息。
+
+## AST 节点结构（Program/Node 注释）
+
+- `body: List<Statement>`：程序的可执行语句列表（保持顺序）
+- `comments: List<Comment>?`：程序级别的注释集合，与 `body` 平行，包含文件头/尾及整体范围内的注释；位置（start/end/loc）与文本完整保留；元素可含 `placement: leading|inner|trailing`。
+- `directives: List<Directive>`：源文件指令，如 `"use strict"`
+- `sourceType: String`：`script | module`
+- `interpreter: InterpreterDirective?`：解释器指令（例如 shebang）
+
+说明：
+
+- 统一保留 `comments` 作为唯一注释入口；节点不再持有 `leadingComments`/`innerComments`/`trailingComments` 三类字段，分类语义通过 `Comment.placement` 表达；解析阶段将所有注释集中至 `Program.comments` 并进行去重。

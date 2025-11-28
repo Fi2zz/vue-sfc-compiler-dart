@@ -2,7 +2,7 @@
 /// 提供基本的SFC解析功能
 library;
 
-import 'package:vue_sfc_parser/sfc_compile_script.dart';
+import 'package:vue_sfc_parser/compile_script.dart';
 import 'package:vue_sfc_parser/sfc_compiler.dart';
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 import 'package:vue_sfc_parser/sfc_parser.dart';

@@ -317,6 +317,11 @@ export interface LogicalExpression extends BaseNode {
 }
 
 export interface AssignmentExpression extends BaseNode {
+  // AssignmentExpression: binary assignment with optional compound operators.
+  // left: assignable Expression (Identifier | MemberExpression in practice).
+  // operator: one of '=', '+=', '-=', '*=', '/=', '%=', '**=', '<<=', '>>=', '>>>=',
+  //           '|=', '^=', '&=', '&&=', '||=', '??='.
+  // right: Expression providing the assigned value.
   type: "AssignmentExpression";
   operator:
     | "="

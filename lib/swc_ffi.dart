@@ -2,25 +2,33 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
 
-typedef _SwcParseTsC =
-    Pointer<Utf8> Function(Pointer<Utf8> src, Uint8 isTsx, Uint8 keepComments);
-typedef _SwcParseTsDart =
-    Pointer<Utf8> Function(Pointer<Utf8> src, int isTsx, int keepComments);
+typedef _SwcParseC =
+    Pointer<Utf8> Function(
+      Pointer<Utf8> src,
+      Pointer<Utf8> language,
+      Uint8 keepComments,
+    );
+typedef _SwcParseDart =
+    Pointer<Utf8> Function(
+      Pointer<Utf8> src,
+      Pointer<Utf8> language,
+      int keepComments,
+    );
 typedef _SwcFreeC = Void Function(Pointer<Utf8> ptr);
 typedef _SwcFreeDart = void Function(Pointer<Utf8> ptr);
-typedef _SwcParseExprC = Pointer<Utf8> Function(Pointer<Utf8> src, Uint8 isTsx);
-typedef _SwcParseExprDart = Pointer<Utf8> Function(Pointer<Utf8> src, int isTsx);
 
 class SwcFFI {
   final DynamicLibrary _lib;
-  late final _SwcParseTsDart _parse;
+  _SwcParseDart? _swcParse;
   late final _SwcFreeDart _free;
-  late final _SwcParseExprDart _parseExpr;
 
   SwcFFI._(this._lib) {
-    _parse = _lib.lookupFunction<_SwcParseTsC, _SwcParseTsDart>('swc_parse_ts');
+    try {
+      _swcParse = _lib.lookupFunction<_SwcParseC, _SwcParseDart>('swc_parse');
+    } catch (_) {
+      _swcParse = null;
+    }
     _free = _lib.lookupFunction<_SwcFreeC, _SwcFreeDart>('swc_free');
-    _parseExpr = _lib.lookupFunction<_SwcParseExprC, _SwcParseExprDart>('swc_parse_expr');
   }
 
   static SwcFFI load() {
@@ -39,36 +47,23 @@ class SwcFFI {
     throw StateError('SWC FFI library not found. Build with make build-swc.');
   }
 
-  String parse(String src, {bool tsx = false, bool keepComments = true}) {
+  String parse(
+    String src, {
+    required String language,
+    bool keepComments = true,
+  }) {
     final inPtr = src.toNativeUtf8();
+    final langPtr = language.toNativeUtf8();
     try {
-      final outPtr = _parse(inPtr, tsx ? 1 : 0, keepComments ? 1 : 0);
-      if (outPtr.address == 0) {
+      final result = _swcParse!(inPtr, langPtr, keepComments ? 1 : 0);
+      if (result.address == 0) {
         throw StateError('SWC parse returned null');
       }
       try {
-        final s = outPtr.toDartString();
+        final s = result.toDartString();
         return s;
       } finally {
-        _free(outPtr);
-      }
-    } finally {
-      malloc.free(inPtr);
-    }
-  }
-
-  String parseExpr(String src, {bool tsx = false}) {
-    final inPtr = src.toNativeUtf8();
-    try {
-      final outPtr = _parseExpr(inPtr, tsx ? 1 : 0);
-      if (outPtr.address == 0) {
-        throw StateError('SWC parse expr returned null');
-      }
-      try {
-        final s = outPtr.toDartString();
-        return s;
-      } finally {
-        _free(outPtr);
+        _free(result);
       }
     } finally {
       malloc.free(inPtr);

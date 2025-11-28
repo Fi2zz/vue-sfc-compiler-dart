@@ -1,5 +1,5 @@
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
-import 'package:vue_sfc_parser/sfc_error.dart';
+import 'package:vue_sfc_parser/errors.dart';
 
 /// 最小化的SFC解析器实现
 class SfcParser {
@@ -10,7 +10,6 @@ class SfcParser {
 
   SfcDescriptor parse() {
     final blocks = _parseBlocks();
-
     // 解析各个块
     TemplateBlock? template;
     ScriptBlock? script;
@@ -22,11 +21,7 @@ class SfcParser {
       switch (block.type) {
         case 'template':
           if (template != null) {
-            throw DuplicateBlockError(
-              type: 'template',
-              locStart: block.locStart,
-              locEnd: block.locEnd,
-            );
+            throw DuplicateBlockError(type: 'template');
           }
 
           template = TemplateBlock(
@@ -48,11 +43,7 @@ class SfcParser {
 
           if (b.isSetup) {
             if (scriptSetup != null) {
-              throw DuplicateBlockError(
-                type: 'script setup',
-                locStart: block.locStart,
-                locEnd: block.locEnd,
-              );
+              throw DuplicateBlockError(type: 'script setup');
             }
 
             scriptSetup = b;
@@ -89,36 +80,23 @@ class SfcParser {
     }
 
     if (template == null && script == null && scriptSetup == null) {
-      throw MissingTemplateOrScript(
-        locStart: 0,
-        locEnd: source.length,
-        filename: filename,
-      );
+      throw MissingTemplateOrScript(filename: filename);
     }
 
     if (scriptSetup != null && scriptSetup.attrs.containsKey('src')) {
-      throw ScriptSetupAttributeError(
-        locStart: scriptSetup.locStart,
-        locEnd: scriptSetup.locEnd,
-      );
+      throw ScriptSetupAttributeError();
     }
 
     if (scriptSetup != null &&
         script != null &&
         script.attrs.containsKey('src')) {
-      throw ScriptSrcAttributeError(
-        locStart: script.locStart,
-        locEnd: script.locEnd,
-      );
+      throw ScriptSrcAttributeError();
     }
 
     if (scriptSetup != null &&
         script != null &&
         scriptSetup.attrs['lang'] != script.attrs['lang']) {
-      throw ScriptLangMismatchError(
-        locStart: scriptSetup.locStart,
-        locEnd: scriptSetup.locEnd,
-      );
+      throw ScriptLangMismatchError();
     }
 
     return SfcDescriptor(

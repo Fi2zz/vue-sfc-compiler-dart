@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:vue_sfc_parser/sfc_compile_script.dart';
+import 'package:vue_sfc_parser/compile_script.dart';
 import 'package:vue_sfc_parser/sfc_parser.dart';
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 

@@ -1,14 +1,13 @@
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 
 // import 'package:vue_sfc_parser/result.dart';
-import 'sfc_ast.dart';
+import 'ast.dart';
 
 class Prepared {
   final CompilationUnit setup;
   final CompilationUnit? normal;
   // final Module setupModule;
   // final Module? normalModule;
-  final String source;
   final String filename;
   // <script setup> import lines to include in output
   final String language;
@@ -18,7 +17,7 @@ class Prepared {
     this.normal,
     required this.language,
     required this.setup,
-    required this.source,
+    // required this.source,
     required this.filename,
   });
 }

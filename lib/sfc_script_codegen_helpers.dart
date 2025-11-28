@@ -1,8 +1,9 @@
-import 'package:vue_sfc_parser/swc_ast.dart';
-import 'package:vue_sfc_parser/sfc_ast.dart';
+// merged: swc_ast types are now provided by ast
+import 'package:vue_sfc_parser/ast.dart';
+import 'package:vue_sfc_parser/errors.dart';
 
 class Walked {
-  SourceLocation? loc;
+  Location? loc;
   Identifier? id;
   BindingPattern? bindings;
   bool isFunctionCall;
@@ -11,7 +12,7 @@ class Walked {
 
 class Expose {
   ArgumentList? exposed;
-  SourceLocation? loc;
+  Location? loc;
   Expose({this.exposed, this.loc});
 }
 
@@ -51,13 +52,32 @@ class CodegenHelpers {
   static const String setupReturns = '\nreturn __returned__';
   static const String normalScriptDefault = '__default__';
 
+  static String defaultModelName = 'modelValue';
+
   static String getModelName(String? modelName) {
-    return modelName ?? "modelValue";
+    if (modelName == null || modelName.isEmpty) return defaultModelName;
+    modelName = modelName.replaceAll('"', '');
+    return modelName;
+  }
+
+  static String getModelModifiersName(String modelName) {
+    return modelName == defaultModelName
+        ? 'modelModifiers'
+        : '${modelName}Modifiers';
+  }
+
+  static String getModelUpdateEventName(String modelName) {
+    return '"update:$modelName"';
+  }
+
+  // Helper functions for checking macro types
+  static bool isDefineOptions(String? name) {
+    return name == defineOptions;
   }
 
   // Helper functions for checking macro types
   static bool isDefineProps(String? name) {
-    return name == defineProps;
+    return name == defineProps || name!.startsWith(defineProps);
   }
 
   static bool isWithDefaults(String? name) {
@@ -76,6 +96,10 @@ class CodegenHelpers {
     return name == defineExpose;
   }
 
+  static bool isDefineSlots(String? name) {
+    return name == defineSlots;
+  }
+
   static bool shouldSkipCallExpr(dynamic item) {
     // Check if the item is a FunctionCallExpression
     if (item is! FunctionCallExpression) return true;
@@ -92,7 +116,7 @@ class CodegenHelpers {
   }
 
   static String defineNormalScriptDefault(String normalScript) {
-    return 'const $normalScriptDefault = $normalScript';
+    return 'const $normalScriptDefault = $normalScript;';
   }
 
   static String exportedLeading(bool isTypescript) {
@@ -120,7 +144,7 @@ class CodegenHelpers {
 
     if (props.length > 1) {
       String result =
-          "_mergeModels(${props.map((e) => '{${e.trim()}}').join(', ')})";
+          "/*@__PURE__*/ _mergeModels(${props.map((e) => '{${e.trim()}}').join(', ')})";
       return '  props: $result,\n';
     }
     return '  props: { ${props.join(', ')} },\n';
@@ -130,10 +154,62 @@ class CodegenHelpers {
     if (props.isEmpty) return '';
 
     if (props.length > 1) {
-      String result = "_mergeModels(${props.map((e) => e.trim()).join(', ')})";
+      String result =
+          "/*@__PURE__*/ _mergeModels(${props.map((e) => e.trim()).join(', ')})";
       return '  emits: $result,\n';
     }
     return '  emits: ${props.first},\n';
+  }
+
+  /// Validate an AssignmentExpression for codegen safety.
+  /// Ensures left is assignable target and operator is supported.
+  static void validateAssignmentExpression(AssignmentExpression node) {
+    final op = node.operator;
+    const allowed = {
+      '=',
+      '+=',
+      '-=',
+      '*=',
+      '/=',
+      '%=',
+      '**=',
+      '<<=',
+      '>>=',
+      '>>>=',
+      '|=',
+      '^=',
+      '&=',
+      '&&=',
+      '||=',
+      '??=',
+    };
+    if (!allowed.contains(op)) {
+      throw StateError('Unsupported assignment operator: $op');
+    }
+    final l = node.left;
+    final isAssignable = l is Identifier || l is MemberExpression;
+    if (!isAssignable) {
+      throw StateError('Left-hand side is not assignable');
+    }
+  }
+
+  /// Heuristic ownership classification for Rust semantics.
+  /// Returns 'copy' | 'move' | 'borrow' | 'unknown'.
+  static String classifyOwnership(AssignmentExpression node) {
+    final r = node.right;
+    if (r is NumberLiteral ||
+        r is StringLiteral ||
+        r is BooleanLiteral ||
+        r is NullLiteral) {
+      return 'copy';
+    }
+    if (r is NewExpression ||
+        r is FunctionExpression ||
+        r is ArrowFunctionExpression) {
+      return 'move';
+    }
+    // Borrow semantics are not modeled in TS; treat as unknown.
+    return 'unknown';
   }
 
   static String setupStart(bool isTypescript, bool hasDefineEmits) {
@@ -188,6 +264,8 @@ class CodegenHelpers {
               first.methodName.name == CodegenHelpers.defineProps) {
             return true;
           }
+        } else {
+          throw WithDefaultsRequiredDefineProps();
         }
       }
 
@@ -615,6 +693,10 @@ class CodegenHelpers {
         if (tsType.endsWith('[]') || tsType.startsWith('Array<')) {
           return 'Array';
         }
+        // Inline object type
+        if (tsType.startsWith('{') && tsType.endsWith('}')) {
+          return 'Object';
+        }
         // Handle union types like "light" | "dark"
         if (tsType.contains('|') && tsType.contains('"')) {
           return 'String';
@@ -622,17 +704,6 @@ class CodegenHelpers {
 
         return 'Object';
     }
-  }
-
-  static ArgumentList? walkDefineOptions(CompilationUnit unit) {
-    for (final st in unit.statements) {
-      final exp = st.expression;
-      if (exp is FunctionCallExpression &&
-          exp.methodName.name == CodegenHelpers.defineOptions) {
-        return exp.argumentList;
-      }
-    }
-    return null;
   }
 
   static WalkedSlots walkDefineSlots(CompilationUnit unit) {
@@ -654,44 +725,6 @@ class CodegenHelpers {
     return slots;
   }
 
-  static WalkedModels walkDefineModels(CompilationUnit unit) {
-    WalkedModels models = [];
-    for (final st in unit.statements) {
-      final exp = st.expression;
-      if (exp is VariableDeclaration) {
-        if (exp.init is Identifier) {
-          String name = (exp.init as Identifier).name;
-          if (name == CodegenHelpers.defineModel) {
-            models.add(Walked(st.loc, exp.name, exp.pattern, false));
-          }
-        }
-      } else if (exp is FunctionCallExpression &&
-          exp.methodName.name == CodegenHelpers.defineModel) {
-        models.add(Walked(st.loc, null, null, true));
-      }
-    }
-    return models;
-  }
-
-  static WalkedEmits walkDefineEmits(CompilationUnit unit) {
-    WalkedEmits emits = [];
-    for (final st in unit.statements) {
-      final exp = st.expression;
-      if (exp is VariableDeclaration) {
-        if (exp.init is Identifier) {
-          String name = (exp.init as Identifier).name;
-          if (name == CodegenHelpers.defineEmits) {
-            emits.add(Walked(st.loc, exp.name, exp.pattern, false));
-          }
-        }
-      } else if (exp is FunctionCallExpression &&
-          exp.methodName.name == CodegenHelpers.defineEmits) {
-        emits.add(Walked(st.loc, null, null, true));
-      }
-    }
-    return emits;
-  }
-
   static WalkedExposes walkDefineExposes(CompilationUnit unit) {
     WalkedExposes exposed = [];
     for (final st in unit.statements) {
@@ -705,7 +738,7 @@ class CodegenHelpers {
   }
 
   // ---------- AST-driven emits extraction ----------
-  static String? extractDefineEmits(CompilationUnit unit) {
+  static List<String> walkDefineEmits(CompilationUnit unit) {
     for (final st in unit.statements) {
       final exp = st.expression;
       if (exp is VariableDeclaration &&
@@ -715,17 +748,16 @@ class CodegenHelpers {
         final call = exp.init as FunctionCallExpression;
         for (final a in call.argumentList.arguments) {
           if (a is ListLiteral) {
-            final items = a.elements
-                .whereType<StringLiteral>()
-                .map((s) => '"${s.stringValue}"')
-                .join(', ');
-            return '[$items]';
+            final items = a.elements.whereType<StringLiteral>().map(
+              (s) => '"${s.stringValue}"',
+            );
+            return items.toList();
           }
         }
         for (final a in call.argumentList.arguments) {
           if (a is SetOrMapLiteral) {
-            final keys = a.elements.map((e) => '"${e.keyText}"').join(', ');
-            return '[$keys]';
+            final keys = a.elements.map((e) => '"${e.keyText}"'); //.join(', ');
+            return keys.toList(); // '[$keys]';
           }
         }
         if (call.typeArgumentText != null &&
@@ -733,11 +765,9 @@ class CodegenHelpers {
           final events = _eventsFromTypeArgs(
             call.typeArgumentText!.replaceAll(RegExp(r'[<>]'), ''),
           );
-          return events.isNotEmpty
-              ? '[${events.map((e) => '"$e"').join(', ')}]'
-              : '[]';
+          return events.isNotEmpty ? events.map((e) => '"$e"').toList() : [];
         }
-        return '[]';
+        return [];
       }
       if (exp is! FunctionCallExpression) continue;
       if (exp.methodName.name != CodegenHelpers.defineEmits) continue;
@@ -747,15 +777,15 @@ class CodegenHelpers {
           final items = a.elements
               .whereType<StringLiteral>()
               .map((s) => '\'${s.stringValue}\'')
-              .join(', ');
-          return '[$items]';
+              .toList();
+          return items;
         }
       }
       // Object arg: { event(){...} } → emit keys
       for (final a in exp.argumentList.arguments) {
         if (a is SetOrMapLiteral) {
-          final keys = a.elements.map((e) => '\'${e.keyText}\'').join(', ');
-          return '[$keys]';
+          final keys = a.elements.map((e) => '\'${e.keyText}\'').toList();
+          return keys;
         }
       }
       // Typed args
@@ -763,119 +793,11 @@ class CodegenHelpers {
         final events = _eventsFromTypeArgs(
           exp.typeArgumentText!.replaceAll(RegExp(r'[<>]'), ''),
         );
-        return events.isNotEmpty
-            ? '[${events.map((e) => '\'$e\'').join(', ')}]'
-            : '[]';
+        return events.isNotEmpty ? events.map((e) => '\'$e\'').toList() : [];
       }
-      return '[]';
+      return [];
     }
-    return null;
-  }
-
-  static String? extractDefineEmitsFromModule(Module m) {
-    for (final it in m.body) {
-      if (it is CallExpr && isDefineEmits(it.calleeIdent)) {
-        if (it.args.isNotEmpty) {
-          final a0 = it.args.first.trim();
-          if (a0.startsWith('[')) {
-            // normalize quotes to single
-            final normalized = _normalizeText(a0).replaceAll('"', '\'');
-            return normalized;
-          }
-        }
-        return '[]';
-      }
-    }
-    return null;
-  }
-
-  static String? extractDefineEmitsFromVarDecls(Module m) {
-    String? firstArg(String callText) {
-      final t = callText.trim();
-      final i = t.indexOf('(');
-      if (i < 0) return null;
-      int j = i + 1;
-      int depth = 1;
-      while (j < t.length) {
-        final ch = t[j];
-        if (ch == '(') {
-          depth++;
-        } else if (ch == ')') {
-          depth--;
-          if (depth == 0) break;
-        }
-        j++;
-      }
-      if (j >= t.length) return null;
-      return t.substring(i + 1, j).trim();
-    }
-
-    for (final it in m.body) {
-      if (it is VarDeclItem && isDefineEmits(it.initCalleeIdent)) {
-        final call = it.initText;
-        if (call == null || call.isEmpty) continue;
-        final arg = firstArg(call);
-        if (arg == null) continue;
-        if (arg.startsWith('[')) {
-          final arr = _normalizeText(arg).replaceAll('"', '\'');
-          return arr;
-        }
-        if (arg.startsWith('{')) {
-          final keys = <String>[];
-          int i = 1; // skip '{'
-          int depth = 1;
-          String readIdent() {
-            final start = i;
-            while (i < arg.length) {
-              final c = arg.codeUnitAt(i);
-              final ok =
-                  (c >= 65 && c <= 90) ||
-                  (c >= 97 && c <= 122) ||
-                  (c >= 48 && c <= 57) ||
-                  c == 95 ||
-                  c == 36;
-              if (!ok) break;
-              i++;
-            }
-            return arg.substring(start, i);
-          }
-
-          bool isWs(int c) => c == 32 || c == 9 || c == 10 || c == 13;
-          void skipWs() {
-            // ignore: curly_braces_in_flow_control_structures
-            while (i < arg.length && isWs(arg.codeUnitAt(i))) i++;
-          }
-
-          while (i < arg.length && depth > 0) {
-            skipWs();
-            if (i >= arg.length) break;
-            final ch = arg[i];
-            if (ch == '{') {
-              depth++;
-              i++;
-              continue;
-            }
-            if (ch == '}') {
-              depth--;
-              i++;
-              continue;
-            }
-            final key = readIdent();
-            skipWs();
-            if (key.isNotEmpty) keys.add(key);
-            // advance to next comma or closing brace at same depth
-            // ignore: curly_braces_in_flow_control_structures
-            while (i < arg.length && arg[i] != ',' && arg[i] != '}') i++;
-            if (i < arg.length && arg[i] == ',') i++;
-          }
-          if (keys.isNotEmpty) {
-            return '[${keys.map((k) => '\'$k\'').join(', ')}]';
-          }
-        }
-        return '[]';
-      }
-    }
-    return null;
+    return [];
   }
 
   static List<String> _eventsFromTypeArgs(String raw) {
@@ -960,6 +882,10 @@ class CodegenHelpers {
         name == defineEmits ||
         name == defineProps ||
         name == withDefaults;
+  }
+
+  static bool isVueMacroIdentifier(Identifier ident) {
+    return isVueMacro(ident.name);
   }
 
   static String marcoNameToSetup(String name) {
