@@ -1,22 +1,19 @@
 # defineSlots_basic
 
 ```
-import { defineComponent as _defineComponent } from "vue";
+import { useSlots as _useSlots } from 'vue'
 
-export default /*@__PURE__*/ _defineComponent({
-setup(__props, { expose: __expose }) {
-__expose();
+export default {
+  __name: 'defineSlots_basic',
+  setup(__props, { expose: __expose }) {
+  __expose();
 
-const slots = useSlots();
+const slots = _useSlots()
 
-const __returned__ = {
-slots,
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
+const __returned__ = { slots }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+return __returned__
+}
+
+}
 ```

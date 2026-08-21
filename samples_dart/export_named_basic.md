@@ -1,20 +1,10 @@
 # export_named_basic
 
-```
-import { defineComponent as _defineComponent } from "vue";
+Vue Compile Error: [@vue/compiler-sfc] <script setup> cannot contain ES module exports. If you are using a previous version of <script setup>, please consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.
 
-export default /*@__PURE__*/ _defineComponent({
-setup(__props, { expose: __expose }) {
-__expose();
-
-
-const __returned__ = {
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
-```
+./export_named_basic.vue
+1 | <script setup>
+| ^
+2 | export const api = 1
+| ^^^^^^^^^^^^^^^^^^^^
+3 | </script>

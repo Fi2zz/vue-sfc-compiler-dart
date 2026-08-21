@@ -127,7 +127,8 @@ void _fillFromReference(
   TypeElements out,
   int depth,
 ) {
-  final id = childOfType(n, 'type_identifier');
+  final id =
+      n.type == 'type_identifier' ? n : childOfType(n, 'type_identifier');
   if (id == null) return;
   final decl = scope[view.textOf(id)];
   if (decl == null) return;
@@ -170,14 +171,11 @@ List<String> inferRuntimeType(
     case 'literal_type':
       return _literal(node);
     case 'union_type':
-      return [
-        for (final c in node.children) ...inferRuntimeType(c, view, scope),
-      ];
+      return _flattenTypes(node.children, view, scope);
     case 'intersection_type':
-      return [
-        for (final c in node.children)
-          ...inferRuntimeType(c, view, scope).where((t) => t != unknownType),
-      ];
+      return _flattenTypes(node.children, view, scope)
+          .where((t) => t != unknownType)
+          .toList(growable: false);
     case 'parenthesized_type':
       return node.children.isEmpty
           ? const [unknownType]
@@ -188,6 +186,24 @@ List<String> inferRuntimeType(
     default:
       return const [unknownType];
   }
+}
+
+/// Port of flattenTypes: single member passes through; otherwise concat
+/// and dedupe (Set semantics preserve first-occurrence order).
+List<String> _flattenTypes(
+  List<AstNode> types,
+  SrcView view,
+  Map<String, AstNode> scope,
+) {
+  if (types.length == 1) return inferRuntimeType(types[0], view, scope);
+  final seen = <String>{};
+  final out = <String>[];
+  for (final t in types) {
+    for (final r in inferRuntimeType(t, view, scope)) {
+      if (seen.add(r)) out.add(r);
+    }
+  }
+  return out;
 }
 
 List<String> _predefined(String text) {
@@ -250,7 +266,8 @@ List<String> _referenceType(
   SrcView view,
   Map<String, AstNode> scope,
 ) {
-  final id = childOfType(node, 'type_identifier');
+  final id =
+      node.type == 'type_identifier' ? node : childOfType(node, 'type_identifier');
   if (id == null) return const [unknownType];
   final name = view.textOf(id);
   final decl = scope[name];

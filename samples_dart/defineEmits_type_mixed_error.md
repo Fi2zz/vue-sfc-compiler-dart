@@ -1,22 +1,9 @@
 # defineEmits_type_mixed_error
 
-```
-import { defineComponent as _defineComponent } from "vue";
+Vue Compile Error: [@vue/compiler-sfc] defineEmits() type cannot mixed call signature and property syntax.
 
-export default /*@__PURE__*/ _defineComponent({
-emits: ["a"],
-setup(__props, { expose: __expose, emit: __emit }) {
-__expose();
-
-const emit = __emit;
-
-const __returned__ = {
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
-```
+./defineEmits_type_mixed_error.vue
+1 | <script setup lang="ts">
+2 | const emit = defineEmits<{ (e: 'a'): void; a: any }>()
+| ^^^^^^^^^^^^^^^^^^^^^^^^^^
+3 | </script>

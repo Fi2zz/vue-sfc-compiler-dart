@@ -5,23 +5,20 @@
 
 ## 一句话现状
 
-用 Dart 实现的 Vue 3 `<script setup>` 编译器，目标输出与官方 `@vue/compiler-sfc` 逐文件对齐。`compileScript` 宏阶段已完成并对齐 143 个样例；`compileTemplate` 和 `compileStyle` 尚未开始。整体完成度约 25%~30%。
+用 Dart 实现的 Vue 3 `<script setup>` 编译器，目标输出与官方 `@vue/compiler-sfc` 逐字节对齐。`compileScript` 已完成：**155/155 样例 EXACT**（verifier v1，见 `verifier/README.md`）。`compileTemplate` 和 `compileStyle` 尚未开始。整体完成度约 30%~35%。
 
 ## 仓库
 
 - 地址：https://github.com/Fi2zz/vue-sfc-compiler-dart （私有）
 - 默认分支：`master`
-- 最近提交：2025-11-17「Implement AST-driven import collection and official alignment」
+- 最近提交：2026-08-21「fix(script): 叶子 type_identifier 引用解析（155/155 EXACT）」
 
 ## 已完成（不要重做）
 
 - SFC 解析与描述符：`lib/sfc_parser.dart`、`lib/sfc_descriptor.dart`、`lib/block.dart`
-- 编译期宏全家桶：`defineProps` / `withDefaults` / `defineEmits` / `defineExpose` / `defineSlots` / `defineOptions` / `defineModel`（含 `mergeModels` 合并）
-- TS 类型 → 运行时 props/emits 声明推导
-- AST 驱动的 import 收集（setup + 普通 script），用户 import 原样保留
-- 错误信息 / 坐标 / code frame 与官方格式对齐
-- `<script>` + `<script setup>` 混用、各种 `export default` 报错场景
-- 143 个样例对齐：`diff -qr samples samples_dart` 应无差异
+- `compileScript` 全量重写（`lib/script/`）：MagicString 编辑模型逐字移植（mini_magic.dart）、宏全家桶（defineProps/withDefaults/defineEmits/defineExpose/defineSlots/defineOptions/defineModel）、TS 类型 → 运行时声明推导、解构 props 转换、top-level await 转换、`__returned__` 生成
+- 错误帧：官方 `generateCodeFrame` 逐字移植（`lib/script/script_error.dart`），配合 prettier 管线字节对齐 samples/
+- 155/155 样例 EXACT：`node verifier/v1/compare.mjs`（先 `dart run ./vue_dart.dart && npx prettier samples_dart/*.md -w`）
 - 复杂用例：`vue_complex.vue` → `vue_complex_dart.md` 与 `vue_complex_official.md` 对齐
 
 ## 待办（按优先级）
@@ -58,11 +55,13 @@
 ## 验证命令
 
 ```bash
-make all                              # 全量校验（样例对齐 + 静态检查）
-dart run ./vue_compiler.dart          # 重新生成 samples_dart/*.md
-diff -qr samples samples_dart         # 应无输出
-dart analyze lib/                     # 须零错误
+# Dart SDK 在 /mnt/agents/output/_toolchain/dart-sdk/bin（先加 PATH）
+dart run ./vue_dart.dart && npx prettier samples_dart/*.md -w --log-level warn
+node verifier/v1/compare.mjs          # 应 155/155 EXACT
+dart analyze                          # 须零错误（runner.dart 有一个历史 info lint 可忽略）
 ```
+
+关键：samples/ 是官方输出经 prettier(markdown) 格式化后的结果，samples_dart 必须过同样的 prettier 步骤才能字节对齐（错误帧空行的双空格硬换行、前导空白折叠均来自 prettier）。
 
 ## 代码规范（硬性约束）
 
@@ -77,10 +76,13 @@ dart analyze lib/                     # 须零错误
 ## 已知坑（别重踩）
 
 - tree-sitter FFI 需要对应平台的动态库，Linux 用 `.so`，macOS 用 `.dylib`；CI/新机器先确认库文件存在
-- 多字节字符（中文注释/emoji）会让 AST byte offset 切错位置——必须 UTF-8 安全切片
+- 多字节字符（中文注释/emoji）会让 AST byte offset 切错位置——必须 UTF-8 安全切片；`tsParserParseString` 必须传 UTF-8 字节长度而非 UTF-16 长度
+- Dart `String.split(RegExp(r'(\r?\n)'))` 与 JS 不同：捕获组分隔符会被丢弃，移植官方 generateCodeFrame 之类逻辑时须手动保留分隔符
 - 官方编译器对 import 排序有自己的规则（运行时 API 多行块、按 setup 源顺序），不要去"优化"它
 - `samples.json` 是样例索引/元数据，新增样例时同步更新
+- babel 会把语句后跨空行的注释挂为 trailingComments，hoistNode 须连同注释与后续全部空白一起移动
+- 已知隐患（未触发）：typeScope 条目跨 parse 时未携带各自 SrcView，setup 若整体引用 normal script 声明的 interface 作为 props 类型，成员键提取会用错 view
 
 ## 新会话开场白（直接粘贴）
 
-> 读 https://github.com/Fi2zz/vue-sfc-compiler-dart 仓库的 HANDOFF.md。这是一个用 Dart 实现 Vue 3 `<script setup>` 编译器的项目，目标输出与官方 @vue/compiler-sfc 对齐。compileScript 宏阶段已完成（143 样例对齐）。现在按 HANDOFF 中的 P0 路线图继续 compileTemplate：先做模板解析器 → 模板 AST。工作方法：样例驱动、AST 优先、diff 官方输出验收。遵守 HANDOFF 中的代码规范。开始前先跑 `make all` 确认基线全绿。
+> 读 https://github.com/Fi2zz/vue-sfc-compiler-dart 仓库的 HANDOFF.md。这是一个用 Dart 实现 Vue 3 `<script setup>` 编译器的项目，目标输出与官方 @vue/compiler-sfc 对齐。compileScript 已完成（155/155 样例 EXACT，验证方式见「验证命令」）。现在按 HANDOFF 中的 P0 路线图继续 compileTemplate：先做模板解析器 → 模板 AST。工作方法：样例驱动、AST 优先、diff 官方输出验收。遵守 HANDOFF 中的代码规范。开始前先跑验证命令确认基线全绿。

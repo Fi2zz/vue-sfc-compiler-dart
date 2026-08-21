@@ -1,10 +1,23 @@
 # script_multiple_export_default_ts_module_error
 
-[vue/compiler-sfc] Only one default export allowed per module. (17:0)
+```
+namespace ComponentNamespace {
+  export interface Props {
+    id: number
+    label: string
+  }
+}
 
-./script_multiple_export_default_ts_module_error.vue
-16 |  
-|  
-17 | export default {
-| ^
-18 | name: 'TsModuleComponent2',
+export default {
+  name: 'TsModuleComponent1',
+  props: {
+    id: Number,
+    label: String
+  } as ComponentNamespace.Props
+}
+
+export default {
+  name: 'TsModuleComponent2',
+  template: '<div>{{ label }}</div>'
+}
+```

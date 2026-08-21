@@ -1,10 +1,21 @@
 # script_multiple_export_default_ts_interface_error
 
-[vue/compiler-sfc] Only one default export allowed per module. (15:0)
+```
+interface ComponentProps {
+  title: string
+  count?: number
+}
 
-./script_multiple_export_default_ts_interface_error.vue
-14 |  
-|  
-15 | export default {
-| ^
-16 | name: 'TsInterfaceComponent2',
+export default {
+  name: 'TsInterfaceComponent1',
+  props: {
+    title: String,
+    count: Number
+  } as ComponentProps
+}
+
+export default {
+  name: 'TsInterfaceComponent2',
+  template: '<div>{{ title }}</div>'
+}
+```

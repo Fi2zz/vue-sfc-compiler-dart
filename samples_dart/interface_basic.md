@@ -1,21 +1,19 @@
 # interface_basic
 
 ```
-import { defineComponent as _defineComponent } from "vue";
+import { defineComponent as _defineComponent } from 'vue'
+interface Point { x: number; y: number }
 
-export default /*@__PURE__*/ _defineComponent({
-setup(__props, { expose: __expose }) {
-__expose();
+export default /*@__PURE__*/_defineComponent({
+  __name: 'interface_basic',
+  setup(__props, { expose: __expose }) {
+  __expose();
 
-interface Point { x: number; y: number };
 
-const __returned__ = {
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
+const __returned__ = {  }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+return __returned__
+}
+
+})
 ```

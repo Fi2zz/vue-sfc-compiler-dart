@@ -1,3 +1,5 @@
+import 'package:vue_sfc_parser/script/script_error.dart';
+
 class SfcError implements Exception {
   final String? message;
   final int locStart;
@@ -35,37 +37,21 @@ class ScriptError extends SfcError {
 class SfcCompileError extends SfcError {
   final String filename;
   final String reason;
-  final String line1;
-  final String caret1;
-  final String line2;
-  final String caret2;
-  final String line3;
+  final String source; // full SFC source for the code frame
   SfcCompileError({
     required this.filename,
     required this.reason,
-    required this.line1,
-    required this.caret1,
-    required this.line2,
-    required this.caret2,
-    required this.line3,
+    required this.source,
     required super.locStart,
     required super.locEnd,
   }) : super(message: reason);
 
   @override
   String toString() {
-    final buf = StringBuffer();
-    buf.writeln('[vue/compiler-sfc] $reason');
-    buf.writeln('');
     String fn = filename;
     if (fn.startsWith('./')) fn = fn.substring(2);
-    buf.writeln('./$fn');
-    buf.writeln(line1);
-    buf.writeln(caret1);
-    buf.writeln(line2);
-    buf.writeln(caret2);
-    buf.writeln(line3);
-    return buf.toString();
+    return 'Vue Compile Error: [vue/compiler-sfc] $reason\n\n'
+        './$fn\n${generateCodeFrame(source, locStart, locEnd)}';
   }
 }
 
