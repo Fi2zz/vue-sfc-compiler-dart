@@ -171,24 +171,37 @@ class TSFFI {
         );
   }
 
+  /// Order lib/native candidates so the platform-native format comes first.
+  /// On Linux the repo may still carry macOS .dylib files, which are not
+  /// loadable ELF objects, so the platform-native extension must lead.
+  static List<String> _nativeCandidates(String stem) {
+    final primary = Platform.isMacOS ? '$stem.dylib' : '$stem.so';
+    final fallback = Platform.isMacOS ? '$stem.so' : '$stem.dylib';
+    return ['lib/native/$primary', 'lib/native/$fallback'];
+  }
+
+  /// Open the first candidate that exists and loads; skip broken binaries.
+  static DynamicLibrary? _openExisting(List<String> candidates) {
+    for (final path in candidates) {
+      if (!File(path).existsSync()) continue;
+      try {
+        return DynamicLibrary.open(path);
+      } catch (_) {
+        continue;
+      }
+    }
+    return null;
+  }
+
   /// Create a new instance by loading the core dynamic library from lib/native.
-  /// Tries .dylib first on macOS, then .so as a fallback.
   static TSFFI loadCore() {
     final candidates = <String>[
-      'lib/native/libtree-sitter.dylib',
-      'lib/native/libtree-sitter.so',
+      ..._nativeCandidates('libtree-sitter'),
       // Homebrew default paths on macOS (Apple Silicon / Intel)
       '/opt/homebrew/lib/libtree-sitter.dylib',
       '/usr/local/lib/libtree-sitter.dylib',
     ];
-    DynamicLibrary? lib;
-    for (final path in candidates) {
-      final f = File(path);
-      if (f.existsSync()) {
-        lib = DynamicLibrary.open(path);
-        break;
-      }
-    }
+    final lib = _openExisting(candidates);
     if (lib == null) {
       throw StateError(
         'Tree-sitter core library not found in lib/native. Build with make build-core.',
@@ -200,15 +213,14 @@ class TSFFI {
   /// Load a grammar library and return the exported TSLanguage pointer.
   /// [symbolName] should be like 'tree_sitter_typescript' or 'tree_sitter_tsx'.
   static Pointer<TSLanguage> loadLanguageSymbol({
-    required String libPath,
+    required String stem,
     required String symbolName,
   }) {
-    final file = File(libPath);
-    if (!file.existsSync()) {
-      throw StateError('Grammar library missing: $libPath');
+    final lib = _openExisting(_nativeCandidates(stem));
+    if (lib == null) {
+      throw StateError('Grammar library missing: lib/native/$stem');
     }
-    final dylib = DynamicLibrary.open(libPath);
-    final fn = dylib
+    final fn = lib
         .lookupFunction<_ts_language_fn, Pointer<TSLanguage> Function()>(
           symbolName,
         );
@@ -217,21 +229,9 @@ class TSFFI {
 
   /// Convenience to load the TypeScript grammar.
   static Pointer<TSLanguage> loadTypescriptLanguage() {
-    // Try .dylib then .so
-    final candidates = [
-      'lib/native/tree-sitter-typescript.dylib',
-      'lib/native/tree-sitter-typescript.so',
-    ];
-    for (final p in candidates) {
-      if (File(p).existsSync()) {
-        return loadLanguageSymbol(
-          libPath: p,
-          symbolName: 'tree_sitter_typescript',
-        );
-      }
-    }
-    throw StateError(
-      'TypeScript grammar library not found. Build with make build-ts.',
+    return loadLanguageSymbol(
+      stem: 'tree-sitter-typescript',
+      symbolName: 'tree_sitter_typescript',
     );
   }
 
@@ -250,36 +250,17 @@ class TSFFI {
 
   /// Convenience to load the TSX grammar.
   static Pointer<TSLanguage> loadTsxLanguage() {
-    final candidates = [
-      'lib/native/tree-sitter-tsx.dylib',
-      'lib/native/tree-sitter-tsx.so',
-    ];
-    for (final p in candidates) {
-      if (File(p).existsSync()) {
-        return loadLanguageSymbol(libPath: p, symbolName: 'tree_sitter_tsx');
-      }
-    }
-    throw StateError(
-      'TSX grammar library not found. Build with make build-ts.',
+    return loadLanguageSymbol(
+      stem: 'tree-sitter-tsx',
+      symbolName: 'tree_sitter_tsx',
     );
   }
 
   /// Convenience to load the JavaScript grammar.
   static Pointer<TSLanguage> loadJavaScriptLanguage() {
-    final candidates = [
-      'lib/native/tree-sitter-javascript.dylib',
-      'lib/native/tree-sitter-javascript.so',
-    ];
-    for (final p in candidates) {
-      if (File(p).existsSync()) {
-        return loadLanguageSymbol(
-          libPath: p,
-          symbolName: 'tree_sitter_javascript',
-        );
-      }
-    }
-    throw StateError(
-      'JavaScript grammar library not found. Build with make build-js.',
+    return loadLanguageSymbol(
+      stem: 'tree-sitter-javascript',
+      symbolName: 'tree_sitter_javascript',
     );
   }
 }
