@@ -1,0 +1,10 @@
+{
+  "total": 155,
+  "EXACT": 154,
+  "NORMALIZED": 0,
+  "MATCH_ERROR": 0,
+  "DIFF": 1,
+  "MISSING": 0
+}
+DIFF_FILES:
+script_and_script_setup_typescript.md

@@ -1,10 +1,10 @@
 # defineProps_duplicate_error
 
-[vue/compiler-sfc] duplicate defineProps() calls are not allowed
+Vue Compile Error: [@vue/compiler-sfc] duplicate defineProps() call
 
 ./defineProps_duplicate_error.vue
 1 | <script setup lang="ts">
-| ^
-2 | defineProps() x 2
-| ^^^^^^^^^^^^^^^^^
-3 | </script>
+2 | const p1 = defineProps<{ a: number }>()
+3 | const p2 = defineProps<{ b: string }>()
+| ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+4 | </script>

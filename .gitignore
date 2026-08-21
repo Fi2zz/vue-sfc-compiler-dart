@@ -153,4 +153,4 @@ dist
 .pnp.*
 token.js
 .DS_Store
-.vscode
+.vscodeprobe*

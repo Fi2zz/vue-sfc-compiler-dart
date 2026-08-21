@@ -1,10 +1,11 @@
 # defineOptions_duplicate_error
 
-[vue/compiler-sfc] duplicate defineOptions() calls are not allowed
+Vue Compile Error: [@vue/compiler-sfc] duplicate defineOptions() call
 
 ./defineOptions_duplicate_error.vue
 1 | <script setup lang="ts">
+2 | defineOptions({ name: 'X1' })
 | ^
-2 | defineOptions() x 2
-| ^^^^^^^^^^^^^^^^^^^
-3 | </script>
+3 | defineOptions({ name: 'X2' })
+| ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+4 | </script>

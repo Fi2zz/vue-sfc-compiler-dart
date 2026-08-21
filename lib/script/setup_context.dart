@@ -2,6 +2,9 @@
 // ScriptCompileContext state that affects codegen output.
 import 'package:vue_sfc_parser/ts_parser.dart';
 
+import 'script_error.dart';
+import 'src_view.dart';
+
 final class ImportBinding {
   final String source;
   final String local;
@@ -26,6 +29,14 @@ final class ModelDecl {
   ModelDecl(this.name, {this.typeNode, this.optionsText});
 }
 
+/// A destructured prop binding: public key -> local name + default node.
+final class DestructureBinding {
+  final String local;
+  final AstNode? defaultNode;
+
+  DestructureBinding(this.local, this.defaultNode);
+}
+
 /// Binding type tags; only [setupLet] changes codegen shape.
 enum BindingKind { literalConst, setupConst, setupLet, setupMaybeRef, props }
 
@@ -34,7 +45,8 @@ final class SetupContext {
   final String filename;
   final bool ts;
 
-  String setupSource = ''; // setup block content
+  String setupSource = ''; // setup block content (untrimmed)
+  late SrcView view; // view over setupSource
   Map<String, AstNode> typeScope = {};
 
   int startOffset = 0; // setup content start (char offset in source)
@@ -49,19 +61,24 @@ final class SetupContext {
   bool hasDefineEmitCall = false;
   bool hasDefineExposeCall = false;
   bool hasDefineOptionsCall = false;
+  bool hasDefineSlotsCall = false;
+  bool hasDefineModelCall = false;
   bool hasDefaultExportName = false;
   bool hasDefaultExportRender = false;
+  bool hasAwait = false;
 
   AstNode? propsCall; // defineProps or withDefaults call node
   AstNode? propsRuntimeDecl;
   AstNode? propsTypeDecl;
   AstNode? propsRuntimeDefaults;
-  bool propsDestructure = false;
-  final Map<String, String?> destructuredDefaults = {};
+  bool propsAssigned = false; // propsDecl != null in official terms
+  AstNode? propsDestructureDecl;
+  String? propsDestructureRestId;
+  final Map<String, DestructureBinding> propsDestructuredBindings = {};
 
   AstNode? emitsRuntimeDecl;
   AstNode? emitsTypeDecl;
-  bool emitAssigned = false;
+  bool emitAssigned = false; // emitDecl != null
 
   AstNode? optionsRuntimeDecl;
 
@@ -76,5 +93,18 @@ final class SetupContext {
   String helper(String key) {
     helperImports.add(key);
     return '_$key';
+  }
+
+  /// Absolute char offset in the full SFC source for an AST byte offset.
+  int abs(int byteOffset) => startOffset + view.charOf(byteOffset);
+
+  Never fail(String reason, AstNode node) {
+    throw ScriptCompileError(
+      reason: reason,
+      filename: filename,
+      source: source,
+      nodeStart: abs(node.startByte),
+      nodeEnd: abs(node.endByte),
+    );
   }
 }

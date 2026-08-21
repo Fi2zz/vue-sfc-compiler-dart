@@ -72,7 +72,7 @@ class TSParser {
           parser,
           Pointer.fromAddress(0),
           codePtr,
-          code.length,
+          codePtr.length, // UTF-8 byte length, not UTF-16 code units
         );
         if (tree.address == 0) {
           throw StateError('Failed to parse input string');

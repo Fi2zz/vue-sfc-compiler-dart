@@ -1,24 +1,20 @@
 # onRenderTriggered_basic
 
 ```
-import { defineComponent as _defineComponent } from "vue";
-import {
-onRenderTriggered,
-} from "vue";
+import { defineComponent as _defineComponent } from 'vue'
+import { onRenderTriggered } from 'vue'
 
-export default /*@__PURE__*/ _defineComponent({
-setup(__props, { expose: __expose }) {
-__expose();
+export default /*@__PURE__*/_defineComponent({
+  __name: 'onRenderTriggered_basic',
+  setup(__props, { expose: __expose }) {
+  __expose();
 
-onRenderTriggered(() => {});
+onRenderTriggered(() => {})
 
-const __returned__ = {
-};
-Object.defineProperty(__returned__, "__isScriptSetup", {
-enumerable: false,
-value: true,
-});
-return __returned__;
-},
-});
+const __returned__ = { onRenderTriggered }
+Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })
+return __returned__
+}
+
+})
 ```

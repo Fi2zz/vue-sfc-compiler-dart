@@ -1,10 +1,25 @@
 # script_multiple_export_default_ts_enum_error
 
-[vue/compiler-sfc] Only one default export allowed per module. (15:0)
+```
+enum ComponentType {
+  PRIMARY = 'primary',
+  SECONDARY = 'secondary'
+}
 
-./script_multiple_export_default_ts_enum_error.vue
-14 |  
-|  
-15 | export default {
-| ^
-16 | name: 'TsEnumComponent2',
+export default {
+  name: 'TsEnumComponent1',
+  setup() {
+    const type = ComponentType.PRIMARY
+    return { type }
+  }
+}
+
+export default {
+  name: 'TsEnumComponent2',
+  data() {
+    return {
+      availableTypes: Object.values(ComponentType)
+    }
+  }
+}
+```
