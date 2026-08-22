@@ -390,5 +390,70 @@
   {
     "name": "style_vbind_string_paren",
     "source": ".a { content: v-bind(\"(\") ; }"
+  },
+  {
+    "name": "style_err_unclosed_block",
+    "source": ".a{color:red;"
+  },
+  {
+    "name": "style_err_unclosed_block_multiline",
+    "source": ".a{color:red}\n.b{width:1px"
+  },
+  {
+    "name": "style_err_missed_semicolon",
+    "source": ".a{color:red background:blue}"
+  },
+  {
+    "name": "style_err_double_colon",
+    "source": ".a{color::red}"
+  },
+  {
+    "name": "style_err_unexpected_close",
+    "source": ".a{color:red}}"
+  },
+  {
+    "name": "style_err_unknown_word",
+    "source": ".a{color red}"
+  },
+  {
+    "name": "style_err_unknown_word_semicolon",
+    "source": ".a;b{color:red}"
+  },
+  {
+    "name": "style_err_unclosed_bracket",
+    "source": ".a{width:calc(100% - 10px}"
+  },
+  {
+    "name": "style_err_atrule_no_name",
+    "source": "@ {}"
+  },
+  {
+    "name": "style_err_unclosed_string",
+    "source": ".a{content:\"abc}"
+  },
+  {
+    "name": "style_err_unclosed_comment",
+    "source": ".a{color:red} /* abc"
+  },
+  {
+    "name": "style_err_sel_double_colon",
+    "source": ".a::{color:red}",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_err_sel_misplaced_paren",
+    "source": ".a){color:red}",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_err_sel_attr_equals",
+    "source": ".a[=\"x\"]{color:red}",
+    "options": {
+      "scoped": true
+    }
   }
 ]
