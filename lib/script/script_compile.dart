@@ -4,6 +4,7 @@ import 'package:vue_sfc_parser/sfc_descriptor.dart';
 import 'package:vue_sfc_parser/ts_parser.dart';
 
 import 'await_transform.dart';
+import 'binding_metadata.dart';
 import 'bindings.dart';
 import 'destructure_transform.dart';
 import 'macro_process.dart';
@@ -26,7 +27,10 @@ final class _Specifier {
   _Specifier(this.node, this.source, this.local, this.imported, this.typeOnly);
 }
 
-String compileScriptSetup(SfcDescriptor descriptor) {
+/// Compile <script setup> into runtime code. Returns the generated code plus
+/// the official-style bindingMetadata consumed by compileTemplate.
+({String code, Map<String, String> bindings}) compileScriptSetup(
+    SfcDescriptor descriptor) {
   final source = descriptor.source;
   final filename = descriptor.filename;
   final script = descriptor.script;
@@ -179,7 +183,7 @@ String compileScriptSetup(SfcDescriptor descriptor) {
     s.prepend("import { $helpers } from 'vue'\n");
   }
 
-  return s.toString();
+  return (code: s.toString(), bindings: buildBindingMetadata(ctx));
 }
 
 bool _isTs(String? lang) => lang == 'ts' || lang == 'tsx';

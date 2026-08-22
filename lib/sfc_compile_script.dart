@@ -17,7 +17,7 @@ String compileScript(SfcDescriptor descriptor) {
         scriptStartOffset: script.locStart,
       );
     }
-    return compileScriptSetup(descriptor);
+    return compileScriptSetup(descriptor).code;
   }
   // Fallback: if only normal <script> exists, return its content as-is
   if (descriptor.script != null) {

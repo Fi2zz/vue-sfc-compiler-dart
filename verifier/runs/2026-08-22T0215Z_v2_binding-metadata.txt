@@ -1,0 +1,9 @@
+# 2026-08-22T0215Z v2 bindingMetadata 联动
+
+v2: 63/63 EXACT（新增 8 个 bindingMetadata 样例：setup-const/setup-let/imported component/kebab component/props/props-aliased/import-maybe-ref/defineModel）。
+v1 回归: 155/155 EXACT（含 prettier 步骤）。
+
+改动要点：
+- compileScriptSetup 返回 ({code, bindings})，新增 buildBindingMetadata（官方登记规则：imports 规则、script/setup 合并、models->props、props 键 putIfAbsent、props-aliased 扁平键 __propsAliases:local）。
+- compileTemplateSource 新增 bindingMetadata 参数，codegen render 签名在非 inline 且传了 bindingMetadata 时追加 $props/$setup/$data/$options。
+- 两侧 generator 均先跑 compileScript 再把 bindings 喂给 compileTemplate（compilerOptions.bindingMetadata）。

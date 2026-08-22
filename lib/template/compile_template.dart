@@ -41,6 +41,7 @@ TmplCompileResult compileTemplateSource(
   String id = '',
   bool scoped = false,
   bool? slotted,
+  Map<String, String>? bindingMetadata,
 }) {
   final errors = <TmplCompileError>[];
   final warnings = <TmplCompileError>[];
@@ -49,8 +50,8 @@ TmplCompileResult compileTemplateSource(
   final ast = baseParse(
       source, _parseOptions(filename, scopeId, slotted, errors, warnings));
   transform(ast, _transformOptions(filename, scopeId, slotted,
-      errors, warnings));
-  final gen = generate(ast, _codegenOptions(filename, scopeId));
+      errors, warnings, bindingMetadata ?? const {}));
+  final gen = generate(ast, _codegenOptions(filename, scopeId, bindingMetadata));
   return TmplCompileResult(gen.code, ast, errors, warnings);
 }
 
@@ -77,13 +78,14 @@ List<TmplCompileError> collectTemplateParseErrors(String content) {
 
 TransformOptions _transformOptions(String filename, String? scopeId,
     bool? slotted, List<TmplCompileError> errors,
-    List<TmplCompileError> warnings) {
+    List<TmplCompileError> warnings, Map<String, String> bindingMetadata) {
   return TransformOptions()
     ..filename = filename
     ..prefixIdentifiers = true
     ..hoistStatic = true
     ..cacheHandlers = true
     ..hmr = true
+    ..bindingMetadata = bindingMetadata
     ..nodeTransforms = _nodeTransforms()
     ..directiveTransforms = _directiveTransforms()
     ..transformHoist = stringifyStatic
@@ -144,10 +146,12 @@ String? _domBuiltInComponent(String tag) {
   return null;
 }
 
-CodegenOptions _codegenOptions(String filename, String? scopeId) {
+CodegenOptions _codegenOptions(String filename, String? scopeId,
+    Map<String, String>? bindingMetadata) {
   return CodegenOptions()
     ..mode = 'module'
     ..prefixIdentifiers = true
     ..filename = filename
-    ..scopeId = scopeId;
+    ..scopeId = scopeId
+    ..bindingMetadata = bindingMetadata;
 }

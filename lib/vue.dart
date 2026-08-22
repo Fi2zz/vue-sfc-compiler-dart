@@ -6,6 +6,7 @@ import 'package:vue_sfc_parser/sfc_compile_script.dart';
 import 'package:vue_sfc_parser/sfc_compiler.dart';
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 import 'package:vue_sfc_parser/sfc_parser.dart';
+import 'package:vue_sfc_parser/script/script_compile.dart';
 import 'package:vue_sfc_parser/template/compile_template.dart';
 // export './sfc_compiler.dart' show CompileResult;
 
@@ -53,5 +54,13 @@ class Vue {
       styles: styles,
       metadata: {},
     );
+  }
+
+  /// bindingMetadata for the standalone compileTemplate API: run the full
+  /// script compilation (official flow derives bindings as a side product)
+  /// and return the resulting bindings map. Null when no <script setup>.
+  static Map<String, String>? bindingMetadataOf(SfcDescriptor descriptor) {
+    if (descriptor.scriptSetup == null) return null;
+    return compileScriptSetup(descriptor).bindings;
   }
 }
