@@ -30,7 +30,7 @@
 剩余：
 1. 样例继续扩充：ws preserve、pre/textarea 边界、更多错误样例（ERRORS 文本对齐）、v-for+v-slot 组合、动态参数边界
 2. processExpression 保真细节：parser 期 createExp 预解析（错误时机差异）、class-in-template 边界
-3. bindingMetadata 边界：normal-script-only 的 options API bindings（`__isScriptSetup: false` 路径）未接；BindingKind 粒度比官方粗（无 setup-ref/setup-reactive-const 区分，module 模式下输出等价，inline 模式才可见差异）
+3. bindingMetadata 边界：~~normal-script-only 的 options API bindings~~（已接，`lib/script/options_bindings.dart` 移植 analyzeScriptBindings，含 `__isScriptSetup: false` 路径）；BindingKind 粒度仍比官方粗（无 setup-ref/setup-reactive-const 区分，module 模式下输出等价，inline 模式才可见差异）
 
 ### P1 — compileStyle（相对独立，可与 P0 并行）
 - scoped CSS：data 属性注入 + 选择器重写
