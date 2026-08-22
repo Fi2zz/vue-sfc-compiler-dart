@@ -4,7 +4,7 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 const samples = JSON.parse(await readFile("samples_tmpl.json", "utf8"));
 const outDir = process.argv[2] || "samples_tmpl";
 await mkdir(outDir, { recursive: true });
-for (const { name, sfc } of samples) {
+for (const { name, sfc, options: sampleOpts } of samples) {
   const filename = `./${name}.vue`;
   const { descriptor, errors } = parse(sfc, { filename });
   let md = `# ${name}\n\n`;
@@ -23,7 +23,10 @@ for (const { name, sfc } of samples) {
         filename,
         id: filename,
         scoped: descriptor.styles.some((s) => s.scoped),
-        compilerOptions: bindingMetadata ? { bindingMetadata } : {},
+        compilerOptions: {
+          ...(bindingMetadata ? { bindingMetadata } : {}),
+          ...(sampleOpts?.whitespace ? { whitespace: sampleOpts.whitespace } : {}),
+        },
       });
       md += "```\n" + result.code.trim() + "\n```\n";
       if (result.errors.length) md += "ERRORS: " + result.errors.join("; ") + "\n";
