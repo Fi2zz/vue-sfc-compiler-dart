@@ -32,6 +32,33 @@ AstNode? _typeArg(AstNode call) {
   return t.children.first;
 }
 
+/// Port of getObjectOrArrayExpressionKeys: keys of a runtime props/emits
+/// declaration (array of string literals or object literal keys).
+List<String> _declKeys(AstNode node, SrcView view) {
+  final inner = node.type == 'parenthesized_expression'
+      ? node.children.first
+      : node;
+  if (inner.type == 'array') {
+    return [
+      for (final e in inner.children)
+        if (e.type == 'string') _stringValue(view, e),
+    ];
+  }
+  if (inner.type == 'object') {
+    return [
+      for (final p in inner.children)
+        if (p.type == 'pair') _pairKey(p, view),
+    ];
+  }
+  return const [];
+}
+
+String _pairKey(AstNode pair, SrcView view) {
+  final key = pair.children.first;
+  if (key.type == 'string') return _stringValue(view, key);
+  return view.textOf(key);
+}
+
 List<AstNode> _args(AstNode call) {
   final a = childOfType(call, 'arguments');
   return a?.children ?? const [];
@@ -53,6 +80,10 @@ bool processDefineProps(
   ctx.hasDefinePropsCall = true;
   final args = _args(node);
   ctx.propsRuntimeDecl = args.isEmpty ? null : args.first;
+  if (ctx.propsRuntimeDecl != null) {
+    // 官方：runtime 声明的每个 props 键登记进 bindingMetadata（putIfAbsent）
+    ctx.propsKeys.addAll(_declKeys(ctx.propsRuntimeDecl!, ctx.view));
+  }
   final typeArg = _typeArg(node);
   if (typeArg != null) {
     if (ctx.propsRuntimeDecl != null) {

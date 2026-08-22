@@ -28,8 +28,12 @@ void main(List<String> args) {
     } else {
       try {
         final scoped = descriptor!.styles.any((st) => st.scoped);
+        final bindings = Vue.bindingMetadataOf(descriptor);
         final result = compileTemplateSource(template.content,
-            filename: filename, id: filename, scoped: scoped);
+            filename: filename,
+            id: filename,
+            scoped: scoped,
+            bindingMetadata: bindings);
         md.writeln('```\n${result.code.trim()}\n```');
         if (result.errors.isNotEmpty) {
           md.writeln(

@@ -75,6 +75,9 @@ final class SetupContext {
   AstNode? propsDestructureDecl;
   String? propsDestructureRestId;
   final Map<String, DestructureBinding> propsDestructuredBindings = {};
+  // 官方在 processDefineProps / genRuntimeProps 中把 props 键登记进
+  // bindingMetadata（putIfAbsent 语义）；这里先收集，由 buildBindingMetadata 合并。
+  final Set<String> propsKeys = {};
 
   AstNode? emitsRuntimeDecl;
   AstNode? emitsTypeDecl;

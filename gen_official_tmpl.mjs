@@ -1,5 +1,5 @@
 // Generate official compileTemplate outputs for template samples.
-import { parse, compileTemplate } from "@vue/compiler-sfc";
+import { parse, compileScript, compileTemplate } from "@vue/compiler-sfc";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 const samples = JSON.parse(await readFile("samples_tmpl.json", "utf8"));
 const outDir = process.argv[2] || "samples_tmpl";
@@ -12,11 +12,18 @@ for (const { name, sfc } of samples) {
     md += "Vue Compile Error: " + String(errors[0].message ?? errors[0]) + "\n";
   } else {
     try {
+      // Mirror the real consumer flow: run compileScript and feed its
+      // bindingMetadata into compileTemplate's compilerOptions.
+      let bindingMetadata;
+      if (descriptor.scriptSetup || descriptor.script) {
+        bindingMetadata = compileScript(descriptor, { id: filename }).bindings;
+      }
       const result = compileTemplate({
         source: descriptor.template.content,
         filename,
         id: filename,
         scoped: descriptor.styles.some((s) => s.scoped),
+        compilerOptions: bindingMetadata ? { bindingMetadata } : {},
       });
       md += "```\n" + result.code.trim() + "\n```\n";
       if (result.errors.length) md += "ERRORS: " + result.errors.join("; ") + "\n";

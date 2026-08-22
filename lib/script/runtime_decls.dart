@@ -47,6 +47,8 @@ List<_RuntimeProp> _propsFromType(SetupContext ctx) {
       resolveTypeElements(ctx.propsTypeDecl!, ctx.view, ctx.typeScope);
   final out = <_RuntimeProp>[];
   for (final key in elements.props.keys) {
+    // 官方 genRuntimeProps：类型推导的 props 键登记进 bindingMetadata
+    ctx.propsKeys.add(key);
     final e = elements.props[key]!;
     var types = e.method
         ? const ['Function']

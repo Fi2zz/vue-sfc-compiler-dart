@@ -218,5 +218,37 @@
   {
     "name": "tmpl_kebab_component",
     "sfc": "<template><my-comp foo=\"1\" /><MyComp /></template>"
+  },
+  {
+    "name": "tmpl_bind_setup_const",
+    "sfc": "<script setup>\nconst msg = 'hello'\n</script>\n<template><div>{{ msg }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_setup_let",
+    "sfc": "<script setup>\nlet count = 0\n</script>\n<template><button @click=\"count++\">{{ count }}</button></template>"
+  },
+  {
+    "name": "tmpl_bind_component",
+    "sfc": "<script setup>\nimport Foo from './Foo.vue'\n</script>\n<template><Foo bar=\"1\" /></template>"
+  },
+  {
+    "name": "tmpl_bind_component_kebab",
+    "sfc": "<script setup>\nimport FooBar from './FooBar.vue'\n</script>\n<template><foo-bar /><FooBar /></template>"
+  },
+  {
+    "name": "tmpl_bind_props",
+    "sfc": "<script setup>\ndefineProps(['msg'])\n</script>\n<template><div>{{ msg }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_props_aliased",
+    "sfc": "<script setup>\nconst { msg: m } = defineProps(['msg'])\n</script>\n<template><div>{{ m }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_import_maybe_ref",
+    "sfc": "<script setup>\nimport { util } from './util.js'\n</script>\n<template><div>{{ util() }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_model",
+    "sfc": "<script setup>\ndefineModel()\n</script>\n<template><div>{{ modelValue }}</div></template>"
   }
 ]
