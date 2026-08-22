@@ -59,7 +59,7 @@ final class SelSyntaxError implements Exception {
   final String message;
   SelSyntaxError(this.message);
   @override
-  String toString() => 'CssSelectorError: $message';
+  String toString() => 'Error: $message';
 }
 
 int _codeAt(String css, int i) => i < css.length ? css.codeUnitAt(i) : -1;

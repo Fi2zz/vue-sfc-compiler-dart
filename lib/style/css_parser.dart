@@ -25,7 +25,7 @@ class CssParser {
         case ';':
           _freeSemicolon(token);
         case '}':
-          _end();
+          _end(token);
         case 'comment':
           _comment(token);
         case 'at-word':
@@ -46,9 +46,10 @@ class CssParser {
     final node = CssAtRule();
     node.name = startToken.content.substring(1);
     if (node.name.isEmpty) {
-      throw CssSyntaxError('At-rule without name');
+      throw CssSyntaxError('At-rule without name', startToken.start,
+          startToken.start + startToken.content.length);
     }
-    _init(node);
+    _init(node, startToken.start);
 
     var last = false;
     var open = false;
@@ -76,7 +77,7 @@ class CssParser {
           open = true;
           break;
         } else if (type == '}') {
-          _end();
+          _end(token);
           break;
         } else {
           params.add(token);
@@ -116,7 +117,7 @@ class CssParser {
 
   void _decl(List<CssToken> tokens, bool customProperty) {
     final node = CssDecl();
-    _init(node);
+    _init(node, tokens[0].start);
 
     var last = tokens[tokens.length - 1];
     if (last.type == ';') {
@@ -126,7 +127,7 @@ class CssParser {
 
     while (tokens[0].type != 'word') {
       if (tokens.length == 1) {
-        throw CssSyntaxError('Unknown word ${tokens[0].content}');
+        _unknownWord(tokens[0]);
       }
       node.raws.before = (node.raws.before ?? '') + tokens.removeAt(0).content;
     }
@@ -147,7 +148,7 @@ class CssParser {
         break;
       } else {
         if (token.type == 'word' && RegExp(r'\w').hasMatch(token.content)) {
-          throw CssSyntaxError('Unknown word ${token.content}');
+          _unknownWord(token);
         }
         node.raws.between = node.raws.between! + token.content;
       }
@@ -215,7 +216,7 @@ class CssParser {
     final colon = _colonIndex(tokens);
     if (colon == -1) return;
     var founded = 0;
-    CssToken? token;
+    late CssToken token;
     for (var j = colon - 1; j >= 0; j--) {
       token = tokens[j];
       if (token.type != 'space') {
@@ -223,7 +224,10 @@ class CssParser {
         if (founded == 2) break;
       }
     }
-    throw CssSyntaxError('Missed semicolon');
+    // 官方：word token 取 token[3] + 1（该词之后的位置），否则 token[2]。
+    final offset =
+        token.type == 'word' ? (token.end ?? token.start) + 1 : token.start;
+    throw CssSyntaxError('Missed semicolon', offset);
   }
 
   int _colonIndex(List<CssToken> tokens) {
@@ -236,7 +240,8 @@ class CssParser {
       if (type == ')') brackets -= 1;
       if (brackets == 0 && type == ':') {
         if (prev == null) {
-          throw CssSyntaxError('Double colon');
+          throw CssSyntaxError(
+              'Double colon', token.start, token.start + token.content.length);
         } else if (prev.type == 'word' && prev.content == 'progid') {
           continue;
         } else {
@@ -252,7 +257,7 @@ class CssParser {
 
   void _comment(CssToken token) {
     final node = CssComment();
-    _init(node);
+    _init(node, token.start);
     final text = token.content.substring(2, token.content.length - 2);
     if (RegExp(r'^\s*$').hasMatch(text)) {
       node.text = '';
@@ -268,13 +273,13 @@ class CssParser {
 
   void _emptyRule(CssToken token) {
     final node = CssRule();
-    _init(node);
+    _init(node, token.start);
     node.selector = '';
     node.raws.between = '';
     current = node;
   }
 
-  void _end() {
+  void _end(CssToken token) {
     if (current.nodes != null && current.nodes!.isNotEmpty) {
       current.raws.semicolon = semicolon;
     }
@@ -284,13 +289,13 @@ class CssParser {
     if (current.parent != null) {
       current = current.parent!;
     } else {
-      throw CssSyntaxError('Unexpected }');
+      throw CssSyntaxError('Unexpected }', token.start, token.start + 1);
     }
   }
 
   void _endFile() {
     if (current.parent != null) {
-      throw CssSyntaxError('Unclosed block');
+      throw CssSyntaxError('Unclosed block', current.sourceStart);
     }
     if (current.nodes != null && current.nodes!.isNotEmpty) {
       current.raws.semicolon = semicolon;
@@ -309,12 +314,18 @@ class CssParser {
     }
   }
 
-  void _init(CssNode node) {
+  void _init(CssNode node, int offset) {
     current.push(node);
+    node.sourceStart = offset;
     node.raws.before = spaces;
     spaces = '';
     if (node.type != 'comment') semicolon = false;
   }
+
+  Never _unknownWord(CssToken token) => throw CssSyntaxError(
+      'Unknown word ${token.content}',
+      token.start,
+      token.start + token.content.length);
 
   // ------------------------------------------------------------- other/rule
 
@@ -365,7 +376,8 @@ class CssParser {
 
     if (tokenizer.endOfFile()) end = true;
     if (brackets.isNotEmpty) {
-      throw CssSyntaxError('Unclosed bracket');
+      throw CssSyntaxError(
+          'Unclosed bracket', bracket!.start, bracket.start + 1);
     }
 
     if (end && colon) {
@@ -378,14 +390,14 @@ class CssParser {
       }
       _decl(tokens, customProperty);
     } else {
-      throw CssSyntaxError('Unknown word ${tokens.isEmpty ? '' : tokens[0].content}');
+      _unknownWord(tokens[0]);
     }
   }
 
   void _rule(List<CssToken> tokens) {
     tokens.removeLast();
     final node = CssRule();
-    _init(node);
+    _init(node, tokens[0].start);
     node.raws.between = _spacesAndCommentsFromEnd(tokens);
     _raw(node, 'selector', tokens);
     current = node;
