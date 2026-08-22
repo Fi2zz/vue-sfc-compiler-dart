@@ -34,4 +34,6 @@ dart vue_dart_style.dart && node verifier/v3/compare.mjs
 
 - `2026-08-22T_style-v3-errors.txt`：v3 扩充 14 个语法错误样例，72/72 EXACT。补齐 postcss 错误定位（偏移→行列二分、path.resolve 文件名、showSourceCode 帧逐字节移植）与 selector 错误的 `Error: ` 前缀；修复属性选择器等号先于属性名的报错文案。错误文本内嵌机器绝对路径，换机需重生成 ground truth。
 
+- `2026-08-22T_style-v3-isprod.txt`：v3 新增 3 个 isProd v-bind 样例，75/75 EXACT。移植 hash-sum（genVarName prod 分支，含首字符数字 'v' 前缀）。
+
 - `v3/compare.mjs`：compileStyle 比较器。直接字节对比 `samples_style/`（官方 compileStyle 输出，gen_official_style.mjs 生成）与 `samples_style_dart/`（vue_dart_style.dart 生成）。级别：EXACT / DIFF / MISSING。

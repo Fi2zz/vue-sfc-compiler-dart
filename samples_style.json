@@ -455,5 +455,27 @@
     "options": {
       "scoped": true
     }
+  },
+  {
+    "name": "style_vbind_prod",
+    "source": ".a { color: v-bind(color); }",
+    "options": {
+      "isProd": true
+    }
+  },
+  {
+    "name": "style_vbind_prod_scoped",
+    "source": ".a { color: v-bind('theme.color'); width: calc(v-bind(x) * 2); }",
+    "options": {
+      "scoped": true,
+      "isProd": true
+    }
+  },
+  {
+    "name": "style_vbind_prod_expr",
+    "source": ".a { border-color: v-bind(  borderColor  ); }",
+    "options": {
+      "isProd": true
+    }
   }
 ]
