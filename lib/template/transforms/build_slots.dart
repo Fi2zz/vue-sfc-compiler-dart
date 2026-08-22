@@ -149,7 +149,7 @@ void _slotWithElse(DirectiveNode vElse, Object slotName,
     _attachElseSlot(vElse, slotName, slotFunction, st);
   } else {
     context.onError(TmplCompileError(
-        30, 'v-else/v-else-if has no adjacent v-if.', vElse.loc));
+        30, 'v-else/v-else-if has no adjacent v-if or v-else-if.', vElse.loc));
   }
 }
 

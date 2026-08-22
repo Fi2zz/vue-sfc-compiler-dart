@@ -166,5 +166,57 @@
   {
     "name": "tmpl_static_scoped",
     "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template><style scoped>.a{color:red}</style>"
+  },
+  {
+    "name": "tmpl_pre",
+    "sfc": "<template><pre>  keep\n    spaces</pre><p class=\"a\">x</p></template>"
+  },
+  {
+    "name": "tmpl_for_slot_combo",
+    "sfc": "<template><List v-for=\"row in rows\" :key=\"row.id\" v-slot=\"{ item }\"><span>{{ item }}</span></List></template>"
+  },
+  {
+    "name": "tmpl_dyn_arg",
+    "sfc": "<template><div :[attr]=\"val\" @[event]=\"handler\"></div></template>"
+  },
+  {
+    "name": "tmpl_err_dup_attr",
+    "sfc": "<template><div id=\"a\" id=\"b\"></div></template>"
+  },
+  {
+    "name": "tmpl_err_v_else_no_if",
+    "sfc": "<template><div v-else></div></template>"
+  },
+  {
+    "name": "tmpl_err_v_on_no_exp",
+    "sfc": "<template><div @click></div></template>"
+  },
+  {
+    "name": "tmpl_v_model_component",
+    "sfc": "<template><Comp v-model=\"val\" /><Comp v-model:title=\"t\" /></template>"
+  },
+  {
+    "name": "tmpl_event_modifiers",
+    "sfc": "<template><button @click.stop.prevent=\"go\" @keyup.enter=\"submit\">go</button></template>"
+  },
+  {
+    "name": "tmpl_v_bind_obj",
+    "sfc": "<template><div v-bind=\"obj\"></div></template>"
+  },
+  {
+    "name": "tmpl_svg",
+    "sfc": "<template><svg viewBox=\"0 0 10 10\"><circle cx=\"5\" cy=\"5\" r=\"4\" /></svg></template>"
+  },
+  {
+    "name": "tmpl_template_if",
+    "sfc": "<template><template v-if=\"ok\"><p>a</p><p>b</p></template></template>"
+  },
+  {
+    "name": "tmpl_template_for",
+    "sfc": "<template><template v-for=\"i in 3\" :key=\"i\"><p>{{ i }}</p></template></template>"
+  },
+  {
+    "name": "tmpl_kebab_component",
+    "sfc": "<template><my-comp foo=\"1\" /><MyComp /></template>"
   }
 ]
