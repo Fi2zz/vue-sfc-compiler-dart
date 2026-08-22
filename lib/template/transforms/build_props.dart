@@ -347,6 +347,8 @@ Object? _normalizeObjectProps(
     if (key is SimpleExpression && key.static_) {
       if (key.content == 'class') classKeyIndex = i;
       if (key.content == 'style') styleKeyIndex = i;
+    } else if (key is CompoundExpression) {
+      if (!key.isHandlerKey) hasDynamicKey = true;
     } else if (key is! SimpleExpression || !key.isHandlerKey) {
       hasDynamicKey = true;
     }

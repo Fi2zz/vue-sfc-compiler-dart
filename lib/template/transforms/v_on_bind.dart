@@ -35,9 +35,12 @@ DirTransformResult transformOnCore(DirectiveNode dir, ElementNode node,
   if (shouldCache) {
     ret.props[0].value = context.cache(ret.props[0].value);
   }
+  // 官方：ret.props.forEach((p) => p.key.isHandlerKey = true)——不区分
+  // SimpleExpression / CompoundExpression。
   for (final p in ret.props) {
     final k = p.key;
     if (k is SimpleExpression) k.isHandlerKey = true;
+    if (k is CompoundExpression) k.isHandlerKey = true;
   }
   return ret;
 }

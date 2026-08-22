@@ -197,6 +197,7 @@ final class CompoundExpression extends TmplNode {
   TmplLoc loc;
   List<String>? identifiers;
   Object? ast;
+  bool isHandlerKey = false; // 官方：事件处理 prop 的动态 key 也带此标记
   CompoundExpression(this.children, this.loc);
 }
 
