@@ -289,5 +289,21 @@
   {
     "name": "tmpl_err_v_slot_outlet_dyn",
     "sfc": "<template><slot :name=\"n\">x</slot></template>"
+  },
+  {
+    "name": "tmpl_bind_options_props",
+    "sfc": "<script>\nexport default {\n  props: ['msg']\n}\n</script>\n<template><div>{{ msg }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_options_data",
+    "sfc": "<script>\nexport default {\n  data() {\n    return { count: 0 }\n  }\n}\n</script>\n<template><div>{{ count }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_options_computed",
+    "sfc": "<script>\nexport default {\n  computed: {\n    doubled() { return 2 }\n  },\n  methods: {\n    go() {}\n  }\n}\n</script>\n<template><div @click=\"go\">{{ doubled }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_options_component_unresolved",
+    "sfc": "<script>\nimport Foo from './Foo.vue'\nexport default {\n  components: { Foo }\n}\n</script>\n<template><Foo /></template>"
   }
 ]
