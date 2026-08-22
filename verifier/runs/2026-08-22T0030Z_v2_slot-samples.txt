@@ -1,0 +1,3 @@
+v2: EXACT 35/35
+v1: 155/155 EXACT (rerun above)
+fixes: sfc_parser depth-aware block scan; expression_walk rootExp scope retention; build_slots hasForwardedSlots tagType===SLOT

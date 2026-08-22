@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'lib/template/compile_template.dart';
+import 'lib/template/transform_context.dart';
 import 'lib/vue.dart';
 
 void main(List<String> args) {
@@ -23,16 +24,17 @@ void main(List<String> args) {
       md.writeln('Vue Compile Error: missing template block');
     } else {
       try {
+        final scoped = descriptor.styles.any((st) => st.scoped);
         final result = compileTemplateSource(template.content,
-            filename: filename, id: filename);
+            filename: filename, id: filename, scoped: scoped);
         md.writeln('```\n${result.code.trim()}\n```');
         if (result.errors.isNotEmpty) {
           md.writeln(
-              'ERRORS: ${result.errors.map((e) => e.message).join('; ')}');
+              "ERRORS: ${result.errors.map((e) => 'SyntaxError: ${e.message}').join('; ')}");
         }
       } catch (e) {
         md.writeln(
-            'Vue Compile Error: ${e is Exception ? e.toString() : '$e'}');
+            'Vue Compile Error: ${e is TmplCompileError ? e.message : '$e'}');
       }
     }
     File('$outDir/$name.md').writeAsStringSync(md.toString());

@@ -146,6 +146,7 @@ TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
   final walker = ExpressionWalker(view, (id, parent, isRefed, isLocal) {
     _onIdentifier(id, parent, isRefed, isLocal, context, ids);
   }, knownIds);
+  walker.rootExp = _unwrapTop(parsed.root);
   walker.walk(parsed.root);
   ids.sort((a, b) => a.startChar.compareTo(b.startChar));
   return _spliceChildren(node, rawExp, ids, knownIds);
