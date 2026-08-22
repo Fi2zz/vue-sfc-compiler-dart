@@ -1,0 +1,1 @@
+v2: 42/42 EXACT (7 new stringifyStatic samples: cached-array splice, partial chunk + cache index fixup, const eval class/style/concat/bool-skip/v-text, nested walk, table bail, scopeId injection); v1: 155/155 EXACT
