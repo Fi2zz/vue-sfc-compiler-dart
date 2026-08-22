@@ -13,6 +13,7 @@ for (const { name, source, options } of samples) {
     id: filename,
     scoped: options?.scoped ?? false,
     trim: options?.trim ?? true,
+    isProd: options?.isProd ?? false,
   });
   md += "```\n" + result.code + "\n```\n";
   if (result.errors.length) {

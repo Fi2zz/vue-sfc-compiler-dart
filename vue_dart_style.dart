@@ -18,9 +18,14 @@ void main(List<String> args) {
     final options = s['options'] as Map<String, dynamic>?;
     final scoped = options?['scoped'] as bool? ?? false;
     final trim = options?['trim'] as bool? ?? true;
+    final isProd = options?['isProd'] as bool? ?? false;
     final filename = './$name.vue';
     final result = compileStyleSource(source,
-        filename: filename, id: filename, scoped: scoped, trim: trim);
+        filename: filename,
+        id: filename,
+        scoped: scoped,
+        trim: trim,
+        isProd: isProd);
     final md = StringBuffer('# $name\n\n```\n${result.code}\n```\n');
     if (result.errors.isNotEmpty) {
       md.writeln('ERRORS: ${result.errors.join('; ')}');

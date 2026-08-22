@@ -1,0 +1,18 @@
+2026-08-22 style v3 isProd genVarName
+=====================================
+
+范围：compileStyle isProd 下 v-bind 变量名（genVarName 的 hash-sum 分支）。
+
+改动：
+- plugins_css_vars.dart：hash-sum 移植（fold 的 int32 截断 + 负值*-2 +
+  hex padLeft(8,'0')；字符串输入等价 fold(fold(fold(0,'[object String]'),
+  'string'), s)），genVarName 首字符数字时 'v' 前缀
+- compileStyleSource 与两个生成器透传 isProd 选项
+
+样例：samples_style.json 72 -> 75（+3 isProd v-bind 样例，
+含首字符为数字触发 'v' 前缀的分支）
+
+结果：
+- v3: EXACT 75/75
+- 回归：v1 EXACT 155/155, v2 EXACT 89/89
+- dart analyze：0 error
