@@ -305,5 +305,37 @@
   {
     "name": "tmpl_bind_options_component_unresolved",
     "sfc": "<script>\nimport Foo from './Foo.vue'\nexport default {\n  components: { Foo }\n}\n</script>\n<template><Foo /></template>"
+  },
+  {
+    "name": "tmpl_class_array",
+    "sfc": "<template><div :class=\"[a, 'b', { c: ok }]\">x</div></template>"
+  },
+  {
+    "name": "tmpl_class_object",
+    "sfc": "<template><div class=\"base\" :class=\"{ active: on }\">x</div></template>"
+  },
+  {
+    "name": "tmpl_style_binding",
+    "sfc": "<template><div :style=\"{ color: c, fontSize: n + 'px' }\">x</div></template>"
+  },
+  {
+    "name": "tmpl_dyn_arg_modifier",
+    "sfc": "<template><button @[event].stop.prevent=\"go\">x</button></template>"
+  },
+  {
+    "name": "tmpl_v_for_nested_slot",
+    "sfc": "<template><my-comp v-for=\"it in list\" :key=\"it.id\"><template #default=\"{ row }\"><span>{{ row.name }}</span></template></my-comp></template>"
+  },
+  {
+    "name": "tmpl_v_model_dyn_arg",
+    "sfc": "<template><my-comp v-model:[prop].trim=\"val\" /></template>"
+  },
+  {
+    "name": "tmpl_bind_obj_spread",
+    "sfc": "<template><div v-bind=\"obj\" id=\"static\">x</div></template>"
+  },
+  {
+    "name": "tmpl_event_key_mod",
+    "sfc": "<template><input @keyup.enter.exact=\"go\" @keydown.a.b=\"go2\" /></template>"
   }
 ]
