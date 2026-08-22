@@ -5,13 +5,14 @@
 
 ## 一句话现状
 
-用 Dart 实现的 Vue 3 `<script setup>` 编译器，目标输出与官方 `@vue/compiler-sfc` 逐字节对齐。`compileScript` 已完成：**155/155 样例 EXACT**（verifier v1，见 `verifier/README.md`）。`compileTemplate` 和 `compileStyle` 尚未开始。整体完成度约 30%~35%。
+用 Dart 实现的 Vue 3 SFC 编译器，目标输出与官方 `@vue/compiler-sfc` 逐字节对齐。`compileScript` 已完成：**155/155 样例 EXACT**（verifier v1）。`compileTemplate` 首批样例完成：**20/20 EXACT**（verifier v2，含指令/插值/组件/注释/实体/空白样例）。剩余：compileTemplate 覆盖面扩充 + stringifyStatic 移植、compileStyle（P1）。整体完成度约 55%~60%。
 
 ## 仓库
 
 - 地址：https://github.com/Fi2zz/vue-sfc-compiler-dart （私有）
 - 默认分支：`master`
-- 最近提交：2026-08-21「fix(script): 叶子 type_identifier 引用解析（155/155 EXACT）」
+- 最近提交：见 `git log`（template 阶段：transform+codegen 全量移植，v2 基线 20/20 EXACT）
+- 注意：本机非交互环境无 git 凭据，push 会失败；每次提交后更新 `../_git_backups/vue-sfc-compiler-dart.bundle`（`git bundle create ... --all`），.git 目录曾在会话间丢失过，bundle 是恢复手段
 
 ## 已完成（不要重做）
 
@@ -23,14 +24,13 @@
 
 ## 待办（按优先级）
 
-### P0 — compileTemplate（最大块，约占剩余工作 50%）
-1. 模板解析器：HTML-like → 模板 AST（元素/文本/插值/注释节点）
-2. 表达式转换：模板内表达式复用现有 tree-sitter TS AST 管线
-3. 核心指令 transform：`v-if`/`v-else-if`/`v-else`、`v-for`、`v-on`（含修饰符）、`v-bind`（含 `.prop`/`.attr`）、`v-model`、`v-show`
-4. 渲染函数 codegen：`createVNode`/`createElementVNode`/`toDisplayString` 等运行时 helper 收集与导入
-5. 指令进阶：`v-slot` 体系（具名/动态/作用域插槽）、`v-html`/`v-text`、`v-memo`、`v-once`
-6. 优化阶段：静态提升（hoistStatic）、补丁标记（patchFlag）、block tree、缓存事件处理器
-7. setup 绑定元数据：模板引用与 `<script setup>` 绑定的联动分析（`bindingMetadata`）
+### P0 — compileTemplate（核心管线已完成，进入覆盖面扩充）
+已完成：模板解析器（tokenizer 移植）、transform 全家桶（v-if/v-for/v-on/v-bind/v-model/v-show/v-slot/v-html/v-text/v-memo/v-once、transformExpression/processExpression 走 tree-sitter TS AST、hoistStatic/cacheHandlers/patchFlag/block tree、asset URL/srcset 重写）、module 模式 codegen。入口 `lib/template/compile_template.dart`（compileTemplateSource），生成器 `vue_dart_tmpl.dart`，验收 `node verifier/v2/compare.mjs`（20/20 EXACT）。
+剩余：
+1. **stringifyStatic（transformHoist）未移植**——静态文本节点 ≥20 或静态元素 ≥5 的块会被官方合并为 createStaticVNode，当前传 null，大模板会 DIFF；移植需连带 stringifyNode/analyzeNode（DOM 节点反向序列化为 HTML 字符串）
+2. 样例扩充：v-slot 具名/作用域/动态、动态组件 `<component :is>`、内置组件（Teleport/Suspense/KeepAlive/Transition）、`<slot>`  Outlet、scopeId（scoped 样式联动）、ws preserve、pre/textarea 边界、错误样例（ERRORS 文本对齐）
+3. bindingMetadata 联动（compileScript 结果喂给模板：setup 引用 `_unref`/`$setup` 前缀等）——当前 compileTemplateSource 未接 bindingMetadata
+4. processExpression 保真细节：parser 期 createExp 预解析（错误时机差异）、class-in-template 边界
 
 ### P1 — compileStyle（相对独立，可与 P0 并行）
 - scoped CSS：data 属性注入 + 选择器重写
@@ -57,7 +57,8 @@
 ```bash
 # Dart SDK 在 /mnt/agents/output/_toolchain/dart-sdk/bin（先加 PATH）
 dart run ./vue_dart.dart && npx prettier samples_dart/*.md -w --log-level warn
-node verifier/v1/compare.mjs          # 应 155/155 EXACT
+node verifier/v1/compare.mjs          # 应 155/155 EXACT（script）
+dart vue_dart_tmpl.dart && node verifier/v2/compare.mjs   # 应 20/20 EXACT（template）
 dart analyze                          # 须零错误（runner.dart 有一个历史 info lint 可忽略）
 ```
 
@@ -82,7 +83,9 @@ dart analyze                          # 须零错误（runner.dart 有一个历�
 - `samples.json` 是样例索引/元数据，新增样例时同步更新
 - babel 会把语句后跨空行的注释挂为 trailingComments，hoistNode 须连同注释与后续全部空白一起移动
 - 已知隐患（未触发）：typeScope 条目跨 parse 时未携带各自 SrcView，setup 若整体引用 normal script 声明的 interface 作为 props 类型，成员键提取会用错 view
+- 模板侧：官方 Symbol 身份以 helper 名字符串建模（genNode 遇 helperNames 集合内字符串输出 `_name`）；官方依赖 JS `arr[-1] === undefined` 的循环（v-if 分支键）移植时要显式判负；`transformIf` 的 createCommentVNode 注册发生在 alternate 构造时（影响 import 顺序）；DOM parserOptions.parseMode 是 html 不是 base
+- `samples_tmpl.json` 是模板样例索引，新增模板样例时同步更新并用 `node gen_official_tmpl.mjs` 重新生成 ground truth
 
 ## 新会话开场白（直接粘贴）
 
-> 读 https://github.com/Fi2zz/vue-sfc-compiler-dart 仓库的 HANDOFF.md。这是一个用 Dart 实现 Vue 3 `<script setup>` 编译器的项目，目标输出与官方 @vue/compiler-sfc 对齐。compileScript 已完成（155/155 样例 EXACT，验证方式见「验证命令」）。现在按 HANDOFF 中的 P0 路线图继续 compileTemplate：先做模板解析器 → 模板 AST。工作方法：样例驱动、AST 优先、diff 官方输出验收。遵守 HANDOFF 中的代码规范。开始前先跑验证命令确认基线全绿。
+> 读 https://github.com/Fi2zz/vue-sfc-compiler-dart 仓库的 HANDOFF.md。这是一个用 Dart 实现 Vue 3 SFC 编译器的项目，目标输出与官方 @vue/compiler-sfc 逐字节对齐。compileScript 已完成（155/155 EXACT），compileTemplate 核心管线已完成（verifier v2 首批 20/20 EXACT）。现在按 HANDOFF 的 P0 剩余项继续：先跑验证命令确认基线全绿，然后扩充模板样例覆盖面（v-slot/动态组件/内置组件/错误样例）并迭代到全 EXACT，或移植 stringifyStatic。工作方法：样例驱动、AST 优先、以官方编译器输出为准。遵守 HANDOFF 中的代码规范与 git 约束（禁止 force push）。
