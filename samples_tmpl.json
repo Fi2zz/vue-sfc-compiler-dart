@@ -257,5 +257,37 @@
       "whitespace": "preserve"
     },
     "sfc": "<template><div>\n  hello\n  <span>  a  b  </span>\n</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_for_no_exp",
+    "sfc": "<template><div v-for>item</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_slot_misplaced",
+    "sfc": "<template><my-comp><div v-slot:default>x</div></my-comp></template>"
+  },
+  {
+    "name": "tmpl_err_v_model_no_exp",
+    "sfc": "<template><input v-model /></template>"
+  },
+  {
+    "name": "tmpl_err_v_else_if_no_exp",
+    "sfc": "<template><div v-if=\"a\"/><div v-else-if>x</div></template>"
+  },
+  {
+    "name": "tmpl_dyn_arg_event",
+    "sfc": "<template><button @[event]=\"go\">x</button></template>"
+  },
+  {
+    "name": "tmpl_dyn_arg_shorthand_bind",
+    "sfc": "<template><div :[key]=\"val\">x</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_bind_no_exp",
+    "sfc": "<template><div :id>x</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_slot_outlet_dyn",
+    "sfc": "<template><slot :name=\"n\">x</slot></template>"
   }
 ]
