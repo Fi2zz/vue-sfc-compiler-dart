@@ -250,5 +250,12 @@
   {
     "name": "tmpl_bind_model",
     "sfc": "<script setup>\ndefineModel()\n</script>\n<template><div>{{ modelValue }}</div></template>"
+  },
+  {
+    "name": "tmpl_ws_preserve",
+    "options": {
+      "whitespace": "preserve"
+    },
+    "sfc": "<template><div>\n  hello\n  <span>  a  b  </span>\n</div></template>"
   }
 ]

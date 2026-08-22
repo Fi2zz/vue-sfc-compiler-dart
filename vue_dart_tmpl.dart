@@ -29,11 +29,14 @@ void main(List<String> args) {
       try {
         final scoped = descriptor!.styles.any((st) => st.scoped);
         final bindings = Vue.bindingMetadataOf(descriptor);
+        final options = s['options'] as Map<String, dynamic>?;
+        final ws = options?['whitespace'] as String? ?? 'condense';
         final result = compileTemplateSource(template.content,
             filename: filename,
             id: filename,
             scoped: scoped,
-            bindingMetadata: bindings);
+            bindingMetadata: bindings,
+            whitespace: ws);
         md.writeln('```\n${result.code.trim()}\n```');
         if (result.errors.isNotEmpty) {
           md.writeln(

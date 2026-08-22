@@ -42,13 +42,14 @@ TmplCompileResult compileTemplateSource(
   bool scoped = false,
   bool? slotted,
   Map<String, String>? bindingMetadata,
+  String whitespace = 'condense',
 }) {
   final errors = <TmplCompileError>[];
   final warnings = <TmplCompileError>[];
   final shortId = id.replaceFirst(RegExp('^data-v-'), '');
   final scopeId = scoped ? 'data-v-$shortId' : null;
-  final ast = baseParse(
-      source, _parseOptions(filename, scopeId, slotted, errors, warnings));
+  final ast = baseParse(source,
+      _parseOptions(filename, scopeId, slotted, errors, warnings, whitespace));
   transform(ast, _transformOptions(filename, scopeId, slotted,
       errors, warnings, bindingMetadata ?? const {}));
   final gen = generate(ast, _codegenOptions(filename, scopeId, bindingMetadata));
@@ -57,14 +58,15 @@ TmplCompileResult compileTemplateSource(
 
 TmplParserOptions _parseOptions(String filename, String? scopeId,
     bool? slotted, List<TmplCompileError> errors,
-    List<TmplCompileError> warnings) {
-  final o = domParserOptions(
+    List<TmplCompileError> warnings,
+    [String whitespace = 'condense']) {
+  return domParserOptions(
     prefixIdentifiers: true,
+    whitespace: whitespace,
     onError: (e) =>
         errors.add(TmplCompileError(
             e.code, e.message ?? tmplErrorMessage(e.code), e.loc)),
   );
-  return o;
 }
 
 /// Mirror of official SFC parse behavior: the full-source parse surfaces
