@@ -5,7 +5,7 @@
 
 ## 一句话现状
 
-用 Dart 实现的 Vue 3 SFC 编译器，目标输出与官方 `@vue/compiler-sfc` 逐字节对齐。`compileScript` 已完成：**155/155 样例 EXACT**（verifier v1）。`compileTemplate`：**42/42 样例 EXACT**（verifier v2，含指令/插值/组件/v-slot/内置组件/stringifyStatic 触发样例）。剩余：compileTemplate 样例继续扩充（ws preserve/pre/textarea 边界/更多错误样例）、bindingMetadata 联动、compileStyle（P1）。整体完成度约 65%。
+用 Dart 实现的 Vue 3 SFC 编译器，目标输出与官方 `@vue/compiler-sfc` 逐字节对齐。`compileScript` 已完成：**155/155 样例 EXACT**（verifier v1）。`compileTemplate`：**63/63 样例 EXACT**（verifier v2，含指令/插值/组件/v-slot/内置组件/stringifyStatic 触发/bindingMetadata 联动样例）。剩余：compileTemplate 样例继续扩充（ws preserve/pre/textarea 边界/更多错误样例）、compileStyle（P1）。整体完成度约 70%。
 
 ## 仓库
 
@@ -26,11 +26,11 @@
 
 ### P0 — compileTemplate（核心管线已完成，进入覆盖面扩充）
 已完成：模板解析器（tokenizer 移植）、transform 全家桶（v-if/v-for/v-on/v-bind/v-model/v-show/v-slot/v-html/v-text/v-memo/v-once、transformExpression/processExpression 走 tree-sitter TS AST、hoistStatic/cacheHandlers/patchFlag/block tree、asset URL/srcset 重写）、module 模式 codegen。入口 `lib/template/compile_template.dart`（compileTemplateSource），生成器 `vue_dart_tmpl.dart`，验收 `node verifier/v2/compare.mjs`（20/20 EXACT）。
-已完成追加（2026-08-22）：stringifyStatic 全量移植（`lib/template/transforms/stringify_static.dart` + `const_eval.dart` 常量求值器替代官方 new Function eval + `stringify_utils.dart` JS 语义助手 + `html_attrs.dart` 官方属性表）；v-slot/动态组件/内置组件/`<slot>` outlet/scopeId/v-html/v-text/v-memo/v-once/错误样例已扩充；SFC 块扫描器改为深度感知（嵌套 `<template>` 不再误判重复块）。
+已完成追加（2026-08-22）：stringifyStatic 全量移植（`lib/template/transforms/stringify_static.dart` + `const_eval.dart` 常量求值器替代官方 new Function eval + `stringify_utils.dart` JS 语义助手 + `html_attrs.dart` 官方属性表）；v-slot/动态组件/内置组件/`<slot>` outlet/scopeId/v-html/v-text/v-memo/v-once/错误样例已扩充；SFC 块扫描器改为深度感知（嵌套 `<template>` 不再误判重复块）；bindingMetadata 联动完成（`compileScriptSetup` 返回 `({code, bindings})`，`buildBindingMetadata` 移植官方登记规则：imports 规则/script+setup 合并/models 与 runtime-decl、type-based props 键 putIfAbsent/props-aliased 扁平键 `__propsAliases:local`；`compileTemplateSource` 接 `bindingMetadata`，module 模式 render 签名追加 `$props/$setup/$data/$options`；两侧 generator 先跑 compileScript 再喂 bindings）。
 剩余：
 1. 样例继续扩充：ws preserve、pre/textarea 边界、更多错误样例（ERRORS 文本对齐）、v-for+v-slot 组合、动态参数边界
-2. bindingMetadata 联动（compileScript 结果喂给模板：setup 引用 `_unref`/`$setup` 前缀等）——当前 compileTemplateSource 未接 bindingMetadata
-3. processExpression 保真细节：parser 期 createExp 预解析（错误时机差异）、class-in-template 边界
+2. processExpression 保真细节：parser 期 createExp 预解析（错误时机差异）、class-in-template 边界
+3. bindingMetadata 边界：normal-script-only 的 options API bindings（`__isScriptSetup: false` 路径）未接；BindingKind 粒度比官方粗（无 setup-ref/setup-reactive-const 区分，module 模式下输出等价，inline 模式才可见差异）
 
 ### P1 — compileStyle（相对独立，可与 P0 并行）
 - scoped CSS：data 属性注入 + 选择器重写
