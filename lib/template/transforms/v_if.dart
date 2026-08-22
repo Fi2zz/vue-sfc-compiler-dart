@@ -97,7 +97,7 @@ Object? _attachElseBranch(
       _mergeIntoIfNode(node, dir, context, processCodegen, sibling, comments);
     } else {
       context.onError(
-          TmplCompileError(30, 'v-else/v-else-if has no adjacent v-if.', node.loc));
+          TmplCompileError(30, 'v-else/v-else-if has no adjacent v-if or v-else-if.', node.loc));
     }
     break;
   }
@@ -115,7 +115,7 @@ void _mergeIntoIfNode(
   if ((dir.name == 'else-if' || dir.name == 'else') &&
       sibling.branches.last.condition == null) {
     context.onError(
-        TmplCompileError(30, 'v-else/v-else-if has no adjacent v-if.', node.loc));
+        TmplCompileError(30, 'v-else/v-else-if has no adjacent v-if or v-else-if.', node.loc));
   }
   context.removeNode();
   final branch = _createIfBranch(node, dir);

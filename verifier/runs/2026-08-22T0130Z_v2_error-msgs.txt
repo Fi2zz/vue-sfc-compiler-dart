@@ -1,0 +1,1 @@
+v2: 55/55 EXACT (13 edge samples: pre/for+slot/dyn-arg/dup-attr/v-else-orphan/v-on-no-exp/v-model-component/modifiers/v-bind-obj/svg/template-if/template-for/kebab); v1: 155/155 EXACT

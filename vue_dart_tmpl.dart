@@ -18,13 +18,16 @@ void main(List<String> args) {
     final sfc = s['sfc'] as String;
     final filename = './$name.vue';
     final md = StringBuffer('# $name\n\n');
-    final descriptor = Vue.parse(sfc, filename: filename);
-    final template = descriptor.template;
-    if (template == null) {
+    final outcome = Vue.parseCollecting(sfc, filename: filename);
+    final descriptor = outcome.descriptor;
+    final template = descriptor?.template;
+    if (outcome.errors.isNotEmpty) {
+      md.writeln('Vue Compile Error: ${outcome.errors.first}');
+    } else if (template == null) {
       md.writeln('Vue Compile Error: missing template block');
     } else {
       try {
-        final scoped = descriptor.styles.any((st) => st.scoped);
+        final scoped = descriptor!.styles.any((st) => st.scoped);
         final result = compileTemplateSource(template.content,
             filename: filename, id: filename, scoped: scoped);
         md.writeln('```\n${result.code.trim()}\n```');

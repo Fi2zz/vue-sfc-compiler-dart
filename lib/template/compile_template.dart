@@ -10,6 +10,7 @@ import 'transform_context.dart';
 import 'transforms/asset_url.dart';
 import 'transforms/dom_transforms.dart';
 import 'transforms/slot_outlet.dart';
+import 'tmpl_error_messages.dart';
 import 'transforms/stringify_static.dart';
 import 'transforms/track_scopes.dart';
 import 'transforms/transform_element.dart';
@@ -59,9 +60,19 @@ TmplParserOptions _parseOptions(String filename, String? scopeId,
   final o = domParserOptions(
     prefixIdentifiers: true,
     onError: (e) =>
-        errors.add(TmplCompileError(e.code, e.message ?? 'parse error', e.loc)),
+        errors.add(TmplCompileError(
+            e.code, e.message ?? tmplErrorMessage(e.code), e.loc)),
   );
   return o;
+}
+
+/// Mirror of official SFC parse behavior: the full-source parse surfaces
+/// template-content parse errors (e.g. duplicate attributes) before
+/// compileTemplate ever runs.
+List<TmplCompileError> collectTemplateParseErrors(String content) {
+  final errors = <TmplCompileError>[];
+  baseParse(content, _parseOptions('', null, null, errors, []));
+  return errors;
 }
 
 TransformOptions _transformOptions(String filename, String? scopeId,

@@ -6,13 +6,40 @@ import 'package:vue_sfc_parser/sfc_compile_script.dart';
 import 'package:vue_sfc_parser/sfc_compiler.dart';
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 import 'package:vue_sfc_parser/sfc_parser.dart';
+import 'package:vue_sfc_parser/template/compile_template.dart';
 // export './sfc_compiler.dart' show CompileResult;
+
+/// parseCollecting 的返回：descriptor + 官方风格的错误消息列表。
+final class SfcParseOutcome {
+  final SfcDescriptor? descriptor;
+  final List<String> errors;
+  SfcParseOutcome(this.descriptor, this.errors);
+}
 
 /// Vue SFC 编译器主类
 class Vue {
   static SfcDescriptor parse(String source, {required String filename}) {
     final parser = SfcParser(source, filename: filename);
     return parser.parse();
+  }
+
+  /// Official parse() semantics: never throws for structural problems,
+  /// returns descriptor + collected error messages (including template
+  /// content parse errors surfaced by the full-source tokenize pass).
+  static SfcParseOutcome parseCollecting(String source,
+      {required String filename}) {
+    try {
+      final descriptor = parse(source, filename: filename);
+      final errors = <String>[];
+      final template = descriptor.template;
+      if (template != null) {
+        errors.addAll(collectTemplateParseErrors(template.content)
+            .map((e) => e.message));
+      }
+      return SfcParseOutcome(descriptor, errors);
+    } catch (e) {
+      return SfcParseOutcome(null, ['$e']);
+    }
   }
 
   static CompileResult compile(String source, {required String filename}) {
