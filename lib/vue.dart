@@ -6,6 +6,7 @@ import 'package:vue_sfc_parser/sfc_compile_script.dart';
 import 'package:vue_sfc_parser/sfc_compiler.dart';
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 import 'package:vue_sfc_parser/sfc_parser.dart';
+import 'package:vue_sfc_parser/script/options_bindings.dart';
 import 'package:vue_sfc_parser/script/script_compile.dart';
 import 'package:vue_sfc_parser/template/compile_template.dart';
 // export './sfc_compiler.dart' show CompileResult;
@@ -60,7 +61,14 @@ class Vue {
   /// script compilation (official flow derives bindings as a side product)
   /// and return the resulting bindings map. Null when no <script setup>.
   static Map<String, String>? bindingMetadataOf(SfcDescriptor descriptor) {
-    if (descriptor.scriptSetup == null) return null;
-    return compileScriptSetup(descriptor).bindings;
+    if (descriptor.scriptSetup != null) {
+      return compileScriptSetup(descriptor).bindings;
+    }
+    final script = descriptor.script;
+    if (script == null) return null;
+    // 官方：非 js/ts 脚本直接返回原块，无 bindings。
+    final lang = script.lang ?? 'js';
+    if (!const ['js', 'jsx', 'ts', 'tsx'].contains(lang)) return null;
+    return analyzeScriptBindings(script.content, lang);
   }
 }
