@@ -5,7 +5,7 @@
 
 ## 一句话现状
 
-用 Dart 实现的 Vue 3 SFC 编译器，目标输出与官方 `@vue/compiler-sfc` 逐字节对齐。`compileScript` 已完成：**155/155 样例 EXACT**（verifier v1）。`compileTemplate`：**89/89 样例 EXACT**（verifier v2，含指令/插值/组件/v-slot/内置组件/stringifyStatic 触发/bindingMetadata 联动/options API bindings/ws preserve 样例）。剩余：compileTemplate 样例继续扩充（更多错误样例——babel 措辞的表达式语法错误暂不可对齐）、compileStyle（P1）。整体完成度约 75%。
+用 Dart 实现的 Vue 3 SFC 编译器，目标输出与官方 `@vue/compiler-sfc` 逐字节对齐。`compileScript` 已完成：**155/155 样例 EXACT**（verifier v1）。`compileTemplate`：**89/89 样例 EXACT**（verifier v2，含指令/插值/组件/v-slot/内置组件/stringifyStatic 触发/bindingMetadata 联动/options API bindings/ws preserve 样例）。`compileStyle` 已完成：**75/75 样例 EXACT**（verifier v3，含 scoped/deep/slotted/global/keyframes/v-bind/14 个语法错误样例/isProd hash）。剩余：compileTemplate 样例继续扩充（更多错误样例——babel 措辞的表达式语法错误暂不可对齐）、compileStyle 覆盖面扩充。整体完成度约 90%。
 
 ## 仓库
 
@@ -35,10 +35,11 @@
 ### P1 — compileStyle（核心链路已完成，进入覆盖面扩充）
 - ~~scoped CSS：data 属性注入 + 选择器重写~~（plugins_scoped.dart）
 - ~~`:deep()` / `:slotted()` / `:global()` 伪类处理~~（含 >>> /deep/ 弃用组合器、:is/:where 递归注入、universal `*` 规则）
-- ~~CSS `v-bind()` → CSS 变量方案~~（plugins_css_vars.dart，isProd=false 命名；prod hash 未做）
+- ~~CSS `v-bind()` → CSS 变量方案~~（plugins_css_vars.dart，含 isProd 的 hash-sum 命名）
 - ~~keyframes 改名 + animation/animation-name 声明重写~~
-- 待做：样式语法错误样例（postcss CssSyntaxError 文本带 `filename:line:col:` 前缀，需补行列号跟踪，目前 CssSyntaxError 只有 reason）
-- 待做：isProd 下 genVarName 的 hash 路径、CSS modules（compileStyleAsync 专属）、预处理器（sass/less/stylus 明确不做）
+- ~~样式语法错误样例~~（css_error.dart 移植 fromOffset 二分 + path.resolve + showSourceCode 帧，14 个错误样例 EXACT；selector 错误为 `Error: ` 前缀。注意：错误文本内嵌机器绝对路径，换机需重生成官方 ground truth）
+- ~~isProd 下 genVarName 的 hash 路径~~（hash-sum 移植，首字符数字 'v' 前缀）
+- 待做：CSS modules（compileStyleAsync 专属）、预处理器（sass/less/stylus 明确不做）
 - 注意：postcss-selector-parser 非独立包，移植自 compiler-sfc.cjs.js 内联 bundle（dist ~4383-7990 行）
 
 ### P2 — 打磨
@@ -63,7 +64,7 @@ dart run ./vue_dart.dart && npx prettier samples_dart/*.md -w --log-level warn
 node verifier/v1/compare.mjs          # 应 155/155 EXACT（script）
 dart vue_dart_tmpl.dart && node verifier/v2/compare.mjs   # 应 89/89 EXACT（template）
 node gen_official_style.mjs           # 仅当官方包行为变动时重新生成 ground truth
-dart vue_dart_style.dart && node verifier/v3/compare.mjs  # 应 58/58 EXACT（style）
+dart vue_dart_style.dart && node verifier/v3/compare.mjs  # 应 75/75 EXACT（style）
 dart analyze                          # 须零错误（runner.dart 有一个历史 info lint 可忽略）
 ```
 
