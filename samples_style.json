@@ -1,0 +1,394 @@
+[
+  {
+    "name": "style_plain",
+    "source": ".a { color: red; }"
+  },
+  {
+    "name": "style_scoped_class",
+    "source": ".a { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_scoped_tag",
+    "source": "div { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_scoped_id",
+    "source": "#app { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_scoped_multi",
+    "source": ".a, .b { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_scoped_combinators",
+    "source": ".a > .b + .c ~ .d { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_scoped_descendant",
+    "source": ".a .b { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_media",
+    "source": "@media (max-width: 100px) { .a { color: red; } }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_keyframes",
+    "source": "@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } } .a { animation: spin 1s; animation-name: spin; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_keyframes_prefixed",
+    "source": "@-webkit-keyframes fade { from { opacity: 0; } } .a { -webkit-animation-name: fade; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_animation_multi",
+    "source": "@keyframes spin { from { opacity: 0; } } @keyframes fade { from { opacity: 1; } } .a { animation: spin 1s, fade 2s; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_deep",
+    "source": ".a :deep(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_deep_root",
+    "source": ":deep(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_deep_inner_compound",
+    "source": ".a :deep(.b > .c) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_v_deep_combinator",
+    "source": ".a ::v-deep .b { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_deep_combinator_triple",
+    "source": ".a >>> .b { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_deep_combinator_slash",
+    "source": ".a /deep/ .b { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_slotted",
+    "source": ".a :slotted(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_slotted_root",
+    "source": ":slotted(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_global",
+    "source": ":global(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_global_after_class",
+    "source": ".a :global(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_universal",
+    "source": "* { margin: 0; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_universal_start",
+    "source": "* .a { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_universal_after_class",
+    "source": ".a * { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_is",
+    "source": ":is(.a, .b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_where",
+    "source": ".x :where(.a, .b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_attribute_selector",
+    "source": "[data-x] { color: red; } [data-y=\"v\"] { color: blue; } [data-z='w' i] { color: green; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_pseudo_states",
+    "source": ".a:hover::before { content: \"x\"; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_comments",
+    "source": "/* head */ .a /* mid */ .b { /* in */ color: red; } /* tail */",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_trim_whitespace",
+    "source": "\n\n  .a {\n    color: red;\n  }\n\n\n  .b { color: blue; }\n\n",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_nested_rule",
+    "source": ".a { color: red; .b { color: blue; } }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_nested_deep",
+    "source": ".a { .b :deep(.c) { color: red; } }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_important",
+    "source": ".a { color: red !important; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_escaped_class",
+    "source": ".\\31 23 { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_import",
+    "source": "@import \"./base.css\"; .a { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_media_deep",
+    "source": "@media screen { .a :deep(.b) { color: red; } }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_font_face",
+    "source": "@font-face { font-family: x; src: url(x.woff); }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_no_scoped_keyframes",
+    "source": "@keyframes spin { from { opacity: 0; } } .a { animation: spin 1s; }"
+  },
+  {
+    "name": "style_not_pseudo",
+    "source": ".a:not(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_nth_child",
+    "source": ".a:nth-child(2n+1) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_deep_multi_inner",
+    "source": ":deep(.a, .b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_deep_no_parens",
+    "source": ".a :deep .b { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_compound",
+    "source": ".a.b#c { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_slotted_compound",
+    "source": ":slotted(div.a) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_global_multi",
+    "source": ":global(.a, .b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_double_deep",
+    "source": ".a :deep(.b) :deep(.c) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_v_slotted",
+    "source": ".a ::v-slotted(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_v_global",
+    "source": "::v-global(.b) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_deep_in_is",
+    "source": ":is(.a, .b) :deep(.c) { color: red; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_no_trim",
+    "source": "\n  .a {\n    color: red;\n  }\n\n  .b { color: blue; }\n",
+    "options": {
+      "scoped": true,
+      "trim": false
+    }
+  },
+  {
+    "name": "style_keyframes_dup_names",
+    "source": "@keyframes a { from { opacity: 0; } } @keyframes b { from { opacity: 1; } } .x { animation: a 1s steps(2), b 2s; animation-name: a, b; }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_scoped_media_multiple",
+    "source": "@media a { .x { color: red; } } @media b { .y { color: blue; } }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_vbind",
+    "source": ".a { color: v-bind(color); }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_vbind_quoted",
+    "source": ".a { color: v-bind('color'); }"
+  },
+  {
+    "name": "style_vbind_multi",
+    "source": ".a { color: v-bind(a); background: v-bind(b) v-bind('c'); }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_vbind_nested_parens",
+    "source": ".a { width: calc(v-bind(x) * 2); }"
+  },
+  {
+    "name": "style_vbind_member_expr",
+    "source": ".a { color: v-bind(theme.color); }",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_vbind_string_paren",
+    "source": ".a { content: v-bind(\"(\") ; }"
+  }
+]

@@ -1,0 +1,4 @@
+2026-08-22T0330Z
+v3 style: 58/58 EXACT (scoped/:deep/:slotted/:global/keyframes/v-bind)
+v2 template: 89/89 EXACT
+v1 script: 155/155 EXACT
