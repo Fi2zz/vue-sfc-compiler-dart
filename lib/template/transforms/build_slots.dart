@@ -268,9 +268,8 @@ bool _hasForwardedSlots(List<TmplNode> children) {
   for (final child in children) {
     switch (child) {
       case ElementNode n:
-        if (n.tagType == etComponent ||
-            findDir(n, 'slot', true) != null ||
-            _hasForwardedSlots(n.children)) {
+        // 官方：child.tagType === ElementTypes.SLOT（<slot> 出口即转发）
+        if (n.tagType == etSlot || _hasForwardedSlots(n.children)) {
           return true;
         }
       case IfNode n:

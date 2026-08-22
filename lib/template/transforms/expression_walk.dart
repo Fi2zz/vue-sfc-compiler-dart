@@ -88,6 +88,10 @@ final class ExpressionWalker {
   final SrcView view;
   final OnIdentifier onIdentifier;
   final KnownIds knownIds;
+
+  /// 官方 walkIdentifiers 的 rootExp：离开该节点时不摘除其作用域标识符，
+  /// 使函数参数（如 slot 解构参数）保留在返回值的 identifiers 中。
+  AstNode? rootExp;
   final List<AstNode?> parentStack = [];
   final List<List<String>> _scopeStack = [];
 
@@ -126,7 +130,7 @@ final class ExpressionWalker {
 
   void _leave(AstNode node, AstNode? parent) {
     if (parent != null) parentStack.removeLast();
-    if (_isScopeNode(node)) {
+    if (_isScopeNode(node) && !identical(node, rootExp)) {
       final ids = _scopeStack.isNotEmpty ? _scopeStack.removeLast() : <String>[];
       for (final id in ids) {
         knownIds.unmark(id);

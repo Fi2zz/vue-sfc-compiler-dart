@@ -16,6 +16,7 @@ for (const { name, sfc } of samples) {
         source: descriptor.template.content,
         filename,
         id: filename,
+        scoped: descriptor.styles.some((s) => s.scoped),
       });
       md += "```\n" + result.code.trim() + "\n```\n";
       if (result.errors.length) md += "ERRORS: " + result.errors.join("; ") + "\n";

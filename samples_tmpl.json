@@ -78,5 +78,65 @@
   {
     "name": "tmpl_entity",
     "sfc": "<template><div>&amp; &lt; &#65;</div></template>"
+  },
+  {
+    "name": "tmpl_slot_named",
+    "sfc": "<template><Layout><template #header><h1>Title</h1></template><p>body</p></Layout></template>"
+  },
+  {
+    "name": "tmpl_slot_scoped",
+    "sfc": "<template><List v-slot=\"{ item, index }\"><span>{{ index }} - {{ item }}</span></List></template>"
+  },
+  {
+    "name": "tmpl_slot_dynamic_name",
+    "sfc": "<template><Layout><template #[name]>dyn</template></Layout></template>"
+  },
+  {
+    "name": "tmpl_slot_outlet",
+    "sfc": "<template><slot name=\"foo\" :bar=\"baz\">fallback</slot></template>"
+  },
+  {
+    "name": "tmpl_component_dynamic",
+    "sfc": "<template><component :is=\"currentView\" :foo=\"1\" /></template>"
+  },
+  {
+    "name": "tmpl_teleport",
+    "sfc": "<template><Teleport to=\"body\"><p>teleported</p></Teleport></template>"
+  },
+  {
+    "name": "tmpl_keepalive",
+    "sfc": "<template><KeepAlive :include=\"['a']\"><component :is=\"view\" /></KeepAlive></template>"
+  },
+  {
+    "name": "tmpl_suspense",
+    "sfc": "<template><Suspense><template #default><AsyncComp /></template><template #fallback>loading</template></Suspense></template>"
+  },
+  {
+    "name": "tmpl_transition",
+    "sfc": "<template><Transition name=\"fade\"><p v-if=\"ok\">hi</p></Transition></template>"
+  },
+  {
+    "name": "tmpl_v_html",
+    "sfc": "<template><div v-html=\"raw\"></div></template>"
+  },
+  {
+    "name": "tmpl_v_text",
+    "sfc": "<template><div v-text=\"txt\"></div></template>"
+  },
+  {
+    "name": "tmpl_v_memo",
+    "sfc": "<template><div v-memo=\"[value]\">{{ value }}</div></template>"
+  },
+  {
+    "name": "tmpl_v_once",
+    "sfc": "<template><p v-once>{{ msg }}</p></template>"
+  },
+  {
+    "name": "tmpl_scoped",
+    "sfc": "<template><div><p class=\"a\">scoped</p></div></template><style scoped>.a{color:red}</style>"
+  },
+  {
+    "name": "tmpl_err_v_if_no_exp",
+    "sfc": "<template><div v-if></div></template>"
   }
 ]

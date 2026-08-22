@@ -133,55 +133,141 @@ class SfcParser {
     );
   }
 
-  /// 解析所有块
+  /// 解析所有块（深度感知：仅顶层元素算 block，与官方 SFC parse 一致——
+  /// 模板内容里嵌套的 `<template>` 是内容而非块）。
   List<Raw> _parseBlocks() {
     final blocks = <Raw>[];
-    final regex = RegExp(
-      r'<(template|script|style|[\w-]+)\s*([^>]*)>([\s\S]*?)<\/\1>',
-      caseSensitive: false,
-      multiLine: true,
-    );
-
-    final matches = regex.allMatches(source);
-    for (final match in matches) {
-      final type = match.group(1)!.toLowerCase();
-      final attrString = match.group(2) ?? '';
-      final content = match.group(3)!;
-      final start = match.start;
-      final end = match.end;
-
-      // 跳过被 HTML 注释包裹的区块，例如：<!-- <script>...</script> -->
-      if (_isWithinHtmlComment(start, end)) {
-        continue;
-      }
-
-      final attrs = _parseAttributes(attrString);
-
-      blocks.add(
-        Raw(
-          type: type,
-          content: content.trim(),
-          attrs: attrs,
-          locStart: start,
-          locEnd: end,
-        ),
-      );
+    var i = 0;
+    while (i < source.length) {
+      final block = _nextBlock(i);
+      if (block == null) break;
+      blocks.add(block);
+      i = block.locEnd;
     }
-
     return blocks;
   }
 
-  // 简单检测 [start, end] 是否位于 HTML 注释区域内：<!-- ... -->
-  bool _isWithinHtmlComment(int start, int end) {
-    final lastOpenBeforeStart = source.lastIndexOf('<!--', start);
-    if (lastOpenBeforeStart < 0) return false;
-    final lastCloseBeforeStart = source.lastIndexOf('-->', start);
-    // 若最近一次打开在最近一次关闭之后，说明 start 时处于注释内
-    final insideAtStart = lastOpenBeforeStart > lastCloseBeforeStart;
-    if (!insideAtStart) return false;
-    // 进一步确认在 end 之后存在关闭标记，避免未闭合误判
-    final closeAfterEnd = source.indexOf('-->', end);
-    return closeAfterEnd >= 0;
+  /// 从 from 起扫描下一个顶层块；没有则返回 null。
+  Raw? _nextBlock(int from) {
+    var i = from;
+    while (i < source.length) {
+      final lt = source.indexOf('<', i);
+      if (lt < 0) return null;
+      if (source.startsWith('<!--', lt)) {
+        i = _skipComment(lt);
+        continue;
+      }
+      final name = _tagNameAt(lt + 1);
+      if (name == null) {
+        i = lt + 1;
+        continue;
+      }
+      return _buildBlock(name, lt);
+    }
+    return null;
+  }
+
+  /// 构建 openLt 处 `<name>` 标签对应的块（含同名嵌套的闭合匹配）。
+  Raw _buildBlock(String name, int openLt) {
+    final openEnd = _tagEnd(openLt);
+    final selfClosing = source[openEnd - 2] == '/';
+    final attrEnd = selfClosing ? openEnd - 2 : openEnd - 1;
+    final attrs =
+        _parseAttributes(source.substring(openLt + 1 + name.length, attrEnd));
+    if (selfClosing) {
+      return Raw(
+          type: name.toLowerCase(), content: '', attrs: attrs,
+          locStart: openLt, locEnd: openEnd);
+    }
+    final closeStart = _findCloseStart(name, openEnd);
+    return Raw(
+      type: name.toLowerCase(),
+      content: source.substring(openEnd, closeStart).trim(),
+      attrs: attrs,
+      locStart: openLt,
+      locEnd: _closeTagEnd(name, closeStart),
+    );
+  }
+
+  /// 找到与 `<name>` 匹配的闭合标签起点；同名嵌套加深，未闭合返回末尾。
+  int _findCloseStart(String name, int from) {
+    var depth = 1;
+    var i = from;
+    while (i < source.length) {
+      final lt = source.indexOf('<', i);
+      if (lt < 0) break;
+      if (source.startsWith('<!--', lt)) {
+        i = _skipComment(lt);
+      } else if (_matchCloseTag(name, lt) > 0) {
+        if (--depth == 0) return lt;
+        i = _matchCloseTag(name, lt);
+      } else {
+        final next = _afterNestedOpen(name, lt);
+        if (next > 0) depth++;
+        i = next > 0 ? next : lt + 1;
+      }
+    }
+    return source.length;
+  }
+
+  /// lt 处若是同名嵌套开标签（非自闭合），返回其之后的位置；否则 -1。
+  int _afterNestedOpen(String name, int lt) {
+    final openName = _tagNameAt(lt + 1);
+    if (openName == null || openName.toLowerCase() != name.toLowerCase()) {
+      return -1;
+    }
+    final end = _tagEnd(lt);
+    return source[end - 2] == '/' ? -1 : end;
+  }
+
+  /// lt 处若是 `</name\s*>` 闭合标签，返回其结束位置；否则 -1。
+  int _matchCloseTag(String name, int lt) {
+    final match =
+        RegExp('</$name\\s*>', caseSensitive: false).matchAsPrefix(source, lt);
+    return match == null ? -1 : match.end;
+  }
+
+  /// 闭合标签之后的位置；未闭合（closeStart 在末尾）时即 source.length。
+  int _closeTagEnd(String name, int closeStart) {
+    if (closeStart >= source.length) return source.length;
+    final end = _matchCloseTag(name, closeStart);
+    return end > 0 ? end : source.length;
+  }
+
+  /// 跳过 <!-- --> 注释，返回注释之后的位置。
+  int _skipComment(int at) {
+    final close = source.indexOf('-->', at + 4);
+    return close < 0 ? source.length : close + 3;
+  }
+
+  /// 读取 at 处的标签名（字母开头的 [\w-]+）；非开标签返回 null。
+  String? _tagNameAt(int at) {
+    if (at >= source.length || !_isAlpha(source.codeUnitAt(at))) return null;
+    var end = at + 1;
+    while (end < source.length && _tagNameChar.hasMatch(source[end])) {
+      end++;
+    }
+    return source.substring(at, end);
+  }
+
+  static final _tagNameChar = RegExp(r'[\w-]');
+
+  static bool _isAlpha(int c) => (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+
+  /// 返回开标签 '>' 之后的位置（引号内的 '>' 不算）；未闭合返回末尾。
+  int _tagEnd(int openLt) {
+    String? quote;
+    for (var i = openLt + 1; i < source.length; i++) {
+      final ch = source[i];
+      if (quote != null) {
+        if (ch == quote) quote = null;
+      } else if (ch == '"' || ch == "'") {
+        quote = ch;
+      } else if (ch == '>') {
+        return i + 1;
+      }
+    }
+    return source.length;
   }
 
   /// 解析属性
