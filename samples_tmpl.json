@@ -337,5 +337,25 @@
   {
     "name": "tmpl_event_key_mod",
     "sfc": "<template><input @keyup.enter.exact=\"go\" @keydown.a.b=\"go2\" /></template>"
+  },
+  {
+    "name": "tmpl_v_for_destructure",
+    "sfc": "<template><div v-for=\"({ a, b }, i) in list\" :key=\"i\">{{ a }}{{ b }}</div></template>"
+  },
+  {
+    "name": "tmpl_optional_chain_handler",
+    "sfc": "<template><button @click=\"a?.b()\">x</button></template>"
+  },
+  {
+    "name": "tmpl_inline_handler_event",
+    "sfc": "<template><button @click=\"go($event, 1)\">x</button></template>"
+  },
+  {
+    "name": "tmpl_nested_template_if_for",
+    "sfc": "<template><template v-for=\"g in groups\" :key=\"g.id\"><template v-if=\"g.show\"><div>{{ g.name }}</div></template></template></template>"
+  },
+  {
+    "name": "tmpl_hoist_nested",
+    "sfc": "<template><div><span class=\"a\"><b>static</b></span><p>{{ dyn }}</p></div></template>"
   }
 ]
