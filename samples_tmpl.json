@@ -1,0 +1,82 @@
+[
+  {
+    "name": "tmpl_text_only",
+    "sfc": "<template>hello</template>"
+  },
+  {
+    "name": "tmpl_single_element",
+    "sfc": "<template><div>hello</div></template>"
+  },
+  {
+    "name": "tmpl_single_element_empty",
+    "sfc": "<template><div></div></template>"
+  },
+  {
+    "name": "tmpl_interp",
+    "sfc": "<template><div>{{ msg }}</div></template>"
+  },
+  {
+    "name": "tmpl_static_attr",
+    "sfc": "<template><div id=\"app\" class=\"foo\">hello</div></template>"
+  },
+  {
+    "name": "tmpl_nested",
+    "sfc": "<template><div><span>a</span><span>b</span></div></template>"
+  },
+  {
+    "name": "tmpl_multi_root",
+    "sfc": "<template><div>a</div><div>b</div></template>"
+  },
+  {
+    "name": "tmpl_comment",
+    "sfc": "<template><!-- hi --><div>x</div></template>"
+  },
+  {
+    "name": "tmpl_self_closing",
+    "sfc": "<template><img src=\"x.png\"></template>"
+  },
+  {
+    "name": "tmpl_whitespace",
+    "sfc": "<template>\n  <div>\n    <p>hello</p>\n  </div>\n</template>"
+  },
+  {
+    "name": "tmpl_v_bind",
+    "sfc": "<template><div :id=\"foo\" v-bind:class=\"cls\">x</div></template>"
+  },
+  {
+    "name": "tmpl_v_on",
+    "sfc": "<template><button @click=\"inc\">+</button></template>"
+  },
+  {
+    "name": "tmpl_v_if",
+    "sfc": "<template><div v-if=\"ok\">yes</div><div v-else>no</div></template>"
+  },
+  {
+    "name": "tmpl_v_for",
+    "sfc": "<template><ul><li v-for=\"item in items\">{{ item }}</li></ul></template>"
+  },
+  {
+    "name": "tmpl_v_model",
+    "sfc": "<template><input v-model=\"text\"></template>"
+  },
+  {
+    "name": "tmpl_v_show",
+    "sfc": "<template><div v-show=\"visible\">x</div></template>"
+  },
+  {
+    "name": "tmpl_component",
+    "sfc": "<template><MyComp :prop=\"val\" @event=\"handler\"/></template>"
+  },
+  {
+    "name": "tmpl_unquoted_attr",
+    "sfc": "<template><div id=app>x</div></template>"
+  },
+  {
+    "name": "tmpl_textarea",
+    "sfc": "<template><textarea>hello</textarea></template>"
+  },
+  {
+    "name": "tmpl_entity",
+    "sfc": "<template><div>&amp; &lt; &#65;</div></template>"
+  }
+]

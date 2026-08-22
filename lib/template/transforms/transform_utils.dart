@@ -1,0 +1,148 @@
+// Shared transform helpers: injectProp, hasScopeRef, getMemoedVNodeCall...
+import '../js_nodes.dart';
+import '../shared_utils.dart';
+import '../transform_context.dart';
+import '../tmpl_ast.dart';
+
+const _propsHelperSet = {hNormalizeProps, hGuardReactiveProps};
+
+(Object?, List<JSCallExpression>) _getUnnormalizedProps(
+    Object? props, List<JSCallExpression> callPath) {
+  var current = props;
+  while (current is JSCallExpression &&
+      current.callee is String &&
+      _propsHelperSet.contains(current.callee)) {
+    callPath.add(current);
+    current = current.arguments.isNotEmpty ? current.arguments[0] : null;
+  }
+  return (current, callPath);
+}
+
+void injectProp(Object? node, JSProperty prop, TransformContext context) {
+  Object? propsWithInjection;
+  Object? props = node is VNodeCall
+      ? node.props
+      : (node as JSCallExpression).arguments.length > 2
+          ? node.arguments[2]
+          : null;
+  var callPath = <JSCallExpression>[];
+  JSCallExpression? parentCall;
+  if (props is JSCallExpression) {
+    final ret = _getUnnormalizedProps(props, callPath);
+    props = ret.$1;
+    callPath = ret.$2;
+    parentCall = callPath.isNotEmpty ? callPath.last : null;
+  }
+  if (props == null || props is String) {
+    propsWithInjection = createObjectExp([prop]);
+  } else if (props is JSCallExpression) {
+    final first = props.arguments.isNotEmpty ? props.arguments[0] : null;
+    if (first is JSObjectExpression) {
+      if (!hasProp(prop, first)) {
+        first.properties.insert(0, prop);
+      }
+    } else {
+      if (props.callee == hToHandlers) {
+        context.helper(hMergeProps);
+        propsWithInjection = createCallExp(
+            hMergeProps, [createObjectExp([prop]), props]);
+      } else {
+        props.arguments.insert(0, createObjectExp([prop]));
+      }
+    }
+    propsWithInjection ??= props;
+  } else if (props is JSObjectExpression) {
+    if (!hasProp(prop, props)) {
+      props.properties.insert(0, prop);
+    }
+    propsWithInjection = props;
+  } else {
+    context.helper(hMergeProps);
+    propsWithInjection = createCallExp(
+        hMergeProps, [createObjectExp([prop]), props]);
+    if (parentCall != null && parentCall.callee == hGuardReactiveProps) {
+      parentCall = callPath[callPath.length - 2];
+    }
+  }
+  _assignProps(node, propsWithInjection, parentCall);
+}
+
+void _assignProps(
+    Object? node, Object? propsWithInjection, JSCallExpression? parentCall) {
+  if (node is VNodeCall) {
+    if (parentCall != null) {
+      parentCall.arguments[0] = propsWithInjection;
+    } else {
+      node.props = propsWithInjection;
+    }
+  } else if (node is JSCallExpression) {
+    if (parentCall != null) {
+      parentCall.arguments[0] = propsWithInjection;
+    } else {
+      node.arguments[2] = propsWithInjection;
+    }
+  }
+}
+
+bool hasProp(JSProperty prop, JSObjectExpression props) {
+  if (prop.key is! SimpleExpression) return false;
+  final propKeyName = (prop.key as SimpleExpression).content;
+  return props.properties.any((p) =>
+      p.key is SimpleExpression &&
+      (p.key as SimpleExpression).content == propKeyName);
+}
+
+Object? getMemoedVNodeCall(Object? node) {
+  if (node is JSCallExpression && node.callee == hWithMemo) {
+    final fn = node.arguments[1];
+    if (fn is JSFunctionExpression) return fn.returns;
+  }
+  return node;
+}
+
+bool hasScopeRef(Object? node, Map<String, int> ids) {
+  if (node == null || ids.isEmpty) return false;
+  if (node is ElementNode) {
+    for (final p in node.props) {
+      if (p is DirectiveNode &&
+          (hasScopeRef(p.arg, ids) || hasScopeRef(p.exp, ids))) {
+        return true;
+      }
+    }
+    return node.children.any((c) => hasScopeRef(c, ids));
+  }
+  if (node is ForNode) {
+    return hasScopeRef(node.source, ids) ||
+        node.children.any((c) => hasScopeRef(c, ids));
+  }
+  if (node is IfNode) {
+    return node.branches.any((b) => hasScopeRef(b, ids));
+  }
+  if (node is IfBranchNode) {
+    return hasScopeRef(node.condition, ids) ||
+        node.children.any((c) => hasScopeRef(c, ids));
+  }
+  if (node is TextCallNode) return hasScopeRef(node.content, ids);
+  return _leafScopeRef(node, ids);
+}
+
+bool _leafScopeRef(Object? node, Map<String, int> ids) {
+  if (node is SimpleExpression) {
+    return !node.static_ &&
+        isSimpleIdentifier(node.content) &&
+        (ids[node.content] ?? 0) != 0;
+  }
+  if (node is CompoundExpression) {
+    return node.children
+        .any((c) => c is! String && hasScopeRef(c, ids));
+  }
+  if (node is InterpolationNode) return hasScopeRef(node.content, ids);
+  return false;
+}
+
+bool isNonWhitespaceContent(TmplNode node) {
+  if (node.type != ntText && node.type != ntTextCall) return true;
+  if (node is TextNode) return node.content.trim().isNotEmpty;
+  if (node is TextCallNode) return isNonWhitespaceContent(node.content);
+  return true;
+}
