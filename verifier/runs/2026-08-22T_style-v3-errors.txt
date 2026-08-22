@@ -1,0 +1,29 @@
+2026-08-22 style v3 错误样例扩充
+================================
+
+范围：compileStyle 语法错误文本（CssSyntaxError 带 filename:line:col 前缀 +
+showSourceCode 帧；selector 错误为原生 Error 前缀）。
+
+改动：
+- css_tokenize/css_parser：所有 throw 点携带 token 偏移（_init(node, offset)
+  跟踪 sourceStart 供 Unclosed block 使用）
+- 新增 lib/style/css_error.dart：Input.fromOffset 二分 + path.resolve +
+  CssSyntaxError.toString()/showSourceCode(color:false) 逐字节移植
+- sfc_compile_style.dart：BOM 剥除、错误格式化、selector 错误 'Error: ' 前缀
+- selector_parser_attribute.dart 修复：等号先于属性名时报
+  'Expected an attribute, found "=" instead.'（原误用无 found 变体）
+
+样例：samples_style.json 58 -> 72（+14 错误样例）
+- CSS 级：unclosed block（单行/多行）、missed semicolon、double colon、
+  unexpected }、unknown word（两种）、unclosed bracket、at-rule without name、
+  unclosed string、unclosed comment
+- selector 级（scoped）：Expected a pseudo-class or pseudo-element /
+  Expected an opening parenthesis / Expected an attribute, found "=" instead
+
+结果：
+- v3: EXACT 72/72
+- 回归：v1 EXACT 155/155, v2 EXACT 89/89
+- dart analyze：0 error（3 info lint 为历史遗留）
+
+注：错误文本内嵌生成机的绝对路径（path.resolve(from)），机器/目录变更后
+需重新生成官方 ground truth。
