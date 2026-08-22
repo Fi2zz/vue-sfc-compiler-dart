@@ -225,7 +225,9 @@ extension on SelParser {
   }
 
   void _attrEquals(_AttrState st, String c) {
-    if (!st.hasAttribute) throw SelSyntaxError('Expected an attribute.');
+    if (!st.hasAttribute) {
+      throw SelSyntaxError('Expected an attribute, found "$c" instead.');
+    }
     if (st.value != null && st.value!.isNotEmpty) {
       throw SelSyntaxError(
           'Unexpected "=" found; an operator was already defined.');

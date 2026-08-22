@@ -34,7 +34,9 @@ int _indexOfWordEnd(String css, int from) {
 
 class CssSyntaxError implements Exception {
   final String reason;
-  CssSyntaxError(this.reason);
+  final int offset;
+  final int? endOffset;
+  CssSyntaxError(this.reason, this.offset, [this.endOffset]);
   @override
   String toString() => reason;
 }
@@ -54,7 +56,7 @@ class CssTokenizer {
   void back(CssToken token) => _returned.add(token);
 
   Never _unclosed(String what) =>
-      throw CssSyntaxError('Unclosed $what');
+      throw CssSyntaxError('Unclosed $what', pos);
 
   CssToken? nextToken({bool ignoreUnclosed = false}) {
     if (_returned.isNotEmpty) return _returned.removeLast();

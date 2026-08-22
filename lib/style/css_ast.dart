@@ -86,6 +86,8 @@ sealed class CssNode {
   String get type;
   CssContainer? parent;
   final CssRaws raws = CssRaws();
+  /// postcss source.start.offset — only feeds error positions.
+  int sourceStart = 0;
 
   CssRoot root() {
     CssNode node = this;
