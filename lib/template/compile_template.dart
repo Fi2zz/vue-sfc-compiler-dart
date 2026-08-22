@@ -10,6 +10,7 @@ import 'transform_context.dart';
 import 'transforms/asset_url.dart';
 import 'transforms/dom_transforms.dart';
 import 'transforms/slot_outlet.dart';
+import 'transforms/stringify_static.dart';
 import 'transforms/track_scopes.dart';
 import 'transforms/transform_element.dart';
 import 'transforms/transform_expression.dart';
@@ -74,7 +75,7 @@ TransformOptions _transformOptions(String filename, String? scopeId,
     ..hmr = true
     ..nodeTransforms = _nodeTransforms()
     ..directiveTransforms = _directiveTransforms()
-    ..transformHoist = null
+    ..transformHoist = stringifyStatic
     ..isBuiltInComponent = _domBuiltInComponent
     ..scopeId = scopeId
     ..slotted = slotted ?? true

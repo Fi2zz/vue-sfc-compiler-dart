@@ -116,13 +116,13 @@ bool _tryCacheAsArray(TmplNode node, TmplNode? parent,
       codegenNode is VNodeCall &&
       codegenNode.children is List) {
     codegenNode.children =
-        wrapArray(createArrayExp(codegenNode.children as List<Object?>));
+        wrapArray(createArrayExp(List<Object?>.of(codegenNode.children as List)));
     return true;
   }
   if (node.tagType == etComponent && codegenNode is VNodeCall) {
     final slot = _getSlotNode(codegenNode.children, 'default');
     if (slot != null) {
-      slot.returns = wrapArray(createArrayExp(slot.returns as List<Object?>));
+      slot.returns = wrapArray(createArrayExp(List<Object?>.of(slot.returns as List)));
       return true;
     }
   }
@@ -137,7 +137,7 @@ bool _tryCacheAsArray(TmplNode node, TmplNode? parent,
           : null;
       if (slot != null) {
         slot.returns =
-            wrapArray(createArrayExp(slot.returns as List<Object?>));
+            wrapArray(createArrayExp(List<Object?>.of(slot.returns as List)));
         return true;
       }
     }

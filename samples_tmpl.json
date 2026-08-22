@@ -138,5 +138,33 @@
   {
     "name": "tmpl_err_v_if_no_exp",
     "sfc": "<template><div v-if></div></template>"
+  },
+  {
+    "name": "tmpl_static_elements",
+    "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template>"
+  },
+  {
+    "name": "tmpl_static_text",
+    "sfc": "<template><div><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></div></template>"
+  },
+  {
+    "name": "tmpl_static_partial_chunk",
+    "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p><span>{{ dynamic }}</span></div></template>"
+  },
+  {
+    "name": "tmpl_static_bind_const",
+    "sfc": "<template><div><p :class=\"['a', 'b']\">1</p><p :style=\"{ color: 'red' }\">2</p><p :title=\"'t' + '1'\">3</p><p :hidden=\"false\">4</p><p v-text=\"'txt'\">5</p></div></template>"
+  },
+  {
+    "name": "tmpl_static_nested",
+    "sfc": "<template><div><ul class=\"list\"><li class=\"i\">a</li><li class=\"i\">b</li><li class=\"i\">c</li></ul><p class=\"x\">t</p></div></template>"
+  },
+  {
+    "name": "tmpl_static_table_bail",
+    "sfc": "<template><div><table><tr><td>a</td></tr></table><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template>"
+  },
+  {
+    "name": "tmpl_static_scoped",
+    "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template><style scoped>.a{color:red}</style>"
   }
 ]
