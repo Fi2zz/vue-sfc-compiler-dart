@@ -25,6 +25,7 @@ StyleCompileResult compileStyleSource(
   required String id,
   bool scoped = false,
   bool trim = true,
+  bool isProd = false,
 }) {
   final shortId = id.replaceFirst(RegExp('^data-v-'), '');
   final longId = 'data-v-$shortId';
@@ -35,7 +36,7 @@ StyleCompileResult compileStyleSource(
   }
   try {
     final root = parseCss(css);
-    applyCssVarsPlugin(root, shortId);
+    applyCssVarsPlugin(root, shortId, isProd: isProd);
     if (trim) applyTrimPlugin(root);
     if (scoped) applyScopedPlugin(root, longId);
     return StyleCompileResult(stringifyCss(root), const []);
