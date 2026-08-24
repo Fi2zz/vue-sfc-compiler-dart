@@ -22,6 +22,18 @@ class SfcParser {
     for (final block in blocks) {
       switch (block.type) {
         case 'template':
+          // 官方：Vue 3 不再支持 <template functional>。
+          if (block.attrs.containsKey('functional')) {
+            throw SfcError(
+              message:
+                  '<template functional> is no longer supported in Vue 3, '
+                  'since functional components no longer have significant '
+                  'performance difference from stateful ones. Just use a '
+                  'normal <template> instead.',
+              locStart: block.locStart,
+              locEnd: block.locEnd,
+            );
+          }
           if (template != null) {
             throw DuplicateBlockError(
               type: 'template',
@@ -39,6 +51,11 @@ class SfcParser {
           );
           break;
         case 'script':
+          // 官方语义：内容为空（含纯空白/自闭合）的 script 块不视为
+          // “存在”；但带 src 的外链块仍登记（官方 compileScript 原样透传）。
+          final hasContent = block.content.trim().isNotEmpty;
+          final isExternal = block.attrs.containsKey('src');
+          if (!hasContent && !isExternal) break;
           final b = ScriptBlock(
             content: block.content,
             attrs: block.attrs,
@@ -61,6 +78,13 @@ class SfcParser {
             script = b;
 
             break;
+          } else {
+            // 官方：普通 <script> 也只允许出现一次。
+            throw DuplicateBlockError(
+              type: 'script',
+              locStart: block.locStart,
+              locEnd: block.locEnd,
+            );
           }
         case 'style':
           styles.add(
@@ -275,31 +299,46 @@ class SfcParser {
     return source.length;
   }
 
-  /// 解析属性
+  /// 解析属性（引号感知：值内空格不切断，如 srcset=" "）。
   Map<String, String> _parseAttributes(String attrString) {
     final attrs = <String, String>{};
-    // 简化的属性解析，避免复杂的正则表达式
-    final parts = attrString.trim().split(RegExp(r'\s+'));
-
-    for (final part in parts) {
-      if (part.contains('=')) {
-        final keyValue = part.split('=');
-        if (keyValue.length == 2) {
-          final key = keyValue[0];
-          var value = keyValue[1];
-          // 移除引号
-          if (value.startsWith('"') && value.endsWith('"')) {
-            value = value.substring(1, value.length - 1);
-          } else if (value.startsWith("'") && value.endsWith("'")) {
-            value = value.substring(1, value.length - 1);
-          }
-          attrs[key] = value;
-        }
-      } else if (part.isNotEmpty) {
-        attrs[part] = 'true';
+    final s = attrString;
+    var i = 0;
+    while (i < s.length) {
+      while (i < s.length && _isWs(s.codeUnitAt(i))) {
+        i++;
       }
+      if (i >= s.length) break;
+      final keyStart = i;
+      while (i < s.length && !_isWs(s.codeUnitAt(i)) && s[i] != '=') {
+        i++;
+      }
+      final key = s.substring(keyStart, i);
+      var value = 'true';
+      if (i < s.length && s[i] == '=') {
+        i++;
+        if (i < s.length && (s[i] == '"' || s[i] == "'")) {
+          final quote = s[i];
+          i++;
+          final vStart = i;
+          while (i < s.length && s[i] != quote) {
+            i++;
+          }
+          value = s.substring(vStart, i);
+          if (i < s.length) i++;
+        } else {
+          final vStart = i;
+          while (i < s.length && !_isWs(s.codeUnitAt(i))) {
+            i++;
+          }
+          value = s.substring(vStart, i);
+        }
+      }
+      if (key.isNotEmpty) attrs[key] = value;
     }
-
     return attrs;
   }
+
+  static bool _isWs(int c) =>
+      c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D;
 }

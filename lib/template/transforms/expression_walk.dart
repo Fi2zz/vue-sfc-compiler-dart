@@ -83,7 +83,8 @@ bool _isFunctionType(String type) {
 
 bool _isForStatement(String type) =>
     type == 'for_statement' ||
-    type == 'for_in_statement';
+    type == 'for_in_statement' ||
+    type == 'for_of_statement';
 
 final class ExpressionWalker {
   final SrcView view;
@@ -238,8 +239,9 @@ final class ExpressionWalker {
             return;
           }
         }
+      // 注意：for-in/of 的循环变量属于循环自身作用域（由 _walkForStatement
+      // 在进入循环时登记），不得提升进外层块的声明集合。
       case 'for_statement':
-      case 'for_in_statement':
         _collectForIds(stmt, ids, isVar ?? true);
       case 'switch_statement':
         _collectSwitchIds(stmt, ids, isVar ?? true);
@@ -266,6 +268,12 @@ final class ExpressionWalker {
       }
       return;
     }
+    // tree-sitter TS：for-in/of 的 `const x` 是匿名 token，首个具名子节点
+    // 即左值模式本身（identifier/pattern），需要登记为循环局部量。
+    if (stmt.type == 'for_in_statement' && stmt.children.isNotEmpty) {
+      final first = stmt.children.first;
+      if (_isPattern(first.type)) ids.addAll(extractIdentifiers(first));
+    }
   }
 
   void _walkSwitchStatement(AstNode stmt, bool isVar) {
@@ -275,10 +283,14 @@ final class ExpressionWalker {
   }
 
   void _collectSwitchIds(AstNode stmt, List<AstNode> ids, bool isVar) {
-    for (final cs in stmt.children) {
-      if (cs.type != 'switch_case' && cs.type != 'switch_default') continue;
-      for (final stmt2 in cs.children) {
-        _collectDeclarationIds(stmt2, ids, isVar);
+    for (final c in stmt.children) {
+      // tree-sitter 层级：switch_statement > switch_body > switch_case。
+      if (c.type != 'switch_body') continue;
+      for (final cs in c.children) {
+        if (cs.type != 'switch_case' && cs.type != 'switch_default') continue;
+        for (final stmt2 in cs.children) {
+          _collectDeclarationIds(stmt2, ids, isVar);
+        }
       }
     }
   }
@@ -288,6 +300,15 @@ final class ExpressionWalker {
     for (final c in node.children) {
       if (c.type == 'identifier') {
         ids.add(c);
+        break;
+      }
+      // catch ({ message: { length } }) 等解构参数。
+      if (_isPattern(c.type)) {
+        ids.addAll(extractIdentifiers(c));
+        break;
+      }
+      if (c.type == 'formal_parameter' && c.children.isNotEmpty) {
+        ids.addAll(extractIdentifiers(c.children.first));
         break;
       }
     }

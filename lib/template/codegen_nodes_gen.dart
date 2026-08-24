@@ -81,11 +81,19 @@ void genNode(Object? node, CodegenContext context) {
   }
 }
 
+/// 与官方 assert 文案逐字对齐（错误文本会进样例 ground truth）。
+/// 独立类型以避免 Dart StateError.toString 的 "Bad state: " 前缀。
+final class _CodegenMissingError implements Exception {
+  final String message;
+  _CodegenMissingError(this.message);
+  @override
+  String toString() => message;
+}
+
 void _genCodegenOf(Object? codegenNode, CodegenContext context, Object node) {
   if (codegenNode == null) {
-    // 与官方 assert 文案逐字对齐（错误文本会进样例 ground truth）。
-    throw StateError('Codegen node is missing for element/if/for node. '
-        'Apply appropriate transforms first.');
+    throw _CodegenMissingError('Codegen node is missing for element/if/for '
+        'node. Apply appropriate transforms first.');
   }
   genNode(codegenNode, context);
 }

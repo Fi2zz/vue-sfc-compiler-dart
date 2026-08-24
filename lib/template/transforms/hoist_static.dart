@@ -263,7 +263,9 @@ int _elementConstantType(
   }
   returnType = _bindPropsConstantType(node, returnType, context);
   if (returnType == 0) return 0;
-  _maybeUnblock(node, codegenNode, context);
+  // 官方：isBlock 且含任意指令 → 0；无指令的 block 降级为普通 vnode。
+  // 返回值必须传播（此前 0 被吞掉导致带指令元素仍被整体缓存）。
+  returnType = _maybeUnblock(node, codegenNode, context, returnType);
   context.constantCache[node] = returnType;
   return returnType;
 }
@@ -284,13 +286,14 @@ int _bindPropsConstantType(
   return returnType;
 }
 
-void _maybeUnblock(
-    ElementNode node, VNodeCall codegenNode, TransformContext context) {
-  if (!codegenNode.isBlock) return;
+int _maybeUnblock(
+    ElementNode node, VNodeCall codegenNode, TransformContext context,
+    int returnType) {
+  if (!codegenNode.isBlock) return returnType;
   for (final p in node.props) {
     if (p is DirectiveNode) {
       context.constantCache[node] = 0;
-      return;
+      return 0;
     }
   }
   context.removeHelper(hOpenBlock);
@@ -298,6 +301,7 @@ void _maybeUnblock(
       getVNodeBlockHelper(context.inSSR, codegenNode.isComponent));
   codegenNode.isBlock = false;
   context.helper(getVNodeHelper(context.inSSR, codegenNode.isComponent));
+  return returnType;
 }
 
 TmplNode _contentOf(TmplNode node) => switch (node) {

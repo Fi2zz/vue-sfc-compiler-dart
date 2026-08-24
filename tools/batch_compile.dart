@@ -28,6 +28,9 @@ void main(List<String> args) {
         } else if (descriptor!.scriptSetup == null &&
             descriptor.script == null) {
           out = 'NO_SCRIPT\n';
+        } else if (descriptor.scriptSetup == null) {
+          // 官方 compileScript 对纯外链 <script src> 原样透传（空内容）。
+          out = '\n';
         } else {
           final result = compileScriptSetup(descriptor,
               hoistStatic: descriptor.script == null);
