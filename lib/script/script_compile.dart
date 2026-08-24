@@ -412,11 +412,15 @@ AstNode? _processNormalScript(
       if (decl != null && _isDeclarable(decl)) {
         // 官方 from === 'script'：静态 const 一律登记 literal-const。
         walkDeclaration(ctx, decl, ctx.scriptBindings,
-            vueImportAliases: vueImportAliases, fromScript: true);
+            vueImportAliases: vueImportAliases,
+            fromScript: true,
+            view: view);
       }
     } else if (_isDeclarable(node)) {
       walkDeclaration(ctx, node, ctx.scriptBindings,
-          vueImportAliases: vueImportAliases, fromScript: true);
+          vueImportAliases: vueImportAliases,
+          fromScript: true,
+          view: view);
     }
   }
   return defaultExport;

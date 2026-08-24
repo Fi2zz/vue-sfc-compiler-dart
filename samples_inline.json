@@ -1,0 +1,14 @@
+[
+  {"name": "inline_basic_ref", "sfc": "<script setup>\nimport { ref } from 'vue'\nconst count = ref(0)\n</script>\n<template><button @click=\"count++\">{{ count }}</button></template>"},
+  {"name": "inline_kinds_matrix", "sfc": "<script setup>\nimport { ref, computed, reactive } from 'vue'\nconst r = ref(0)\nconst c = computed(() => r.value * 2)\nconst s = reactive({ a: 1 })\nconst m = unknownCall()\nlet l = 1\nconst lit = 'hi'\n</script>\n<template><p>{{ r }} {{ c }} {{ s.a }} {{ m }} {{ l }} {{ lit }}</p></template>"},
+  {"name": "inline_props", "sfc": "<script setup lang=\"ts\">\ndefineProps<{ title: string; 'data-x'?: number }>()\nconst local = 1\n</script>\n<template><p>{{ title }} {{ local }} {{ datax }}</p></template>"},
+  {"name": "inline_setup_let_assign", "sfc": "<script setup>\nlet n = 0\n</script>\n<template><button @click=\"n = n + 1\">{{ n }}</button></template>"},
+  {"name": "inline_expose_call", "sfc": "<script setup>\nimport { ref } from 'vue'\nconst x = ref(1)\ndefineExpose({ x })\n</script>\n<template><i>{{ x }}</i></template>"},
+  {"name": "inline_emits", "sfc": "<script setup>\nconst emit = defineEmits(['go'])\n</script>\n<template><button @click=\"emit('go')\">go</button></template>"},
+  {"name": "inline_component", "sfc": "<script setup>\nimport MyComp from './MyComp.vue'\nimport { ref } from 'vue'\nconst show = ref(true)\n</script>\n<template><MyComp v-if=\"show\" /><other-one /></template>"},
+  {"name": "inline_ts", "sfc": "<script setup lang=\"ts\">\nimport { ref } from 'vue'\nconst n = ref(0)\n</script>\n<template><input :value=\"n\" @change=\"n = Number($event)\" /></template>"},
+  {"name": "inline_literal_hoist", "sfc": "<script setup>\nconst a = 1\nconst b = 'x'\nlet c = 2\n</script>\n<template><p>{{ a }} {{ b }} {{ c }}</p></template>"},
+  {"name": "inline_v_for_scope", "sfc": "<script setup>\nimport { ref } from 'vue'\nconst list = ref([1, 2])\n</script>\n<template><ul><li v-for=\"(item, i) in list\" :key=\"i\">{{ item }} {{ i }}</li></ul></template>"},
+  {"name": "inline_maybe_ref_assign", "sfc": "<script setup>\nimport { customThing } from './thing'\nconst m = customThing()\n</script>\n<template><button @click=\"m = 2\">{{ m }}</button></template>"},
+  {"name": "inline_normal_script", "sfc": "<script lang=\"ts\">\nexport interface P { a: string }\nexport const k = 5\n</script>\n<script setup lang=\"ts\">\ndefineProps<P>()\nimport { useStore } from './store'\nconst st = useStore()\n</script>\n<template><p>{{ a }} {{ st.something }} {{ k2 }}</p></template>"}
+]

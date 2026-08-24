@@ -58,7 +58,7 @@ TmplCompileResult compileTemplateSource(
       errors, warnings, bindingMetadata ?? const {},
       inline: inline, isTS: isTS));
   final gen = generate(ast, _codegenOptions(filename, scopeId, bindingMetadata,
-      inline: inline));
+      inline: inline, isTS: isTS));
   return TmplCompileResult(gen.code, ast, errors, warnings,
       preamble: gen.preamble);
 }
@@ -160,12 +160,13 @@ String? _domBuiltInComponent(String tag) {
 
 CodegenOptions _codegenOptions(String filename, String? scopeId,
     Map<String, String>? bindingMetadata,
-    {bool inline = false}) {
+    {bool inline = false, bool isTS = false}) {
   return CodegenOptions()
     ..mode = 'module'
     ..prefixIdentifiers = true
     ..filename = filename
     ..scopeId = scopeId
     ..bindingMetadata = bindingMetadata
-    ..inline = inline;
+    ..inline = inline
+    ..isTS = isTS;
 }

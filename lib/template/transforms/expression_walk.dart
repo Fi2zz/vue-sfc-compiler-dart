@@ -6,8 +6,9 @@ import 'package:vue_sfc_parser/ts_parser.dart';
 import '../../script/src_view.dart';
 
 final class WalkedIdent {
-  final int startChar; // UTF-16 offset within the wrapped source
-  final int endChar;
+  // update 表达式参数会扩写区间（官方 id.start/end 延展），故可变。
+  int startChar; // UTF-16 offset within the wrapped source
+  int endChar;
   final String name;
   String? prefix; // 'name: ' for shorthand object properties
   bool isConstant = false;

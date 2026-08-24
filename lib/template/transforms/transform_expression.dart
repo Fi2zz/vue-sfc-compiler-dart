@@ -94,12 +94,15 @@ bool _isConstBinding(String? type) =>
     type == 'setup-const' || type == 'literal-const';
 
 String _rewriteIdentifier(String raw, TransformContext context,
-    {AstNode? parent, WalkedIdent? id, int Function(int)? byteToChar}) {
+    {AstNode? parent,
+    WalkedIdent? id,
+    int Function(int)? byteToChar,
+    String Function(int, int)? sliceText}) {
   final bindings = context.bindingMetadata;
   final type = bindings[raw];
   if (context.inline) {
     return _rewriteInline(raw, type, context,
-        parent: parent, id: id, byteToChar: byteToChar);
+        parent: parent, id: id, byteToChar: byteToChar, sliceText: sliceText);
   }
   if (type != null && (type.startsWith('setup') || type == 'literal-const')) {
     return '\$setup.$raw';
@@ -115,9 +118,15 @@ String _rewriteIdentifier(String raw, TransformContext context,
 
 /// 官方 rewriteIdentifier 的 inline 分支：render 内联进 setup 后，绑定按
 /// kind 直接引用（ref 类补 .value / unref），不再有 $setup 前缀。
-String _rewriteInline(String raw, String? type, TransformContext context,
-    {AstNode? parent, WalkedIdent? id, int Function(int)? byteToChar}) {
-  final lval = _isLValPosition(parent, id, byteToChar ?? (b) => b);
+String _rewriteInline(
+    String raw,
+    String? type,
+    TransformContext context,
+    {AstNode? parent,
+    WalkedIdent? id,
+    int Function(int)? byteToChar,
+    String Function(int, int)? sliceText}) {
+  final lval = _lvalKind(parent, id, byteToChar ?? (b) => b);
   switch (type) {
     case 'setup-const':
     case 'literal-const':
@@ -126,13 +135,39 @@ String _rewriteInline(String raw, String? type, TransformContext context,
     case 'setup-ref':
       return '$raw.value';
     case 'setup-maybe-ref':
-      return lval ? '$raw.value' : '${context.helperString(hUnref)}($raw)';
+      return lval == _LVal.none
+          ? '${context.helperString(hUnref)}($raw)'
+          : '$raw.value';
     case 'setup-let':
-      if (!lval) return '${context.helperString(hUnref)}($raw)';
-      // 赋值/自更新左值：isRef 三元（官方形态）。
+      if (lval == _LVal.none) {
+        return '${context.helperString(hUnref)}($raw)';
+      }
+      // 赋值/自更新左值：isRef 三元（官方形态），RHS 递归改写。
       final tsIgnore = context.isTS ? ' //@ts-ignore\n' : '';
+      final b2c = byteToChar ?? (b) => b;
+      final cut = sliceText ?? (s, e) => '';
+      final first = parent!.children.first;
+      if (parent.type == 'assignment_expression') {
+        final right = parent.children.last;
+        final op =
+            cut(first.endByte, right.startByte).trim();
+        final rExp = cut(right.startByte, right.endByte);
+        final processed = stringifyExpression(processExpression(
+            SimpleExpression(rExp, false, locStub()), context,
+            localVars: KnownIds(context.identifiers)));
+        return '${context.helperString(hIsRef)}($raw)$tsIgnore'
+            ' ? $raw.value $op $processed : $raw';
+      }
+      // update_expression：n++ / ++n，替换区间扩到整个表达式。
+      final opText =
+          cut(_opStart(parent, first, b2c), parent.endByte).trim();
+      final prefix = first.startByte == parent.startByte ? '' : opText;
+      final postfix = first.startByte == parent.startByte ? opText : '';
+      id!
+        ..startChar = b2c(parent.startByte)
+        ..endChar = b2c(parent.endByte);
       return '${context.helperString(hIsRef)}($raw)$tsIgnore'
-          '? $raw.value : $raw';
+          ' ? $prefix$raw.value$postfix : $prefix$raw$postfix';
     case 'props':
       return _propsAccessExp(raw);
     case 'props-aliased':
@@ -143,6 +178,32 @@ String _rewriteInline(String raw, String? type, TransformContext context,
   return '_ctx.$raw';
 }
 
+enum _LVal { none, assign, update }
+
+_LVal _lvalKind(AstNode? parent, WalkedIdent? id,
+    int Function(int byteOffset) byteToChar) {
+  if (parent == null || id == null || parent.children.isEmpty) {
+    return _LVal.none;
+  }
+  final start = byteToChar(parent.children.first.startByte);
+  final end = byteToChar(parent.children.first.endByte);
+  final covers = parent.children.first.type == 'identifier' &&
+      start <= id.startChar &&
+      id.endChar <= end;
+  switch (parent.type) {
+    case 'assignment_expression':
+      return covers ? _LVal.assign : _LVal.none;
+    case 'update_expression':
+      return covers ? _LVal.update : _LVal.none;
+  }
+  return _LVal.none;
+}
+
+int _opStart(AstNode parent, AstNode argument, int Function(int) b2c) {
+  // 前缀形式（++n）：操作符在参数之前；后缀：参数之后。
+  return b2c(argument.endByte);
+}
+
 /// 官方 genPropsAccessExp。
 String _propsAccessExp(String name) {
   final plain = RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$').hasMatch(name);
@@ -151,21 +212,6 @@ String _propsAccessExp(String name) {
 
 String _jsStr(String s) =>
     '"${s.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
-
-/// 赋值表达式/自更新表达式的左值位置判定（首子节点即左值）。
-/// [byteToChar] 由调用方注入（walker 的 SrcView），统一字节/字符坐标；
-/// WalkedIdent 的 startChar/endChar 与转换结果同处包裹源 char 空间。
-bool _isLValPosition(AstNode? parent, WalkedIdent? id,
-    int Function(int byteOffset) byteToChar) {
-  if (parent == null || id == null || parent.children.isEmpty) return false;
-  const lvalParents = {'assignment_expression', 'update_expression'};
-  if (!lvalParents.contains(parent.type)) return false;
-  final first = parent.children.first;
-  if (first.type != 'identifier') return false;
-  final start = byteToChar(first.startByte);
-  final end = byteToChar(first.endByte);
-  return start <= id.startChar && id.endChar <= end;
-}
 
 _ParsedExp? _parseExpression(SimpleExpression node, TransformContext context,
     String rawExp, bool asParams, bool asRawStatements) {
@@ -202,7 +248,7 @@ TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
   final ids = <WalkedIdent>[];
   void onIdent(WalkedIdent id, AstNode? parent, bool isRefed, bool isLocal) {
     _onIdentifier(id, parent, isRefed, isLocal, context, ids,
-        srcView.charOf);
+        srcView.charOf, (s, e) => srcView.slice(srcView.charOf(s), srcView.charOf(e)));
   }
 
   final walker = ExpressionWalker(srcView, onIdent, knownIds);
@@ -214,15 +260,16 @@ TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
 
 void _onIdentifier(WalkedIdent id, AstNode? parent, bool isRefed,
     bool isLocal, TransformContext context, List<WalkedIdent> ids,
-    int Function(int byteOffset) byteToChar) {
+    int Function(int byteOffset) byteToChar,
+    String Function(int, int) sliceText) {
   if (id.name.startsWith('_filter_')) return;
   final needPrefix = isRefed && _canPrefix(id.name);
   if (needPrefix && !isLocal) {
     if (parent != null && parent.type == 'object') {
       id.prefix = '${id.name}: ';
     }
-    id.rewritten =
-        _rewriteIdentifier(id.name, context, parent: parent, id: id, byteToChar: byteToChar);
+    id.rewritten = _rewriteIdentifier(id.name, context,
+        parent: parent, id: id, byteToChar: byteToChar, sliceText: sliceText);
     ids.add(id);
   } else {
     if (!(needPrefix && isLocal) && !_isCallOrMember(parent)) {
