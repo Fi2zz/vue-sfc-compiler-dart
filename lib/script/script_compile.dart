@@ -60,7 +60,7 @@ final class _Specifier {
   final setupRoot = parser.parse(code: setupSource, language: lang);
   AstNode? scriptRoot;
   SrcView? scriptView;
-  final typeScope = <String, AstNode>{};
+  final typeScope = <String, TypeScopeEntry>{};
   if (script != null) {
     final scriptSource =
         source.substring(scriptStartOffset, scriptEndOffset);

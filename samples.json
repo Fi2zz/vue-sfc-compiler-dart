@@ -1,623 +1,626 @@
 [
-  {
-    "name": "defineProps_runtime",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ msg: String, count: { type: Number, default: 0 } })\n</script>"
-  },
-  {
-    "name": "defineProps_runtime_array",
-    "sfc": "<script setup>\nconst props = defineProps(['msg','count'])\n</script>"
-  },
-  {
-    "name": "defineProps_runtime_required",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ count: { type: Number, required: true } })\n</script>"
-  },
-  {
-    "name": "defineProps_runtime_validator",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ count: { type: Number, validator: (v:number)=> v >= 0 } })\n</script>"
-  },
-  {
-    "name": "defineProps_runtime_default_fn",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ items: { type: Array, default: ()=> [] } })\n</script>"
-  },
-  {
-    "name": "defineProps_runtime_boolean_default",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ enabled: { type: Boolean, default: true } })\n</script>"
-  },
-  {
-    "name": "defineProps_ts_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ msg: string; count?: number }>()\n</script>"
-  },
-  {
-    "name": "defineProps_ts_destructure",
-    "sfc": "<script setup lang=\"ts\">\nconst { msg = 'hi', count = 1 } = defineProps<{ msg: string; count?: number }>()\n</script>"
-  },
-  {
-    "name": "defineProps_ts_union",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ id: string | number; active?: boolean }>()\n</script>"
-  },
-  {
-    "name": "defineProps_ts_array_object",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ items: string[]; config?: { title: string } }>()\n</script>"
-  },
-  {
-    "name": "defineProps_ts_nested",
-    "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ user: { name: string; roles: string[] } }>()\n</script>"
-  },
-  {
-    "name": "defineProps_ts_literal_union_destructure",
-    "sfc": "<script setup lang=\"ts\">\nconst { size = 'medium' } = defineProps<{ size: 'small' | 'medium' | 'large' }>()\n</script>"
-  },
-  {
-    "name": "withDefaults_typed_destructure",
-    "sfc": "<script setup lang=\"ts\">\nconst { msg, count } = withDefaults(defineProps<{ msg?: string; count?: number }>(), { msg: 'hi', count: 1 })\n</script>"
-  },
-  {
-    "name": "defineEmits_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits(['update','remove'])\nfunction onUpdate(id:number){ emit('update', id) }\n</script>"
-  },
-  {
-    "name": "defineEmits_object_validator",
-    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits({ submit(payload: { id: number }) { return true } })\nemit('submit', { id: 1 })\n</script>"
-  },
-  {
-    "name": "defineEmits_object_multi",
-    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits({ save(v: { id: number }) { return true }, cancel() { return true } })\nemit('save', { id: 1 })\nemit('cancel')\n</script>"
-  },
-  {
-    "name": "defineEmits_ts",
-    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'update', id: number): void; (e:'remove'): void }>()\nemit('remove')\nemit('update', 1)\n</script>"
-  },
-  {
-    "name": "defineEmits_ts_object_payload",
-    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'save', payload: { id: number }): void }>()\nemit('save', { id: 1 })\n</script>"
-  },
-  {
-    "name": "defineEmits_ts_union_payload",
-    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'select', payload: { id: number } | { slug: string }): void }>()\nemit('select', { id: 1 })\n</script>"
-  },
-  {
-    "name": "defineExpose_basic",
-    "sfc": "<script setup lang=\"ts\">\nfunction inc(){}\nconst count = 0\ndefineExpose({ inc, count })\n</script>"
-  },
-  {
-    "name": "defineExpose_empty",
-    "sfc": "<script setup lang=\"ts\">\ndefineExpose()\n</script>"
-  },
-  {
-    "name": "defineSlots_ts",
-    "sfc": "<script setup lang=\"ts\">\nconst slots = defineSlots<{ default(props:{msg:string}): any }>()\n</script>"
-  },
-  {
-    "name": "defineSlots_basic",
-    "sfc": "<script setup>\nconst slots = defineSlots()\n</script>"
-  },
-  {
-    "name": "defineSlots_multi_ts",
-    "sfc": "<script setup lang=\"ts\">\nconst slots = defineSlots<{ header(): any; default(props:{msg:string}): any; footer(): any }>()\n</script>"
-  },
-  {
-    "name": "useSlots_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst slots = useSlots()\n</script>"
-  },
-  {
-    "name": "useAttrs_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst attrs = useAttrs()\n</script>"
-  },
-  {
-    "name": "useCssVars_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst color = 'red'\nuseCssVars(() => ({ color }))\n</script>"
-  },
-  {
-    "name": "useId_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst uid = useId()\n</script>"
-  },
-  {
-    "name": "useTemplateRef_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst input = useTemplateRef('input')\n</script>"
-  },
-  {
-    "name": "reactive_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { reactive } from 'vue'\nconst state = reactive({ count: 0 })\n</script>"
-  },
-  {
-    "name": "ref_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { ref } from 'vue'\nconst count = ref(0)\n</script>"
-  },
-  {
-    "name": "computed_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { ref, computed } from 'vue'\nconst count = ref(1)\nconst double = computed(() => count.value * 2)\n</script>"
-  },
-  {
-    "name": "watch_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { ref, watch } from 'vue'\nconst v = ref(0)\nwatch(v, (nv, ov) => {})\n</script>"
-  },
-  {
-    "name": "watchEffect_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { ref, watchEffect } from 'vue'\nconst v = ref(0)\nwatchEffect(() => { v.value })\n</script>"
-  },
-  {
-    "name": "onMounted_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onMounted } from 'vue'\nonMounted(() => {})\n</script>"
-  },
-  {
-    "name": "provide_inject_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { provide, inject } from 'vue'\nprovide('key', 1)\nconst injected = inject('key', 0)\n</script>"
-  },
-  {
-    "name": "getCurrentInstance_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { getCurrentInstance } from 'vue'\nconst inst = getCurrentInstance()\n</script>"
-  },
-  {
-    "name": "variables_basic",
-    "sfc": "<script setup>\nconst a = 1\nconst b = true\n</script>"
-  },
-  {
-    "name": "variables_let",
-    "sfc": "<script setup>\nlet a = 1\n</script>"
-  },
-  {
-    "name": "variables_object",
-    "sfc": "<script setup>\nconst obj = { x: 1, ok: true }\n</script>"
-  },
-  {
-    "name": "variables_destructure",
-    "sfc": "<script setup>\nconst { x, ok = true } = { x: 1, ok: true }\n</script>"
-  },
-  {
-    "name": "function_basic",
-    "sfc": "<script setup>\nfunction foo(){ return 1 }\n</script>"
-  },
-  {
-    "name": "topLevelAwait_basic",
-    "sfc": "<script setup>\nconst res = await Promise.resolve(1)\n</script>"
-  },
-  {
-    "name": "import_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { ref, isRef } from 'vue'\nconst a = ref(1)\nconst ok = isRef(a)\n</script>"
-  },
-  {
-    "name": "export_named_basic",
-    "sfc": "<script setup>\nexport const api = 1\n</script>"
-  },
-  {
-    "name": "for_loop_basic",
-    "sfc": "<script setup>\nfor (let i = 0; i < 3; i++) { }\n</script>"
-  },
-  {
-    "name": "try_catch_basic",
-    "sfc": "<script setup>\ntry { throw new Error('x') } catch (e) { } finally { }\n</script>"
-  },
-  {
-    "name": "async_function_basic",
-    "sfc": "<script setup>\nasync function load(){ return 1 }\n</script>"
-  },
-  {
-    "name": "class_basic",
-    "sfc": "<script setup>\nclass X { a = 1 }\nconst x = new X()\n</script>"
-  },
-  {
-    "name": "export_default_error",
-    "sfc": "<script setup>\nexport default { name: 'X' }\n</script>"
-  },
-  {
-    "name": "type_alias_basic",
-    "sfc": "<script setup lang=\"ts\">\ntype User = { id: number; name: string }\n</script>"
-  },
-  {
-    "name": "interface_basic",
-    "sfc": "<script setup lang=\"ts\">\ninterface Point { x: number; y: number }\n</script>"
-  },
-  {
-    "name": "enum_basic",
-    "sfc": "<script setup lang=\"ts\">\nenum Color { Red, Green }\n</script>"
-  },
-  {
-    "name": "import_type_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport type { Component } from 'vue'\nlet c: Component | null = null\n</script>"
-  },
-  {
-    "name": "export_type_basic",
-    "sfc": "<script setup lang=\"ts\">\nexport type Result = { ok: boolean }\n</script>"
-  },
-  {
-    "name": "console_basic",
-    "sfc": "<script setup>\nconsole.log('hello')\n</script>"
-  },
-  {
-    "name": "onBeforeMount_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onBeforeMount } from 'vue'\nonBeforeMount(() => {})\n</script>"
-  },
-  {
-    "name": "onUpdated_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onUpdated } from 'vue'\nonUpdated(() => {})\n</script>"
-  },
-  {
-    "name": "onUnmounted_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onUnmounted } from 'vue'\nonUnmounted(() => {})\n</script>"
-  },
-  {
-    "name": "onErrorCaptured_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onErrorCaptured } from 'vue'\nonErrorCaptured(() => false)\n</script>"
-  },
-  {
-    "name": "onRenderTracked_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onRenderTracked } from 'vue'\nonRenderTracked(() => {})\n</script>"
-  },
-  {
-    "name": "onRenderTriggered_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onRenderTriggered } from 'vue'\nonRenderTriggered(() => {})\n</script>"
-  },
-  {
-    "name": "nextTick_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { nextTick } from 'vue'\nawait nextTick()\n</script>"
-  },
-  {
-    "name": "effectScope_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { effectScope } from 'vue'\nconst scope = effectScope()\nscope.stop()\n</script>"
-  },
-  {
-    "name": "getCurrentScope_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { getCurrentScope } from 'vue'\nconst scope = getCurrentScope()\n</script>"
-  },
-  {
-    "name": "onScopeDispose_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onScopeDispose } from 'vue'\nonScopeDispose(() => {})\n</script>"
-  },
-  {
-    "name": "shallowRef_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { shallowRef } from 'vue'\nconst a = shallowRef(1)\n</script>"
-  },
-  {
-    "name": "shallowReactive_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { shallowReactive } from 'vue'\nconst obj = shallowReactive({ a: 1 })\n</script>"
-  },
-  {
-    "name": "readonly_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { readonly, reactive } from 'vue'\nconst s = readonly(reactive({ a: 1 }))\n</script>"
-  },
-  {
-    "name": "toRefs_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { reactive, toRefs } from 'vue'\nconst s = reactive({ a: 1, b: 2 })\nconst { a, b } = toRefs(s)\n</script>"
-  },
-  {
-    "name": "toRef_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { reactive, toRef } from 'vue'\nconst s = reactive({ a: 1 })\nconst a = toRef(s, 'a')\n</script>"
-  },
-  {
-    "name": "unref_isRef_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { ref, unref, isRef } from 'vue'\nconst a = ref(1)\nconst v = unref(a)\nconst ok = isRef(a)\n</script>"
-  },
-  {
-    "name": "watchPostEffect_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { ref, watchPostEffect } from 'vue'\nconst v = ref(0)\nwatchPostEffect(() => { v.value })\n</script>"
-  },
-  {
-    "name": "watchSyncEffect_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { ref, watchSyncEffect } from 'vue'\nconst v = ref(0)\nwatchSyncEffect(() => { v.value })\n</script>"
-  },
-  {
-    "name": "onBeforeUpdate_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onBeforeUpdate } from 'vue'\nonBeforeUpdate(() => {})\n</script>"
-  },
-  {
-    "name": "onActivated_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onActivated } from 'vue'\nonActivated(() => {})\n</script>"
-  },
-  {
-    "name": "onDeactivated_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onDeactivated } from 'vue'\nonDeactivated(() => {})\n</script>"
-  },
-  {
-    "name": "customRef_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { customRef } from 'vue'\nconst r = customRef((track, trigger) => ({ get(){ track(); return 1 }, set(v){ trigger() } }))\n</script>"
-  },
-  {
-    "name": "triggerRef_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { shallowRef, triggerRef } from 'vue'\nconst r = shallowRef(1)\ntriggerRef(r)\n</script>"
-  },
-  {
-    "name": "markRaw_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { markRaw } from 'vue'\nconst obj = markRaw({ a: 1 })\n</script>"
-  },
-  {
-    "name": "isReactive_isReadonly_isProxy_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { reactive, readonly, isReactive, isReadonly, isProxy } from 'vue'\nconst a = reactive({})\nconst b = readonly({})\nconst ra = isReactive(a)\nconst ro = isReadonly(b)\nconst px = isProxy(a)\n</script>"
-  },
-  {
-    "name": "toValue_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { toValue, ref } from 'vue'\nconst a = ref(1)\nconst v = toValue(a)\n</script>"
-  },
-  {
-    "name": "defineAsyncComponent_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { defineAsyncComponent } from 'vue'\nconst Comp = defineAsyncComponent(() => Promise.resolve({}))\n</script>"
-  },
-  {
-    "name": "generic_function_basic",
-    "sfc": "<script setup lang=\"ts\">\nfunction id<T>(x: T): T { return x }\nconst n = id(1)\n</script>"
-  },
-  {
-    "name": "conditional_types_basic",
-    "sfc": "<script setup lang=\"ts\">\ntype IsString<T> = T extends string ? true : false\nconst r: IsString<'a'> = true\n</script>"
-  },
-  {
-    "name": "intersection_types_basic",
-    "sfc": "<script setup lang=\"ts\">\ntype A = { a: number }\ntype B = { b: string }\ntype C = A & B\nconst c: C = { a: 1, b: 'x' }\n</script>"
-  },
-  {
-    "name": "satisfies_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst conf = { a: 1 } satisfies { a: number }\n</script>"
-  },
-  {
-    "name": "as_const_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst cfg = { a: 1 } as const\n</script>"
-  },
-  {
-    "name": "import_dynamic_basic",
-    "sfc": "<script setup lang=\"ts\">\nconst mod = await import('./nonexistent')\n</script>"
-  },
-  {
-    "name": "defineProps_duplicate_error",
-    "sfc": "<script setup lang=\"ts\">\nconst p1 = defineProps<{ a: number }>()\nconst p2 = defineProps<{ b: string }>()\n</script>"
-  },
-  {
-    "name": "defineOptions_duplicate_error",
-    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'X1' })\ndefineOptions({ name: 'X2' })\n</script>"
-  },
-  {
-    "name": "onServerPrefetch_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { onServerPrefetch } from 'vue'\nonServerPrefetch(async () => {})\n</script>"
-  },
-  {
-    "name": "getCurrentInstance_emit_basic",
-    "sfc": "<script setup lang=\"ts\">\nimport { getCurrentInstance } from 'vue'\nconst inst = getCurrentInstance()\ninst?.emit?.('change')\n</script>"
-  },
-  {
-    "name": "class_private_field_basic",
-    "sfc": "<script setup>\nclass Y { #a = 1 }\nconst y = new Y()\n</script>"
-  },
-  {
-    "name": "symbol_bigint_importmeta_process_basic",
-    "sfc": "<script setup>\nconst S = Symbol('k')\nconst big = 1n\nconst env = import.meta.env\nconst nodeEnv = process.env.NODE_ENV\n</script>"
-  },
-  {
-    "name": "defineProps_type_and_runtime_error",
-    "sfc": "<script setup lang=\"ts\">\nconst p = defineProps<{ a: number }>({ a: Number })\n</script>"
-  },
-  {
-    "name": "withDefaults_non_call_error",
-    "sfc": "<script setup lang=\"ts\">\nconst foo = {} as any\nconst { a } = withDefaults(foo, { a: 1 })\n</script>"
-  },
-  {
-    "name": "withDefaults_runtime_error",
-    "sfc": "<script setup lang=\"ts\">\nconst { a } = withDefaults(defineProps({ a: Number }), { a: 1 })\n</script>"
-  },
-  {
-    "name": "defineEmits_duplicate_error",
-    "sfc": "<script setup lang=\"ts\">\nconst e1 = defineEmits(['a'])\nconst e2 = defineEmits(['b'])\n</script>"
-  },
-  {
-    "name": "defineEmits_type_mixed_error",
-    "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e: 'a'): void; a: any }>()\n</script>"
-  },
-  {
-    "name": "defineModel_duplicate_name_error",
-    "sfc": "<script setup lang=\"ts\">\nconst a = defineModel<number>('count')\nconst b = defineModel<number>('count')\n</script>"
-  },
-  {
-    "name": "defineOptions_type_args_error",
-    "sfc": "<script setup lang=\"ts\">\ndefineOptions<{}>({ name: 'X' })\n</script>"
-  },
-  {
-    "name": "defineSlots_invalid_args_error",
-    "sfc": "<script setup lang=\"ts\">\ndefineSlots({})\n</script>"
-  },
-  {
-    "name": "defineModel_default",
-    "sfc": "<script setup lang=\"ts\">\nconst model = defineModel<string>()\n</script>"
-  },
-  {
-    "name": "defineModel_default_runtime_type",
-    "sfc": "<script setup>\nconst model = defineModel({ type: String })\n</script>"
-  },
-  {
-    "name": "defineModel_named",
-    "sfc": "<script setup lang=\"ts\">\nconst count = defineModel<number>('count', { default: 0 })\n</script>"
-  },
-  {
-    "name": "defineModel_local",
-    "sfc": "<script setup lang=\"ts\">\nconst count = defineModel<number>('count', { local: true })\n</script>"
-  },
-  {
-    "name": "defineModel_required",
-    "sfc": "<script setup lang=\"ts\">\nconst visible = defineModel<boolean>('visible', { required: true })\n</script>"
-  },
-  {
-    "name": "defineModel_get_set",
-    "sfc": "<script setup lang=\"ts\">\nconst value = defineModel<number>('value', { get: (v)=> v, set: (v)=> Math.max(0, v) })\n</script>"
-  },
-  {
-    "name": "defineModel_multiple",
-    "sfc": "<script setup lang=\"ts\">\nconst title = defineModel<string>()\nconst checked = defineModel<boolean>('checked')\n</script>"
-  },
-  {
-    "name": "defineModel_named_default_fn",
-    "sfc": "<script setup lang=\"ts\">\nconst config = defineModel<{ a: number }>('config', { default: () => ({ a: 1 }) })\n</script>"
-  },
-  {
-    "name": "defineOptions_basic",
-    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'MyComponent', inheritAttrs: false })\n</script>"
-  },
-  {
-    "name": "defineOptions_extends",
-    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'Extended', extends: { props: { a: String } } })\n</script>"
-  },
-  {
-    "name": "defineOptions_components",
-    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'WithComp', components: { A: {} } })\n</script>"
-  },
-  {
-    "name": "defineOptions_directives",
-    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'WithDir', directives: { focus: {} } })\n</script>"
-  },
-  {
-    "name": "defineOptions_props_error",
-    "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'OptsPropsErr', props: { a: String } })\n</script>"
-  },
-  {
-    "name": "script_and_script_setup_basic",
-    "sfc": "<script>\nexport default {\n  name: 'MyComponent',\n  inheritAttrs: false\n}\n</script>\n\n<script setup>\nconst count = ref(0)\n</script>"
-  },
-  {
-    "name": "script_and_script_setup_props_emits",
-    "sfc": "<script>\nexport default {\n  props: {\n    title: String,\n    count: {\n      type: Number,\n      default: 0\n    }\n  },\n  emits: ['update', 'delete']\n}\n</script>\n\n<script setup>\nconst props = defineProps(['title', 'count'])\nconst emit = defineEmits(['update', 'delete'])\n</script>"
-  },
-  {
-    "name": "script_and_script_setup_typescript",
-    "sfc": "<script lang=\"ts\">\nimport type { PropType } from 'vue'\n\ninterface User {\n  id: number\n  name: string\n}\n\nexport default {\n  name: 'UserComponent',\n  props: {\n    user: {\n      type: Object as PropType<User>,\n      required: true\n    }\n  }\n}\n</script>\n\n<script setup lang=\"ts\">\nimport { ref } from 'vue'\n\nconst props = defineProps<{\n  user: User\n}>()\n\nconst localCount = ref(0)\n</script>"
-  },
-  {
-    "name": "script_and_script_setup_mixed_features",
-    "sfc": "<script>\nexport default {\n  name: 'MixedComponent',\n  data() {\n    return {\n      legacyData: 'legacy'\n    }\n  },\n  computed: {\n    legacyComputed() {\n      return this.legacyData + ' computed'\n    }\n  },\n  methods: {\n    legacyMethod() {\n      console.log('legacy method')\n    }\n  }\n}\n</script>\n\n<script setup>\nimport { ref, computed } from 'vue'\n\nconst setupCount = ref(0)\nconst setupComputed = computed(() => setupCount.value * 2)\n\nfunction setupMethod() {\n  console.log('setup method')\n}\n</script>"
-  },
-  {
-    "name": "script_and_script_setup_import_export",
-    "sfc": "<script>\nimport { someUtil } from './utils'\n\nexport const sharedValue = 'shared'\n\nexport default {\n  name: 'ImportExportComponent'\n}\n</script>\n\n<script setup>\nimport { ref } from 'vue'\nimport { anotherUtil } from './another-utils'\n\nconst localValue = ref('local')\n\nexport { localValue }\n</script>"
-  },
-  {
-    "name": "script_import_composition_api_basic",
-    "sfc": "<script>\nimport { ref, computed, onMounted } from 'vue'\n\nexport default {\n  name: 'CompositionInScript',\n  setup() {\n    const count = ref(0)\n    const doubled = computed(() => count.value * 2)\n    \n    onMounted(() => {\n      console.log('component mounted')\n    })\n    \n    function increment() {\n      count.value++\n    }\n    \n    return {\n      count,\n      doubled,\n      increment\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_import_composition_api_reactive",
-    "sfc": "<script>\nimport { reactive, computed, watch } from 'vue'\n\nexport default {\n  name: 'ReactiveInScript',\n  setup() {\n    const state = reactive({\n      name: '',\n      age: 0\n    })\n    \n    const description = computed(() => {\n      return `${state.name} is ${state.age} years old`\n    })\n    \n    watch(() => state.age, (newAge, oldAge) => {\n      console.log(`age changed from ${oldAge} to ${newAge}`)\n    })\n    \n    function updateProfile(name, age) {\n      state.name = name\n      state.age = age\n    }\n    \n    return {\n      state,\n      description,\n      updateProfile\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_import_composition_api_lifecycle",
-    "sfc": "<script>\nimport { ref, onMounted, onUpdated, onUnmounted, onBeforeMount } from 'vue'\n\nexport default {\n  name: 'LifecycleInScript',\n  setup() {\n    const message = ref('')\n    \n    onBeforeMount(() => {\n      message.value = 'before mount'\n    })\n    \n    onMounted(() => {\n      console.log('mounted')\n      message.value = 'mounted'\n    })\n    \n    onUpdated(() => {\n      console.log('updated')\n    })\n    \n    onUnmounted(() => {\n      console.log('unmounted')\n    })\n    \n    return {\n      message\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_import_composition_api_watch",
-    "sfc": "<script>\nimport { ref, watch, watchEffect } from 'vue'\n\nexport default {\n  name: 'WatchInScript',\n  setup() {\n    const count = ref(0)\n    const multiplier = ref(1)\n    const result = ref(0)\n    \n    watch([count, multiplier], ([newCount, newMultiplier]) => {\n      result.value = newCount * newMultiplier\n    })\n    \n    watchEffect(() => {\n      console.log(`Current count: ${count.value}`)\n    })\n    \n    function increment() {\n      count.value++\n    }\n    \n    function updateMultiplier(value) {\n      multiplier.value = value\n    }\n    \n    return {\n      count,\n      multiplier,\n      result,\n      increment,\n      updateMultiplier\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_import_composition_api_provide_inject",
-    "sfc": "<script>\nimport { ref, provide, inject } from 'vue'\n\nexport default {\n  name: 'ProvideInjectInScript',\n  setup() {\n    const theme = ref('light')\n    const user = inject('currentUser', ref({ name: 'Guest' }))\n    \n    provide('theme', theme)\n    provide('appConfig', {\n      version: '1.0.0',\n      apiUrl: 'https://api.example.com'\n    })\n    \n    function toggleTheme() {\n      theme.value = theme.value === 'light' ? 'dark' : 'light'\n    }\n    \n    return {\n      theme,\n      user,\n      toggleTheme\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_import_composition_api_refs",
-    "sfc": "<script>\nimport { ref, unref, isRef, toRef, toRefs } from 'vue'\n\nexport default {\n  name: 'RefsInScript',\n  props: ['initialValue'],\n  setup(props) {\n    const count = ref(0)\n    const maybeRef = ref(10)\n    const rawValue = 20\n    \n    const fromProps = toRef(props, 'initialValue')\n    \n    function checkRef(value) {\n      return isRef(value)\n    }\n    \n    function getValue(value) {\n      return unref(value)\n    }\n    \n    return {\n      count,\n      maybeRef,\n      rawValue,\n      fromProps,\n      checkRef,\n      getValue\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_import_composition_api_advanced",
-    "sfc": "<script>\nimport { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'\n\nexport default {\n  name: 'AdvancedCompositionInScript',\n  setup() {\n    const count = ref(0)\n    const instance = getCurrentInstance()\n    \n    const doubleCount = computed(() => count.value * 2)\n    \n    const tripleCount = computed({\n      get: () => count.value * 3,\n      set: (val) => {\n        count.value = Math.floor(val / 3)\n      }\n    })\n    \n    async function incrementAndWait() {\n      count.value++\n      await nextTick()\n      console.log('DOM updated')\n    }\n    \n    watch(count, (newVal, oldVal) => {\n      console.log(`Count changed: ${oldVal} -> ${newVal}`)\n    })\n    \n    return {\n      count,\n      doubleCount,\n      tripleCount,\n      incrementAndWait,\n      instance\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_error",
-    "sfc": "<script>\nexport default {\n  name: 'FirstDefault'\n}\n\nexport default {\n  name: 'SecondDefault'\n}\n</script>"
-  },
-  {
-    "name": "script_export_default_and_setup_error",
-    "sfc": "<script>\nexport default {\n  name: 'ComponentWithSetup',\n  setup() {\n    return { message: 'hello' }\n  }\n}\n\nexport default {\n  name: 'AnotherDefault'\n}\n</script>"
-  },
-  {
-    "name": "script_export_default_mixed_options_error",
-    "sfc": "<script>\nexport default {\n  name: 'FirstComponent',\n  data() {\n    return { count: 0 }\n  }\n}\n\nexport default {\n  name: 'SecondComponent',\n  props: ['message']\n}\n</script>"
-  },
-  {
-    "name": "script_export_default_same_file_error",
-    "sfc": "<script>\nconst firstConfig = {\n  name: 'FirstConfig',\n  template: '<div>First</div>'\n}\n\nconst secondConfig = {\n  name: 'SecondConfig',\n  template: '<div>Second</div>'\n}\n\nexport default firstConfig\nexport default secondConfig\n</script>"
-  },
-  {
-    "name": "script_export_default_separated_error",
-    "sfc": "<script>\nexport default {\n  name: 'Component1'\n}\n\nconst someCode = 123\n\nexport default {\n  name: 'Component2'\n}\n</script>"
-  },
-  {
-    "name": "script_export_default_with_composition_api_error",
-    "sfc": "<script>\nimport { ref } from 'vue'\n\nexport default {\n  name: 'FirstComposition',\n  setup() {\n    const count = ref(0)\n    return { count }\n  }\n}\n\nexport default {\n  name: 'SecondComposition',\n  setup() {\n    const message = ref('hello')\n    return { message }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_export_default_conditional_error",
-    "sfc": "<script>\nconst isDev = process.env.NODE_ENV === 'development'\n\nexport default isDev ? {\n  name: 'DevComponent',\n  template: '<div>Development</div>'\n} : {\n  name: 'ProdComponent',\n  template: '<div>Production</div>'\n}\n\nexport default {\n  name: 'FallbackComponent'\n}\n</script>"
-  },
-  {
-    "name": "script_export_default_async_error",
-    "sfc": "<script>\nexport default {\n  name: 'SyncComponent'\n}\n\nasync function loadConfig() {\n  return { name: 'AsyncComponent' }\n}\n\nexport default await loadConfig()\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_ts_error",
-    "sfc": "<script lang=\"ts\">\nimport { defineComponent } from 'vue'\n\nexport default defineComponent({\n  name: 'FirstTsComponent',\n  props: {\n    message: String\n  },\n  setup(props) {\n    return { greeting: 'Hello ' + props.message }\n  }\n})\n\nexport default defineComponent({\n  name: 'SecondTsComponent',\n  data() {\n    return { count: 0 }\n  }\n})\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_ts_interface_error",
-    "sfc": "<script lang=\"ts\">\ninterface ComponentProps {\n  title: string\n  count?: number\n}\n\nexport default {\n  name: 'TsInterfaceComponent1',\n  props: {\n    title: String,\n    count: Number\n  } as ComponentProps\n}\n\nexport default {\n  name: 'TsInterfaceComponent2',\n  template: '<div>{{ title }}</div>'\n}\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_ts_type_alias_error",
-    "sfc": "<script lang=\"ts\">\ntype User = {\n  id: number\n  name: string\n}\n\nexport default {\n  name: 'TsTypeComponent1',\n  setup() {\n    const user: User = { id: 1, name: 'John' }\n    return { user }\n  }\n}\n\nexport default {\n  name: 'TsTypeComponent2',\n  props: {\n    user: Object as () => User\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_ts_generic_error",
-    "sfc": "<script lang=\"ts\">\nimport { ref, Ref } from 'vue'\n\nfunction createComponent<T>(name: string, initialValue: T) {\n  return {\n    name,\n    setup() {\n      const value: Ref<T> = ref(initialValue)\n      return { value }\n    }\n  }\n}\n\nexport default createComponent('GenericComponent1', 'hello')\nexport default createComponent('GenericComponent2', 42)\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_ts_enum_error",
-    "sfc": "<script lang=\"ts\">\nenum ComponentType {\n  PRIMARY = 'primary',\n  SECONDARY = 'secondary'\n}\n\nexport default {\n  name: 'TsEnumComponent1',\n  setup() {\n    const type = ComponentType.PRIMARY\n    return { type }\n  }\n}\n\nexport default {\n  name: 'TsEnumComponent2',\n  data() {\n    return {\n      availableTypes: Object.values(ComponentType)\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_ts_union_error",
-    "sfc": "<script lang=\"ts\">\ntype Status = 'loading' | 'success' | 'error'\n\nexport default {\n  name: 'TsUnionComponent1',\n  props: {\n    status: String as () => Status\n  }\n}\n\nexport default {\n  name: 'TsUnionComponent2',\n  setup() {\n    const currentStatus: Status = 'success'\n    return { currentStatus }\n  }\n}\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_ts_decorator_error",
-    "sfc": "<script lang=\"ts\">\nimport { Vue, Component, Prop } from 'vue-property-decorator'\n\n@Component({\n  name: 'TsDecoratorComponent1'\n})\nexport default class FirstComponent extends Vue {\n  @Prop(String) message!: string\n}\n\n@Component({\n  name: 'TsDecoratorComponent2'\n})\nexport default class SecondComponent extends Vue {\n  @Prop(Number) count!: number\n}\n</script>"
-  },
-  {
-    "name": "script_multiple_export_default_ts_module_error",
-    "sfc": "<script lang=\"ts\">\nnamespace ComponentNamespace {\n  export interface Props {\n    id: number\n    label: string\n  }\n}\n\nexport default {\n  name: 'TsModuleComponent1',\n  props: {\n    id: Number,\n    label: String\n  } as ComponentNamespace.Props\n}\n\nexport default {\n  name: 'TsModuleComponent2',\n  template: '<div>{{ label }}</div>'\n}\n</script>"
-  },
-  {
-    "name": "user_import_script_setup_basic",
-    "sfc": "<script setup lang=\"ts\">\n// 用户自定义导入\nimport { formatDate } from '@/utils/format'\nimport { UserService } from '@/services/user'\nimport type { UserProfile, UserSettings } from '@/types/user'\nimport { useAuth } from '@/composables/useAuth'\nimport { API_ENDPOINTS } from '@/config/api'\n\n// 使用导入的功能\nconst userService = new UserService()\nconst { user, isLoggedIn } = useAuth()\nconst currentDate = formatDate(new Date())\n\nconst userProfile = ref<UserProfile | null>(null)\nconst settings = reactive<UserSettings>({\n  theme: 'light',\n  language: 'zh-CN'\n})\n\nasync function loadUserData() {\n  if (isLoggedIn.value) {\n    userProfile.value = await userService.getProfile(API_ENDPOINTS.user.profile)\n  }\n}\n\nloadUserData()\n</script>"
-  },
-  {
-    "name": "user_import_script_setup_mixed",
-    "sfc": "<script setup lang=\"ts\">\n// 用户导入 - 混合不同类型\nimport { ref, computed } from 'vue'\nimport { debounce } from 'lodash-es'\nimport { useRouter, useRoute } from 'vue-router'\nimport { useStore } from '@/store'\nimport { validateEmail, validatePhone } from '@/utils/validation'\nimport { ElMessage } from 'element-plus'\nimport type { FormRules, FormInstance } from 'element-plus'\n\nconst router = useRouter()\nconst route = useRoute()\nconst store = useStore()\n\nconst email = ref('')\nconst phone = ref('')\n\nconst isValidEmail = computed(() => validateEmail(email.value))\nconst isValidPhone = computed(() => validatePhone(phone.value))\n\nconst debouncedSearch = debounce((query: string) => {\n  store.dispatch('search', query)\n}, 300)\n\nfunction showMessage(message: string, type: 'success' | 'error' = 'success') {\n  ElMessage({\n    message,\n    type,\n    duration: 3000\n  })\n}\n</script>"
-  },
-  {
-    "name": "user_import_script_setup_vue_use",
-    "sfc": "<script setup lang=\"ts\">\n// 用户导入 VueUse 库\nimport { useLocalStorage, useDark, useToggle, useDebounce, useThrottle } from '@vueuse/core'\nimport { useAxios } from '@vueuse/integrations/useAxios'\n\n// 本地存储\nconst userPreferences = useLocalStorage('user-preferences', {\n  theme: 'light',\n  fontSize: 14,\n  sidebarCollapsed: false\n})\n\n// 暗黑模式\nconst isDark = useDark()\nconst toggleDark = useToggle(isDark)\n\n// 防抖和节流\nconst searchQuery = ref('')\nconst debouncedQuery = useDebounce(searchQuery, 500)\nconst throttledQuery = useThrottle(searchQuery, 1000)\n\n// HTTP 请求\nconst { data, error, isLoading } = useAxios('/api/users', {\n  method: 'GET'\n})\n\nwatch(debouncedQuery, (newQuery) => {\n  console.log('搜索:', newQuery)\n})\n</script>"
-  },
-  {
-    "name": "user_import_script_normal_basic",
-    "sfc": "<script lang=\"ts\">\n// 普通 script 中的用户导入\nimport { formatCurrency } from '@/utils/currency'\nimport { ProductService } from '@/services/product'\nimport type { Product, CartItem } from '@/types/commerce'\nimport { useCart } from '@/composables/useCart'\nimport { EVENT_BUS } from '@/utils/eventBus'\n\nexport default {\n  name: 'ProductList',\n  components: {\n    ProductCard: () => import('@/components/ProductCard.vue')\n  },\n  setup() {\n    const productService = new ProductService()\n    const { cart, addToCart } = useCart()\n    \n    const products = ref<Product[]>([])\n    const loading = ref(false)\n    \n    const totalValue = computed(() => {\n      return products.value.reduce((sum, product) => {\n        return sum + product.price\n      }, 0)\n    })\n    \n    const formattedTotal = computed(() => {\n      return formatCurrency(totalValue.value)\n    })\n    \n    async function loadProducts() {\n      loading.value = true\n      try {\n        products.value = await productService.getProducts()\n        EVENT_BUS.emit('products-loaded', products.value.length)\n      } finally {\n        loading.value = false\n      }\n    }\n    \n    function handleAddToCart(product: Product) {\n      const cartItem: CartItem = {\n        id: product.id,\n        name: product.name,\n        price: product.price,\n        quantity: 1\n      }\n      addToCart(cartItem)\n    }\n    \n    onMounted(() => {\n      loadProducts()\n    })\n    \n    return {\n      products,\n      cart,\n      loading,\n      formattedTotal,\n      handleAddToCart,\n      loadProducts\n    }\n  }\n}\n</script>"
-  },
-  {
-    "name": "user_import_script_normal_mixed",
-    "sfc": "<script lang=\"ts\">\n// 普通 script 中的复杂用户导入\nimport { ref, computed, watch, nextTick } from 'vue'\nimport { useQuasar } from 'quasar'\nimport { useI18n } from 'vue-i18n'\nimport { dayjs } from 'dayjs'\nimport { utc } from 'dayjs/plugin/utc'\nimport { timezone } from 'dayjs/plugin/timezone'\nimport { Chart, registerables } from 'chart.js'\nimport { generateReport } from '@/utils/report'\nimport { exportToPDF } from '@/utils/export'\nimport type { ReportData, ChartConfig } from '@/types/report'\n\n// 注册 Day.js 插件\ndayjs.extend(utc)\ndayjs.extend(timezone)\n\n// 注册 Chart.js\nChart.register(...registerables)\n\nexport default {\n  name: 'ReportDashboard',\n  props: {\n    reportId: {\n      type: String,\n      required: true\n    },\n    dateRange: {\n      type: Object,\n      default: () => ({\n        start: dayjs().subtract(30, 'day').format('YYYY-MM-DD'),\n        end: dayjs().format('YYYY-MM-DD')\n      })\n    }\n  },\n  setup(props) {\n    const $q = useQuasar()\n    const { t, locale } = useI18n()\n    \n    const reportData = ref<ReportData | null>(null)\n    const chartInstance = ref<Chart | null>(null)\n    const isGenerating = ref(false)\n    \n    const formattedDateRange = computed(() => {\n      const start = dayjs(props.dateRange.start).locale(locale.value)\n      const end = dayjs(props.dateRange.end).locale(locale.value)\n      return `${start.format('LL')} - ${end.format('LL')}`\n    })\n    \n    const chartConfig = computed<ChartConfig>(() => ({\n      type: 'line',\n      data: reportData.value?.chartData || {},\n      options: {\n        responsive: true,\n        plugins: {\n          title: {\n            display: true,\n            text: t('reports.chart.title')\n          }\n        }\n      }\n    }))\n    \n    async function generateReportData() {\n      isGenerating.value = true\n      try {\n        reportData.value = await generateReport(props.reportId, props.dateRange)\n        await nextTick()\n        renderChart()\n      } catch (error) {\n        $q.notify({\n          type: 'negative',\n          message: t('reports.error.generationFailed')\n        })\n      } finally {\n        isGenerating.value = false\n      }\n    }\n    \n    function renderChart() {\n      const ctx = document.getElementById('report-chart') as HTMLCanvasElement\n      if (ctx) {\n        chartInstance.value = new Chart(ctx, chartConfig.value)\n      }\n    }\n    \n    async function exportReport() {\n      if (!reportData.value) return\n      \n      try {\n        await exportToPDF(reportData.value, {\n          title: t('reports.export.title'),\n          dateRange: formattedDateRange.value\n        })\n        $q.notify({\n          type: 'positive',\n          message: t('reports.export.success')\n        })\n      } catch (error) {\n        $q.notify({\n          type: 'negative',\n          message: t('reports.export.failed')\n        })\n      }\n    }\n    \n    watch(() => props.reportId, () => {\n      generateReportData()\n    }, { immediate: true })\n    \n    return {\n      reportData,\n      isGenerating,\n      formattedDateRange,\n      chartConfig,\n      generateReportData,\n      exportReport\n    }\n  }\n}\n</script>"
-  }
-  ,
-  {
-    "name": "user_import_script_setup_namespace_vue",
-    "sfc": "<script setup lang=\"ts\">\nimport * as vue from 'vue'\nconst count = vue.ref(0)\n</script>"
-  },
-  {
-    "name": "user_import_script_setup_default_import",
-    "sfc": "<script setup lang=\"ts\">\nimport dayjs from 'dayjs'\nconst now = dayjs()\n</script>"
-  },
-  {
-    "name": "user_import_script_setup_type_only",
-    "sfc": "<script setup lang=\"ts\">\nimport type { Component } from 'vue'\nlet c: Component | null = null\n</script>"
-  },
-  {
-    "name": "user_import_script_setup_side_effect",
-    "sfc": "<script setup lang=\"ts\">\nimport 'reflect-metadata'\nconst ok = true\n</script>"
-  },
-  {
-    "name": "user_import_script_normal_namespace_vue",
-    "sfc": "<script lang=\"ts\">\nimport * as vue from 'vue'\nimport dayjs from 'dayjs'\nexport default {\n  name: 'NsVue',\n  mounted() {\n    const now = dayjs()\n    const c = vue.ref(1)\n  }\n}\n</script>"
-  },
-  {
-    "name": "user_import_script_normal_side_effect",
-    "sfc": "<script lang=\"ts\">\nimport 'reflect-metadata'\nexport default { name: 'SideEffect' }\n</script>"
-  }
+ {
+  "name": "defineProps_runtime",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ msg: String, count: { type: Number, default: 0 } })\n</script>"
+ },
+ {
+  "name": "defineProps_runtime_array",
+  "sfc": "<script setup>\nconst props = defineProps(['msg','count'])\n</script>"
+ },
+ {
+  "name": "defineProps_runtime_required",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ count: { type: Number, required: true } })\n</script>"
+ },
+ {
+  "name": "defineProps_runtime_validator",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ count: { type: Number, validator: (v:number)=> v >= 0 } })\n</script>"
+ },
+ {
+  "name": "defineProps_runtime_default_fn",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ items: { type: Array, default: ()=> [] } })\n</script>"
+ },
+ {
+  "name": "defineProps_runtime_boolean_default",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps({ enabled: { type: Boolean, default: true } })\n</script>"
+ },
+ {
+  "name": "defineProps_ts_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ msg: string; count?: number }>()\n</script>"
+ },
+ {
+  "name": "defineProps_ts_destructure",
+  "sfc": "<script setup lang=\"ts\">\nconst { msg = 'hi', count = 1 } = defineProps<{ msg: string; count?: number }>()\n</script>"
+ },
+ {
+  "name": "defineProps_ts_union",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ id: string | number; active?: boolean }>()\n</script>"
+ },
+ {
+  "name": "defineProps_ts_array_object",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ items: string[]; config?: { title: string } }>()\n</script>"
+ },
+ {
+  "name": "defineProps_ts_nested",
+  "sfc": "<script setup lang=\"ts\">\nconst props = defineProps<{ user: { name: string; roles: string[] } }>()\n</script>"
+ },
+ {
+  "name": "defineProps_ts_literal_union_destructure",
+  "sfc": "<script setup lang=\"ts\">\nconst { size = 'medium' } = defineProps<{ size: 'small' | 'medium' | 'large' }>()\n</script>"
+ },
+ {
+  "name": "withDefaults_typed_destructure",
+  "sfc": "<script setup lang=\"ts\">\nconst { msg, count } = withDefaults(defineProps<{ msg?: string; count?: number }>(), { msg: 'hi', count: 1 })\n</script>"
+ },
+ {
+  "name": "defineEmits_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits(['update','remove'])\nfunction onUpdate(id:number){ emit('update', id) }\n</script>"
+ },
+ {
+  "name": "defineEmits_object_validator",
+  "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits({ submit(payload: { id: number }) { return true } })\nemit('submit', { id: 1 })\n</script>"
+ },
+ {
+  "name": "defineEmits_object_multi",
+  "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits({ save(v: { id: number }) { return true }, cancel() { return true } })\nemit('save', { id: 1 })\nemit('cancel')\n</script>"
+ },
+ {
+  "name": "defineEmits_ts",
+  "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'update', id: number): void; (e:'remove'): void }>()\nemit('remove')\nemit('update', 1)\n</script>"
+ },
+ {
+  "name": "defineEmits_ts_object_payload",
+  "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'save', payload: { id: number }): void }>()\nemit('save', { id: 1 })\n</script>"
+ },
+ {
+  "name": "defineEmits_ts_union_payload",
+  "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e:'select', payload: { id: number } | { slug: string }): void }>()\nemit('select', { id: 1 })\n</script>"
+ },
+ {
+  "name": "defineExpose_basic",
+  "sfc": "<script setup lang=\"ts\">\nfunction inc(){}\nconst count = 0\ndefineExpose({ inc, count })\n</script>"
+ },
+ {
+  "name": "defineExpose_empty",
+  "sfc": "<script setup lang=\"ts\">\ndefineExpose()\n</script>"
+ },
+ {
+  "name": "defineSlots_ts",
+  "sfc": "<script setup lang=\"ts\">\nconst slots = defineSlots<{ default(props:{msg:string}): any }>()\n</script>"
+ },
+ {
+  "name": "defineSlots_basic",
+  "sfc": "<script setup>\nconst slots = defineSlots()\n</script>"
+ },
+ {
+  "name": "defineSlots_multi_ts",
+  "sfc": "<script setup lang=\"ts\">\nconst slots = defineSlots<{ header(): any; default(props:{msg:string}): any; footer(): any }>()\n</script>"
+ },
+ {
+  "name": "useSlots_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst slots = useSlots()\n</script>"
+ },
+ {
+  "name": "useAttrs_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst attrs = useAttrs()\n</script>"
+ },
+ {
+  "name": "useCssVars_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst color = 'red'\nuseCssVars(() => ({ color }))\n</script>"
+ },
+ {
+  "name": "useId_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst uid = useId()\n</script>"
+ },
+ {
+  "name": "useTemplateRef_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst input = useTemplateRef('input')\n</script>"
+ },
+ {
+  "name": "reactive_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { reactive } from 'vue'\nconst state = reactive({ count: 0 })\n</script>"
+ },
+ {
+  "name": "ref_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { ref } from 'vue'\nconst count = ref(0)\n</script>"
+ },
+ {
+  "name": "computed_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { ref, computed } from 'vue'\nconst count = ref(1)\nconst double = computed(() => count.value * 2)\n</script>"
+ },
+ {
+  "name": "watch_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { ref, watch } from 'vue'\nconst v = ref(0)\nwatch(v, (nv, ov) => {})\n</script>"
+ },
+ {
+  "name": "watchEffect_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { ref, watchEffect } from 'vue'\nconst v = ref(0)\nwatchEffect(() => { v.value })\n</script>"
+ },
+ {
+  "name": "onMounted_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onMounted } from 'vue'\nonMounted(() => {})\n</script>"
+ },
+ {
+  "name": "provide_inject_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { provide, inject } from 'vue'\nprovide('key', 1)\nconst injected = inject('key', 0)\n</script>"
+ },
+ {
+  "name": "getCurrentInstance_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { getCurrentInstance } from 'vue'\nconst inst = getCurrentInstance()\n</script>"
+ },
+ {
+  "name": "variables_basic",
+  "sfc": "<script setup>\nconst a = 1\nconst b = true\n</script>"
+ },
+ {
+  "name": "variables_let",
+  "sfc": "<script setup>\nlet a = 1\n</script>"
+ },
+ {
+  "name": "variables_object",
+  "sfc": "<script setup>\nconst obj = { x: 1, ok: true }\n</script>"
+ },
+ {
+  "name": "variables_destructure",
+  "sfc": "<script setup>\nconst { x, ok = true } = { x: 1, ok: true }\n</script>"
+ },
+ {
+  "name": "function_basic",
+  "sfc": "<script setup>\nfunction foo(){ return 1 }\n</script>"
+ },
+ {
+  "name": "topLevelAwait_basic",
+  "sfc": "<script setup>\nconst res = await Promise.resolve(1)\n</script>"
+ },
+ {
+  "name": "import_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { ref, isRef } from 'vue'\nconst a = ref(1)\nconst ok = isRef(a)\n</script>"
+ },
+ {
+  "name": "export_named_basic",
+  "sfc": "<script setup>\nexport const api = 1\n</script>"
+ },
+ {
+  "name": "for_loop_basic",
+  "sfc": "<script setup>\nfor (let i = 0; i < 3; i++) { }\n</script>"
+ },
+ {
+  "name": "try_catch_basic",
+  "sfc": "<script setup>\ntry { throw new Error('x') } catch (e) { } finally { }\n</script>"
+ },
+ {
+  "name": "async_function_basic",
+  "sfc": "<script setup>\nasync function load(){ return 1 }\n</script>"
+ },
+ {
+  "name": "class_basic",
+  "sfc": "<script setup>\nclass X { a = 1 }\nconst x = new X()\n</script>"
+ },
+ {
+  "name": "export_default_error",
+  "sfc": "<script setup>\nexport default { name: 'X' }\n</script>"
+ },
+ {
+  "name": "type_alias_basic",
+  "sfc": "<script setup lang=\"ts\">\ntype User = { id: number; name: string }\n</script>"
+ },
+ {
+  "name": "interface_basic",
+  "sfc": "<script setup lang=\"ts\">\ninterface Point { x: number; y: number }\n</script>"
+ },
+ {
+  "name": "enum_basic",
+  "sfc": "<script setup lang=\"ts\">\nenum Color { Red, Green }\n</script>"
+ },
+ {
+  "name": "import_type_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport type { Component } from 'vue'\nlet c: Component | null = null\n</script>"
+ },
+ {
+  "name": "export_type_basic",
+  "sfc": "<script setup lang=\"ts\">\nexport type Result = { ok: boolean }\n</script>"
+ },
+ {
+  "name": "console_basic",
+  "sfc": "<script setup>\nconsole.log('hello')\n</script>"
+ },
+ {
+  "name": "onBeforeMount_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onBeforeMount } from 'vue'\nonBeforeMount(() => {})\n</script>"
+ },
+ {
+  "name": "onUpdated_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onUpdated } from 'vue'\nonUpdated(() => {})\n</script>"
+ },
+ {
+  "name": "onUnmounted_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onUnmounted } from 'vue'\nonUnmounted(() => {})\n</script>"
+ },
+ {
+  "name": "onErrorCaptured_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onErrorCaptured } from 'vue'\nonErrorCaptured(() => false)\n</script>"
+ },
+ {
+  "name": "onRenderTracked_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onRenderTracked } from 'vue'\nonRenderTracked(() => {})\n</script>"
+ },
+ {
+  "name": "onRenderTriggered_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onRenderTriggered } from 'vue'\nonRenderTriggered(() => {})\n</script>"
+ },
+ {
+  "name": "nextTick_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { nextTick } from 'vue'\nawait nextTick()\n</script>"
+ },
+ {
+  "name": "effectScope_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { effectScope } from 'vue'\nconst scope = effectScope()\nscope.stop()\n</script>"
+ },
+ {
+  "name": "getCurrentScope_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { getCurrentScope } from 'vue'\nconst scope = getCurrentScope()\n</script>"
+ },
+ {
+  "name": "onScopeDispose_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onScopeDispose } from 'vue'\nonScopeDispose(() => {})\n</script>"
+ },
+ {
+  "name": "shallowRef_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { shallowRef } from 'vue'\nconst a = shallowRef(1)\n</script>"
+ },
+ {
+  "name": "shallowReactive_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { shallowReactive } from 'vue'\nconst obj = shallowReactive({ a: 1 })\n</script>"
+ },
+ {
+  "name": "readonly_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { readonly, reactive } from 'vue'\nconst s = readonly(reactive({ a: 1 }))\n</script>"
+ },
+ {
+  "name": "toRefs_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { reactive, toRefs } from 'vue'\nconst s = reactive({ a: 1, b: 2 })\nconst { a, b } = toRefs(s)\n</script>"
+ },
+ {
+  "name": "toRef_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { reactive, toRef } from 'vue'\nconst s = reactive({ a: 1 })\nconst a = toRef(s, 'a')\n</script>"
+ },
+ {
+  "name": "unref_isRef_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { ref, unref, isRef } from 'vue'\nconst a = ref(1)\nconst v = unref(a)\nconst ok = isRef(a)\n</script>"
+ },
+ {
+  "name": "watchPostEffect_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { ref, watchPostEffect } from 'vue'\nconst v = ref(0)\nwatchPostEffect(() => { v.value })\n</script>"
+ },
+ {
+  "name": "watchSyncEffect_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { ref, watchSyncEffect } from 'vue'\nconst v = ref(0)\nwatchSyncEffect(() => { v.value })\n</script>"
+ },
+ {
+  "name": "onBeforeUpdate_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onBeforeUpdate } from 'vue'\nonBeforeUpdate(() => {})\n</script>"
+ },
+ {
+  "name": "onActivated_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onActivated } from 'vue'\nonActivated(() => {})\n</script>"
+ },
+ {
+  "name": "onDeactivated_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onDeactivated } from 'vue'\nonDeactivated(() => {})\n</script>"
+ },
+ {
+  "name": "customRef_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { customRef } from 'vue'\nconst r = customRef((track, trigger) => ({ get(){ track(); return 1 }, set(v){ trigger() } }))\n</script>"
+ },
+ {
+  "name": "triggerRef_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { shallowRef, triggerRef } from 'vue'\nconst r = shallowRef(1)\ntriggerRef(r)\n</script>"
+ },
+ {
+  "name": "markRaw_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { markRaw } from 'vue'\nconst obj = markRaw({ a: 1 })\n</script>"
+ },
+ {
+  "name": "isReactive_isReadonly_isProxy_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { reactive, readonly, isReactive, isReadonly, isProxy } from 'vue'\nconst a = reactive({})\nconst b = readonly({})\nconst ra = isReactive(a)\nconst ro = isReadonly(b)\nconst px = isProxy(a)\n</script>"
+ },
+ {
+  "name": "toValue_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { toValue, ref } from 'vue'\nconst a = ref(1)\nconst v = toValue(a)\n</script>"
+ },
+ {
+  "name": "defineAsyncComponent_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { defineAsyncComponent } from 'vue'\nconst Comp = defineAsyncComponent(() => Promise.resolve({}))\n</script>"
+ },
+ {
+  "name": "generic_function_basic",
+  "sfc": "<script setup lang=\"ts\">\nfunction id<T>(x: T): T { return x }\nconst n = id(1)\n</script>"
+ },
+ {
+  "name": "conditional_types_basic",
+  "sfc": "<script setup lang=\"ts\">\ntype IsString<T> = T extends string ? true : false\nconst r: IsString<'a'> = true\n</script>"
+ },
+ {
+  "name": "intersection_types_basic",
+  "sfc": "<script setup lang=\"ts\">\ntype A = { a: number }\ntype B = { b: string }\ntype C = A & B\nconst c: C = { a: 1, b: 'x' }\n</script>"
+ },
+ {
+  "name": "satisfies_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst conf = { a: 1 } satisfies { a: number }\n</script>"
+ },
+ {
+  "name": "as_const_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst cfg = { a: 1 } as const\n</script>"
+ },
+ {
+  "name": "import_dynamic_basic",
+  "sfc": "<script setup lang=\"ts\">\nconst mod = await import('./nonexistent')\n</script>"
+ },
+ {
+  "name": "defineProps_duplicate_error",
+  "sfc": "<script setup lang=\"ts\">\nconst p1 = defineProps<{ a: number }>()\nconst p2 = defineProps<{ b: string }>()\n</script>"
+ },
+ {
+  "name": "defineOptions_duplicate_error",
+  "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'X1' })\ndefineOptions({ name: 'X2' })\n</script>"
+ },
+ {
+  "name": "onServerPrefetch_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { onServerPrefetch } from 'vue'\nonServerPrefetch(async () => {})\n</script>"
+ },
+ {
+  "name": "getCurrentInstance_emit_basic",
+  "sfc": "<script setup lang=\"ts\">\nimport { getCurrentInstance } from 'vue'\nconst inst = getCurrentInstance()\ninst?.emit?.('change')\n</script>"
+ },
+ {
+  "name": "class_private_field_basic",
+  "sfc": "<script setup>\nclass Y { #a = 1 }\nconst y = new Y()\n</script>"
+ },
+ {
+  "name": "symbol_bigint_importmeta_process_basic",
+  "sfc": "<script setup>\nconst S = Symbol('k')\nconst big = 1n\nconst env = import.meta.env\nconst nodeEnv = process.env.NODE_ENV\n</script>"
+ },
+ {
+  "name": "defineProps_type_and_runtime_error",
+  "sfc": "<script setup lang=\"ts\">\nconst p = defineProps<{ a: number }>({ a: Number })\n</script>"
+ },
+ {
+  "name": "withDefaults_non_call_error",
+  "sfc": "<script setup lang=\"ts\">\nconst foo = {} as any\nconst { a } = withDefaults(foo, { a: 1 })\n</script>"
+ },
+ {
+  "name": "withDefaults_runtime_error",
+  "sfc": "<script setup lang=\"ts\">\nconst { a } = withDefaults(defineProps({ a: Number }), { a: 1 })\n</script>"
+ },
+ {
+  "name": "defineEmits_duplicate_error",
+  "sfc": "<script setup lang=\"ts\">\nconst e1 = defineEmits(['a'])\nconst e2 = defineEmits(['b'])\n</script>"
+ },
+ {
+  "name": "defineEmits_type_mixed_error",
+  "sfc": "<script setup lang=\"ts\">\nconst emit = defineEmits<{ (e: 'a'): void; a: any }>()\n</script>"
+ },
+ {
+  "name": "defineModel_duplicate_name_error",
+  "sfc": "<script setup lang=\"ts\">\nconst a = defineModel<number>('count')\nconst b = defineModel<number>('count')\n</script>"
+ },
+ {
+  "name": "defineOptions_type_args_error",
+  "sfc": "<script setup lang=\"ts\">\ndefineOptions<{}>({ name: 'X' })\n</script>"
+ },
+ {
+  "name": "defineSlots_invalid_args_error",
+  "sfc": "<script setup lang=\"ts\">\ndefineSlots({})\n</script>"
+ },
+ {
+  "name": "defineModel_default",
+  "sfc": "<script setup lang=\"ts\">\nconst model = defineModel<string>()\n</script>"
+ },
+ {
+  "name": "defineModel_default_runtime_type",
+  "sfc": "<script setup>\nconst model = defineModel({ type: String })\n</script>"
+ },
+ {
+  "name": "defineModel_named",
+  "sfc": "<script setup lang=\"ts\">\nconst count = defineModel<number>('count', { default: 0 })\n</script>"
+ },
+ {
+  "name": "defineModel_local",
+  "sfc": "<script setup lang=\"ts\">\nconst count = defineModel<number>('count', { local: true })\n</script>"
+ },
+ {
+  "name": "defineModel_required",
+  "sfc": "<script setup lang=\"ts\">\nconst visible = defineModel<boolean>('visible', { required: true })\n</script>"
+ },
+ {
+  "name": "defineModel_get_set",
+  "sfc": "<script setup lang=\"ts\">\nconst value = defineModel<number>('value', { get: (v)=> v, set: (v)=> Math.max(0, v) })\n</script>"
+ },
+ {
+  "name": "defineModel_multiple",
+  "sfc": "<script setup lang=\"ts\">\nconst title = defineModel<string>()\nconst checked = defineModel<boolean>('checked')\n</script>"
+ },
+ {
+  "name": "defineModel_named_default_fn",
+  "sfc": "<script setup lang=\"ts\">\nconst config = defineModel<{ a: number }>('config', { default: () => ({ a: 1 }) })\n</script>"
+ },
+ {
+  "name": "defineOptions_basic",
+  "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'MyComponent', inheritAttrs: false })\n</script>"
+ },
+ {
+  "name": "defineOptions_extends",
+  "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'Extended', extends: { props: { a: String } } })\n</script>"
+ },
+ {
+  "name": "defineOptions_components",
+  "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'WithComp', components: { A: {} } })\n</script>"
+ },
+ {
+  "name": "defineOptions_directives",
+  "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'WithDir', directives: { focus: {} } })\n</script>"
+ },
+ {
+  "name": "defineOptions_props_error",
+  "sfc": "<script setup lang=\"ts\">\ndefineOptions({ name: 'OptsPropsErr', props: { a: String } })\n</script>"
+ },
+ {
+  "name": "script_and_script_setup_basic",
+  "sfc": "<script>\nexport default {\n  name: 'MyComponent',\n  inheritAttrs: false\n}\n</script>\n\n<script setup>\nconst count = ref(0)\n</script>"
+ },
+ {
+  "name": "script_and_script_setup_props_emits",
+  "sfc": "<script>\nexport default {\n  props: {\n    title: String,\n    count: {\n      type: Number,\n      default: 0\n    }\n  },\n  emits: ['update', 'delete']\n}\n</script>\n\n<script setup>\nconst props = defineProps(['title', 'count'])\nconst emit = defineEmits(['update', 'delete'])\n</script>"
+ },
+ {
+  "name": "script_and_script_setup_typescript",
+  "sfc": "<script lang=\"ts\">\nimport type { PropType } from 'vue'\n\ninterface User {\n  id: number\n  name: string\n}\n\nexport default {\n  name: 'UserComponent',\n  props: {\n    user: {\n      type: Object as PropType<User>,\n      required: true\n    }\n  }\n}\n</script>\n\n<script setup lang=\"ts\">\nimport { ref } from 'vue'\n\nconst props = defineProps<{\n  user: User\n}>()\n\nconst localCount = ref(0)\n</script>"
+ },
+ {
+  "name": "script_and_script_setup_mixed_features",
+  "sfc": "<script>\nexport default {\n  name: 'MixedComponent',\n  data() {\n    return {\n      legacyData: 'legacy'\n    }\n  },\n  computed: {\n    legacyComputed() {\n      return this.legacyData + ' computed'\n    }\n  },\n  methods: {\n    legacyMethod() {\n      console.log('legacy method')\n    }\n  }\n}\n</script>\n\n<script setup>\nimport { ref, computed } from 'vue'\n\nconst setupCount = ref(0)\nconst setupComputed = computed(() => setupCount.value * 2)\n\nfunction setupMethod() {\n  console.log('setup method')\n}\n</script>"
+ },
+ {
+  "name": "script_and_script_setup_import_export",
+  "sfc": "<script>\nimport { someUtil } from './utils'\n\nexport const sharedValue = 'shared'\n\nexport default {\n  name: 'ImportExportComponent'\n}\n</script>\n\n<script setup>\nimport { ref } from 'vue'\nimport { anotherUtil } from './another-utils'\n\nconst localValue = ref('local')\n\nexport { localValue }\n</script>"
+ },
+ {
+  "name": "script_import_composition_api_basic",
+  "sfc": "<script>\nimport { ref, computed, onMounted } from 'vue'\n\nexport default {\n  name: 'CompositionInScript',\n  setup() {\n    const count = ref(0)\n    const doubled = computed(() => count.value * 2)\n    \n    onMounted(() => {\n      console.log('component mounted')\n    })\n    \n    function increment() {\n      count.value++\n    }\n    \n    return {\n      count,\n      doubled,\n      increment\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_import_composition_api_reactive",
+  "sfc": "<script>\nimport { reactive, computed, watch } from 'vue'\n\nexport default {\n  name: 'ReactiveInScript',\n  setup() {\n    const state = reactive({\n      name: '',\n      age: 0\n    })\n    \n    const description = computed(() => {\n      return `${state.name} is ${state.age} years old`\n    })\n    \n    watch(() => state.age, (newAge, oldAge) => {\n      console.log(`age changed from ${oldAge} to ${newAge}`)\n    })\n    \n    function updateProfile(name, age) {\n      state.name = name\n      state.age = age\n    }\n    \n    return {\n      state,\n      description,\n      updateProfile\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_import_composition_api_lifecycle",
+  "sfc": "<script>\nimport { ref, onMounted, onUpdated, onUnmounted, onBeforeMount } from 'vue'\n\nexport default {\n  name: 'LifecycleInScript',\n  setup() {\n    const message = ref('')\n    \n    onBeforeMount(() => {\n      message.value = 'before mount'\n    })\n    \n    onMounted(() => {\n      console.log('mounted')\n      message.value = 'mounted'\n    })\n    \n    onUpdated(() => {\n      console.log('updated')\n    })\n    \n    onUnmounted(() => {\n      console.log('unmounted')\n    })\n    \n    return {\n      message\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_import_composition_api_watch",
+  "sfc": "<script>\nimport { ref, watch, watchEffect } from 'vue'\n\nexport default {\n  name: 'WatchInScript',\n  setup() {\n    const count = ref(0)\n    const multiplier = ref(1)\n    const result = ref(0)\n    \n    watch([count, multiplier], ([newCount, newMultiplier]) => {\n      result.value = newCount * newMultiplier\n    })\n    \n    watchEffect(() => {\n      console.log(`Current count: ${count.value}`)\n    })\n    \n    function increment() {\n      count.value++\n    }\n    \n    function updateMultiplier(value) {\n      multiplier.value = value\n    }\n    \n    return {\n      count,\n      multiplier,\n      result,\n      increment,\n      updateMultiplier\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_import_composition_api_provide_inject",
+  "sfc": "<script>\nimport { ref, provide, inject } from 'vue'\n\nexport default {\n  name: 'ProvideInjectInScript',\n  setup() {\n    const theme = ref('light')\n    const user = inject('currentUser', ref({ name: 'Guest' }))\n    \n    provide('theme', theme)\n    provide('appConfig', {\n      version: '1.0.0',\n      apiUrl: 'https://api.example.com'\n    })\n    \n    function toggleTheme() {\n      theme.value = theme.value === 'light' ? 'dark' : 'light'\n    }\n    \n    return {\n      theme,\n      user,\n      toggleTheme\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_import_composition_api_refs",
+  "sfc": "<script>\nimport { ref, unref, isRef, toRef, toRefs } from 'vue'\n\nexport default {\n  name: 'RefsInScript',\n  props: ['initialValue'],\n  setup(props) {\n    const count = ref(0)\n    const maybeRef = ref(10)\n    const rawValue = 20\n    \n    const fromProps = toRef(props, 'initialValue')\n    \n    function checkRef(value) {\n      return isRef(value)\n    }\n    \n    function getValue(value) {\n      return unref(value)\n    }\n    \n    return {\n      count,\n      maybeRef,\n      rawValue,\n      fromProps,\n      checkRef,\n      getValue\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_import_composition_api_advanced",
+  "sfc": "<script>\nimport { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'\n\nexport default {\n  name: 'AdvancedCompositionInScript',\n  setup() {\n    const count = ref(0)\n    const instance = getCurrentInstance()\n    \n    const doubleCount = computed(() => count.value * 2)\n    \n    const tripleCount = computed({\n      get: () => count.value * 3,\n      set: (val) => {\n        count.value = Math.floor(val / 3)\n      }\n    })\n    \n    async function incrementAndWait() {\n      count.value++\n      await nextTick()\n      console.log('DOM updated')\n    }\n    \n    watch(count, (newVal, oldVal) => {\n      console.log(`Count changed: ${oldVal} -> ${newVal}`)\n    })\n    \n    return {\n      count,\n      doubleCount,\n      tripleCount,\n      incrementAndWait,\n      instance\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_error",
+  "sfc": "<script>\nexport default {\n  name: 'FirstDefault'\n}\n\nexport default {\n  name: 'SecondDefault'\n}\n</script>"
+ },
+ {
+  "name": "script_export_default_and_setup_error",
+  "sfc": "<script>\nexport default {\n  name: 'ComponentWithSetup',\n  setup() {\n    return { message: 'hello' }\n  }\n}\n\nexport default {\n  name: 'AnotherDefault'\n}\n</script>"
+ },
+ {
+  "name": "script_export_default_mixed_options_error",
+  "sfc": "<script>\nexport default {\n  name: 'FirstComponent',\n  data() {\n    return { count: 0 }\n  }\n}\n\nexport default {\n  name: 'SecondComponent',\n  props: ['message']\n}\n</script>"
+ },
+ {
+  "name": "script_export_default_same_file_error",
+  "sfc": "<script>\nconst firstConfig = {\n  name: 'FirstConfig',\n  template: '<div>First</div>'\n}\n\nconst secondConfig = {\n  name: 'SecondConfig',\n  template: '<div>Second</div>'\n}\n\nexport default firstConfig\nexport default secondConfig\n</script>"
+ },
+ {
+  "name": "script_export_default_separated_error",
+  "sfc": "<script>\nexport default {\n  name: 'Component1'\n}\n\nconst someCode = 123\n\nexport default {\n  name: 'Component2'\n}\n</script>"
+ },
+ {
+  "name": "script_export_default_with_composition_api_error",
+  "sfc": "<script>\nimport { ref } from 'vue'\n\nexport default {\n  name: 'FirstComposition',\n  setup() {\n    const count = ref(0)\n    return { count }\n  }\n}\n\nexport default {\n  name: 'SecondComposition',\n  setup() {\n    const message = ref('hello')\n    return { message }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_export_default_conditional_error",
+  "sfc": "<script>\nconst isDev = process.env.NODE_ENV === 'development'\n\nexport default isDev ? {\n  name: 'DevComponent',\n  template: '<div>Development</div>'\n} : {\n  name: 'ProdComponent',\n  template: '<div>Production</div>'\n}\n\nexport default {\n  name: 'FallbackComponent'\n}\n</script>"
+ },
+ {
+  "name": "script_export_default_async_error",
+  "sfc": "<script>\nexport default {\n  name: 'SyncComponent'\n}\n\nasync function loadConfig() {\n  return { name: 'AsyncComponent' }\n}\n\nexport default await loadConfig()\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_ts_error",
+  "sfc": "<script lang=\"ts\">\nimport { defineComponent } from 'vue'\n\nexport default defineComponent({\n  name: 'FirstTsComponent',\n  props: {\n    message: String\n  },\n  setup(props) {\n    return { greeting: 'Hello ' + props.message }\n  }\n})\n\nexport default defineComponent({\n  name: 'SecondTsComponent',\n  data() {\n    return { count: 0 }\n  }\n})\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_ts_interface_error",
+  "sfc": "<script lang=\"ts\">\ninterface ComponentProps {\n  title: string\n  count?: number\n}\n\nexport default {\n  name: 'TsInterfaceComponent1',\n  props: {\n    title: String,\n    count: Number\n  } as ComponentProps\n}\n\nexport default {\n  name: 'TsInterfaceComponent2',\n  template: '<div>{{ title }}</div>'\n}\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_ts_type_alias_error",
+  "sfc": "<script lang=\"ts\">\ntype User = {\n  id: number\n  name: string\n}\n\nexport default {\n  name: 'TsTypeComponent1',\n  setup() {\n    const user: User = { id: 1, name: 'John' }\n    return { user }\n  }\n}\n\nexport default {\n  name: 'TsTypeComponent2',\n  props: {\n    user: Object as () => User\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_ts_generic_error",
+  "sfc": "<script lang=\"ts\">\nimport { ref, Ref } from 'vue'\n\nfunction createComponent<T>(name: string, initialValue: T) {\n  return {\n    name,\n    setup() {\n      const value: Ref<T> = ref(initialValue)\n      return { value }\n    }\n  }\n}\n\nexport default createComponent('GenericComponent1', 'hello')\nexport default createComponent('GenericComponent2', 42)\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_ts_enum_error",
+  "sfc": "<script lang=\"ts\">\nenum ComponentType {\n  PRIMARY = 'primary',\n  SECONDARY = 'secondary'\n}\n\nexport default {\n  name: 'TsEnumComponent1',\n  setup() {\n    const type = ComponentType.PRIMARY\n    return { type }\n  }\n}\n\nexport default {\n  name: 'TsEnumComponent2',\n  data() {\n    return {\n      availableTypes: Object.values(ComponentType)\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_ts_union_error",
+  "sfc": "<script lang=\"ts\">\ntype Status = 'loading' | 'success' | 'error'\n\nexport default {\n  name: 'TsUnionComponent1',\n  props: {\n    status: String as () => Status\n  }\n}\n\nexport default {\n  name: 'TsUnionComponent2',\n  setup() {\n    const currentStatus: Status = 'success'\n    return { currentStatus }\n  }\n}\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_ts_decorator_error",
+  "sfc": "<script lang=\"ts\">\nimport { Vue, Component, Prop } from 'vue-property-decorator'\n\n@Component({\n  name: 'TsDecoratorComponent1'\n})\nexport default class FirstComponent extends Vue {\n  @Prop(String) message!: string\n}\n\n@Component({\n  name: 'TsDecoratorComponent2'\n})\nexport default class SecondComponent extends Vue {\n  @Prop(Number) count!: number\n}\n</script>"
+ },
+ {
+  "name": "script_multiple_export_default_ts_module_error",
+  "sfc": "<script lang=\"ts\">\nnamespace ComponentNamespace {\n  export interface Props {\n    id: number\n    label: string\n  }\n}\n\nexport default {\n  name: 'TsModuleComponent1',\n  props: {\n    id: Number,\n    label: String\n  } as ComponentNamespace.Props\n}\n\nexport default {\n  name: 'TsModuleComponent2',\n  template: '<div>{{ label }}</div>'\n}\n</script>"
+ },
+ {
+  "name": "user_import_script_setup_basic",
+  "sfc": "<script setup lang=\"ts\">\n// 用户自定义导入\nimport { formatDate } from '@/utils/format'\nimport { UserService } from '@/services/user'\nimport type { UserProfile, UserSettings } from '@/types/user'\nimport { useAuth } from '@/composables/useAuth'\nimport { API_ENDPOINTS } from '@/config/api'\n\n// 使用导入的功能\nconst userService = new UserService()\nconst { user, isLoggedIn } = useAuth()\nconst currentDate = formatDate(new Date())\n\nconst userProfile = ref<UserProfile | null>(null)\nconst settings = reactive<UserSettings>({\n  theme: 'light',\n  language: 'zh-CN'\n})\n\nasync function loadUserData() {\n  if (isLoggedIn.value) {\n    userProfile.value = await userService.getProfile(API_ENDPOINTS.user.profile)\n  }\n}\n\nloadUserData()\n</script>"
+ },
+ {
+  "name": "user_import_script_setup_mixed",
+  "sfc": "<script setup lang=\"ts\">\n// 用户导入 - 混合不同类型\nimport { ref, computed } from 'vue'\nimport { debounce } from 'lodash-es'\nimport { useRouter, useRoute } from 'vue-router'\nimport { useStore } from '@/store'\nimport { validateEmail, validatePhone } from '@/utils/validation'\nimport { ElMessage } from 'element-plus'\nimport type { FormRules, FormInstance } from 'element-plus'\n\nconst router = useRouter()\nconst route = useRoute()\nconst store = useStore()\n\nconst email = ref('')\nconst phone = ref('')\n\nconst isValidEmail = computed(() => validateEmail(email.value))\nconst isValidPhone = computed(() => validatePhone(phone.value))\n\nconst debouncedSearch = debounce((query: string) => {\n  store.dispatch('search', query)\n}, 300)\n\nfunction showMessage(message: string, type: 'success' | 'error' = 'success') {\n  ElMessage({\n    message,\n    type,\n    duration: 3000\n  })\n}\n</script>"
+ },
+ {
+  "name": "user_import_script_setup_vue_use",
+  "sfc": "<script setup lang=\"ts\">\n// 用户导入 VueUse 库\nimport { useLocalStorage, useDark, useToggle, useDebounce, useThrottle } from '@vueuse/core'\nimport { useAxios } from '@vueuse/integrations/useAxios'\n\n// 本地存储\nconst userPreferences = useLocalStorage('user-preferences', {\n  theme: 'light',\n  fontSize: 14,\n  sidebarCollapsed: false\n})\n\n// 暗黑模式\nconst isDark = useDark()\nconst toggleDark = useToggle(isDark)\n\n// 防抖和节流\nconst searchQuery = ref('')\nconst debouncedQuery = useDebounce(searchQuery, 500)\nconst throttledQuery = useThrottle(searchQuery, 1000)\n\n// HTTP 请求\nconst { data, error, isLoading } = useAxios('/api/users', {\n  method: 'GET'\n})\n\nwatch(debouncedQuery, (newQuery) => {\n  console.log('搜索:', newQuery)\n})\n</script>"
+ },
+ {
+  "name": "user_import_script_normal_basic",
+  "sfc": "<script lang=\"ts\">\n// 普通 script 中的用户导入\nimport { formatCurrency } from '@/utils/currency'\nimport { ProductService } from '@/services/product'\nimport type { Product, CartItem } from '@/types/commerce'\nimport { useCart } from '@/composables/useCart'\nimport { EVENT_BUS } from '@/utils/eventBus'\n\nexport default {\n  name: 'ProductList',\n  components: {\n    ProductCard: () => import('@/components/ProductCard.vue')\n  },\n  setup() {\n    const productService = new ProductService()\n    const { cart, addToCart } = useCart()\n    \n    const products = ref<Product[]>([])\n    const loading = ref(false)\n    \n    const totalValue = computed(() => {\n      return products.value.reduce((sum, product) => {\n        return sum + product.price\n      }, 0)\n    })\n    \n    const formattedTotal = computed(() => {\n      return formatCurrency(totalValue.value)\n    })\n    \n    async function loadProducts() {\n      loading.value = true\n      try {\n        products.value = await productService.getProducts()\n        EVENT_BUS.emit('products-loaded', products.value.length)\n      } finally {\n        loading.value = false\n      }\n    }\n    \n    function handleAddToCart(product: Product) {\n      const cartItem: CartItem = {\n        id: product.id,\n        name: product.name,\n        price: product.price,\n        quantity: 1\n      }\n      addToCart(cartItem)\n    }\n    \n    onMounted(() => {\n      loadProducts()\n    })\n    \n    return {\n      products,\n      cart,\n      loading,\n      formattedTotal,\n      handleAddToCart,\n      loadProducts\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "user_import_script_normal_mixed",
+  "sfc": "<script lang=\"ts\">\n// 普通 script 中的复杂用户导入\nimport { ref, computed, watch, nextTick } from 'vue'\nimport { useQuasar } from 'quasar'\nimport { useI18n } from 'vue-i18n'\nimport { dayjs } from 'dayjs'\nimport { utc } from 'dayjs/plugin/utc'\nimport { timezone } from 'dayjs/plugin/timezone'\nimport { Chart, registerables } from 'chart.js'\nimport { generateReport } from '@/utils/report'\nimport { exportToPDF } from '@/utils/export'\nimport type { ReportData, ChartConfig } from '@/types/report'\n\n// 注册 Day.js 插件\ndayjs.extend(utc)\ndayjs.extend(timezone)\n\n// 注册 Chart.js\nChart.register(...registerables)\n\nexport default {\n  name: 'ReportDashboard',\n  props: {\n    reportId: {\n      type: String,\n      required: true\n    },\n    dateRange: {\n      type: Object,\n      default: () => ({\n        start: dayjs().subtract(30, 'day').format('YYYY-MM-DD'),\n        end: dayjs().format('YYYY-MM-DD')\n      })\n    }\n  },\n  setup(props) {\n    const $q = useQuasar()\n    const { t, locale } = useI18n()\n    \n    const reportData = ref<ReportData | null>(null)\n    const chartInstance = ref<Chart | null>(null)\n    const isGenerating = ref(false)\n    \n    const formattedDateRange = computed(() => {\n      const start = dayjs(props.dateRange.start).locale(locale.value)\n      const end = dayjs(props.dateRange.end).locale(locale.value)\n      return `${start.format('LL')} - ${end.format('LL')}`\n    })\n    \n    const chartConfig = computed<ChartConfig>(() => ({\n      type: 'line',\n      data: reportData.value?.chartData || {},\n      options: {\n        responsive: true,\n        plugins: {\n          title: {\n            display: true,\n            text: t('reports.chart.title')\n          }\n        }\n      }\n    }))\n    \n    async function generateReportData() {\n      isGenerating.value = true\n      try {\n        reportData.value = await generateReport(props.reportId, props.dateRange)\n        await nextTick()\n        renderChart()\n      } catch (error) {\n        $q.notify({\n          type: 'negative',\n          message: t('reports.error.generationFailed')\n        })\n      } finally {\n        isGenerating.value = false\n      }\n    }\n    \n    function renderChart() {\n      const ctx = document.getElementById('report-chart') as HTMLCanvasElement\n      if (ctx) {\n        chartInstance.value = new Chart(ctx, chartConfig.value)\n      }\n    }\n    \n    async function exportReport() {\n      if (!reportData.value) return\n      \n      try {\n        await exportToPDF(reportData.value, {\n          title: t('reports.export.title'),\n          dateRange: formattedDateRange.value\n        })\n        $q.notify({\n          type: 'positive',\n          message: t('reports.export.success')\n        })\n      } catch (error) {\n        $q.notify({\n          type: 'negative',\n          message: t('reports.export.failed')\n        })\n      }\n    }\n    \n    watch(() => props.reportId, () => {\n      generateReportData()\n    }, { immediate: true })\n    \n    return {\n      reportData,\n      isGenerating,\n      formattedDateRange,\n      chartConfig,\n      generateReportData,\n      exportReport\n    }\n  }\n}\n</script>"
+ },
+ {
+  "name": "user_import_script_setup_namespace_vue",
+  "sfc": "<script setup lang=\"ts\">\nimport * as vue from 'vue'\nconst count = vue.ref(0)\n</script>"
+ },
+ {
+  "name": "user_import_script_setup_default_import",
+  "sfc": "<script setup lang=\"ts\">\nimport dayjs from 'dayjs'\nconst now = dayjs()\n</script>"
+ },
+ {
+  "name": "user_import_script_setup_type_only",
+  "sfc": "<script setup lang=\"ts\">\nimport type { Component } from 'vue'\nlet c: Component | null = null\n</script>"
+ },
+ {
+  "name": "user_import_script_setup_side_effect",
+  "sfc": "<script setup lang=\"ts\">\nimport 'reflect-metadata'\nconst ok = true\n</script>"
+ },
+ {
+  "name": "user_import_script_normal_namespace_vue",
+  "sfc": "<script lang=\"ts\">\nimport * as vue from 'vue'\nimport dayjs from 'dayjs'\nexport default {\n  name: 'NsVue',\n  mounted() {\n    const now = dayjs()\n    const c = vue.ref(1)\n  }\n}\n</script>"
+ },
+ {
+  "name": "user_import_script_normal_side_effect",
+  "sfc": "<script lang=\"ts\">\nimport 'reflect-metadata'\nexport default { name: 'SideEffect' }\n</script>"
+ },
+ {
+  "name": "script_type_scope_cross_block",
+  "sfc": "<template><p>{{ title }}</p></template>\n<script lang=\"ts\">\nexport interface CrossBlockProps {\n  title: string\n  count?: number\n  onChange: (v: string) => void\n}\n</script>\n<script setup lang=\"ts\">\nconst props = defineProps<CrossBlockProps>()\nconsole.log(props)\n</script>"
+ }
 ]

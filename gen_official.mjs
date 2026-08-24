@@ -12,7 +12,8 @@ for (const { name, sfc } of samples) {
     const code = script.content.trim();
     if (code) md += "```\n" + code + "\n```\n";
   } catch (error) {
-    md += String(error && error.message ? error.message : error) + "\n";
+    // 与 Dart 侧 SfcCompileError.toString 的格式保持一致（历史 ground truth 均带此前缀）。
+    md += "Vue Compile Error: " + String(error && error.message ? error.message : error) + "\n";
   }
   await writeFile(`${outDir}/${name}.md`, md);
 }

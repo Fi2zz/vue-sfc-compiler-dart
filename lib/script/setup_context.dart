@@ -4,6 +4,7 @@ import 'package:vue_sfc_parser/ts_parser.dart';
 
 import 'script_error.dart';
 import 'src_view.dart';
+import 'type_infer.dart';
 
 final class ImportBinding {
   final String source;
@@ -47,7 +48,7 @@ final class SetupContext {
 
   String setupSource = ''; // setup block content (untrimmed)
   late SrcView view; // view over setupSource
-  Map<String, AstNode> typeScope = {};
+  Map<String, TypeScopeEntry> typeScope = {};
 
   int startOffset = 0; // setup content start (char offset in source)
   int endOffset = 0; // setup content end

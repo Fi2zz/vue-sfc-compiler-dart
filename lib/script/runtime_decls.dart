@@ -54,7 +54,7 @@ List<_RuntimeProp> _propsFromType(SetupContext ctx) {
         ? const ['Function']
         : e.typeNode == null
         ? const [unknownType]
-        : inferRuntimeType(e.typeNode!, ctx.view, ctx.typeScope);
+        : inferRuntimeType(e.typeNode!, e.view, ctx.typeScope);
     var skipCheck = false;
     if (types.contains(unknownType)) {
       if (types.contains('Boolean') || types.contains('Function')) {

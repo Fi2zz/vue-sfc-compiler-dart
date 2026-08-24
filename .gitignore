@@ -154,3 +154,4 @@ dist
 token.js
 .DS_Store
 .vscodeprobe*
+.dbg/

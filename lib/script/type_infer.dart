@@ -10,26 +10,42 @@ const unknownType = 'Unknown';
 final class PropData {
   final String key;
   final AstNode? typeNode; // annotation type node
+  final SrcView view; // typeNode 所在块的 view（跨块类型引用必需）
   final bool optional;
   final bool method;
 
-  PropData(this.key, this.typeNode, {this.optional = false, this.method = false});
+  PropData(this.key, this.typeNode, this.view,
+      {this.optional = false, this.method = false});
 }
 
 /// Build a name -> declaration node map for a parsed script body.
-Map<String, AstNode> collectTypeScope(AstNode root, SrcView view) {
-  final out = <String, AstNode>{};
+///
+/// 条目必须携带声明所在块的 SrcView：normal script 与 setup 是同一源文件的
+/// 不同切片，字节偏移互不相通。setup 整体引用 normal script 声明的类型时，
+/// 若用引用方 view 提取声明体文本会拿错内容（成员键乱码/丢失 → props 缺失）。
+typedef TypeScopeEntry = (AstNode node, SrcView view);
+
+Map<String, TypeScopeEntry> collectTypeScope(AstNode root, SrcView view) {
+  final out = <String, TypeScopeEntry>{};
   for (final n in root.children) {
-    if (n.type == 'type_alias_declaration' ||
-        n.type == 'interface_declaration' ||
-        n.type == 'enum_declaration' ||
-        n.type == 'class_declaration') {
-      final id = childOfType(n, 'type_identifier') ?? childOfType(n, 'identifier');
-      if (id != null) out[view.textOf(id)] = n;
+    // `export interface/enum/...` 会被包一层 export_statement，须解包。
+    var d = n;
+    if (n.type == 'export_statement' && n.children.isNotEmpty) {
+      final inner = n.children.first;
+      if (_isTypeDecl(inner.type)) d = inner;
     }
+    if (!_isTypeDecl(d.type)) continue;
+    final id = childOfType(d, 'type_identifier') ?? childOfType(d, 'identifier');
+    if (id != null) out[view.textOf(id)] = (d, view);
   }
   return out;
 }
+
+bool _isTypeDecl(String type) =>
+    type == 'type_alias_declaration' ||
+    type == 'interface_declaration' ||
+    type == 'enum_declaration' ||
+    type == 'class_declaration';
 
 bool _optionalMarker(SrcView view, AstNode nameNode, AstNode? annotation) {
   if (annotation == null) return false;
@@ -58,7 +74,7 @@ final class TypeElements {
 TypeElements resolveTypeElements(
   AstNode node,
   SrcView view,
-  Map<String, AstNode> scope,
+  Map<String, TypeScopeEntry> scope,
 ) {
   final out = TypeElements();
   void fill(AstNode n, int depth) {
@@ -101,6 +117,7 @@ void _fillFromMembers(AstNode n, SrcView view, TypeElements out) {
       out.props[key] = PropData(
         key,
         ann,
+        view,
         optional: nameNode != null && _optionalMarker(view, nameNode, ann),
       );
     } else if (m.type == 'method_signature') {
@@ -111,6 +128,7 @@ void _fillFromMembers(AstNode n, SrcView view, TypeElements out) {
       out.props[key] = PropData(
         key,
         null,
+        view,
         optional: _optionalMarker(view, nameNode ?? m, null),
         method: true,
       );
@@ -123,26 +141,28 @@ void _fillFromMembers(AstNode n, SrcView view, TypeElements out) {
 void _fillFromReference(
   AstNode n,
   SrcView view,
-  Map<String, AstNode> scope,
+  Map<String, TypeScopeEntry> scope,
   TypeElements out,
   int depth,
 ) {
   final id =
       n.type == 'type_identifier' ? n : childOfType(n, 'type_identifier');
   if (id == null) return;
-  final decl = scope[view.textOf(id)];
-  if (decl == null) return;
+  final entry = scope[view.textOf(id)];
+  if (entry == null) return;
+  // 跨块引用：声明体文本必须用声明所在块的 view 提取。
+  final (decl, declView) = entry;
   if (decl.type == 'type_alias_declaration') {
     final body = decl.children.firstWhere(
       (c) => c.type != 'type_identifier' && c.type != 'type_parameters',
       orElse: () => decl,
     );
-    final resolved = resolveTypeElements(body, view, scope);
+    final resolved = resolveTypeElements(body, declView, scope);
     out.props.addAll(resolved.props);
     out.calls.addAll(resolved.calls);
   } else if (decl.type == 'interface_declaration') {
     final body = childOfType(decl, 'interface_body');
-    if (body != null) _fillFromMembers(body, view, out);
+    if (body != null) _fillFromMembers(body, declView, out);
   }
 }
 
@@ -150,7 +170,7 @@ void _fillFromReference(
 List<String> inferRuntimeType(
   AstNode node,
   SrcView view,
-  Map<String, AstNode> scope,
+  Map<String, TypeScopeEntry> scope,
 ) {
   switch (node.type) {
     case 'type_annotation':
@@ -193,7 +213,7 @@ List<String> inferRuntimeType(
 List<String> _flattenTypes(
   List<AstNode> types,
   SrcView view,
-  Map<String, AstNode> scope,
+  Map<String, TypeScopeEntry> scope,
 ) {
   if (types.length == 1) return inferRuntimeType(types[0], view, scope);
   final seen = <String>{};
@@ -264,21 +284,25 @@ List<String> _literal(AstNode node) {
 List<String> _referenceType(
   AstNode node,
   SrcView view,
-  Map<String, AstNode> scope,
+  Map<String, TypeScopeEntry> scope,
 ) {
   final id =
       node.type == 'type_identifier' ? node : childOfType(node, 'type_identifier');
   if (id == null) return const [unknownType];
   final name = view.textOf(id);
-  final decl = scope[name];
-  if (decl != null) return _inferDeclared(decl, view, scope);
+  final entry = scope[name];
+  if (entry != null) {
+    // 声明体用声明所在块的 view；嵌套引用再经 scope 逐级切换。
+    final (decl, declView) = entry;
+    return _inferDeclared(decl, declView, scope);
+  }
   return _builtinType(name);
 }
 
 List<String> _inferDeclared(
   AstNode decl,
   SrcView view,
-  Map<String, AstNode> scope,
+  Map<String, TypeScopeEntry> scope,
 ) {
   if (decl.type == 'type_alias_declaration') {
     final body = decl.children.firstWhere(
