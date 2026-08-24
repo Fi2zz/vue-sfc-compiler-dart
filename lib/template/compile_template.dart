@@ -28,8 +28,9 @@ final class TmplCompileResult {
   final List<TmplCompileError> errors;
   final List<TmplCompileError> warnings;
   final String preamble;
+  final Map<String, Object?>? map;
   TmplCompileResult(this.code, this.ast, this.errors, this.warnings,
-      {this.preamble = ''});
+      {this.preamble = '', this.map});
 }
 
 /// Mirrors doCompileTemplate({source, filename, id, scoped, slotted}) with
@@ -47,6 +48,7 @@ TmplCompileResult compileTemplateSource(
   String whitespace = 'condense',
   bool inline = false,
   bool isTS = false,
+  bool sourceMap = false,
 }) {
   final errors = <TmplCompileError>[];
   final warnings = <TmplCompileError>[];
@@ -58,9 +60,9 @@ TmplCompileResult compileTemplateSource(
       errors, warnings, bindingMetadata ?? const {},
       inline: inline, isTS: isTS));
   final gen = generate(ast, _codegenOptions(filename, scopeId, bindingMetadata,
-      inline: inline, isTS: isTS));
+      inline: inline, isTS: isTS, sourceMap: sourceMap));
   return TmplCompileResult(gen.code, ast, errors, warnings,
-      preamble: gen.preamble);
+      preamble: gen.preamble, map: gen.map);
 }
 
 TmplParserOptions _parseOptions(String filename, String? scopeId,
@@ -160,8 +162,9 @@ String? _domBuiltInComponent(String tag) {
 
 CodegenOptions _codegenOptions(String filename, String? scopeId,
     Map<String, String>? bindingMetadata,
-    {bool inline = false, bool isTS = false}) {
+    {bool inline = false, bool isTS = false, bool sourceMap = false}) {
   return CodegenOptions()
+    ..sourceMap = sourceMap
     ..mode = 'module'
     ..prefixIdentifiers = true
     ..filename = filename

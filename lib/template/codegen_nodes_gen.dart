@@ -29,9 +29,10 @@ void genNode(Object? node, CodegenContext context) {
     case ForNode n:
       _genCodegenOf(n.codegenNode, context, node);
     case TextNode n:
-      context.push(jsonEncode(n.content));
+      context.push(jsonEncode(n.content), newlineIndex: -3, node: n);
     case SimpleExpression n:
-      context.push(n.static_ ? jsonEncode(n.content) : n.content);
+      context.push(n.static_ ? jsonEncode(n.content) : n.content,
+          newlineIndex: -3, node: n);
     case InterpolationNode n:
       _genInterpolation(n, context);
     case TextCallNode n:
@@ -156,16 +157,16 @@ void _genExpressionAsPropertyKey(Object node, CodegenContext context) {
     final text = isSimpleIdentifier(node.content)
         ? node.content
         : jsonEncode(node.content);
-    context.push(text);
+    context.push(text, newlineIndex: -2, node: node);
   } else if (node is SimpleExpression) {
-    context.push('[${node.content}]');
+    context.push('[${node.content}]', newlineIndex: -3, node: node);
   }
 }
 
 void _genObjectExpression(JSObjectExpression node, CodegenContext context) {
   final properties = node.properties;
   if (properties.isEmpty) {
-    context.push('{}');
+    context.push('{}', newlineIndex: -2, node: node);
     return;
   }
   final multilines = properties.length > 1 ||
@@ -192,7 +193,7 @@ void _genCallExpression(JSCallExpression node, CodegenContext context) {
       ? calleeRaw
       : context.helper(calleeRaw as String);
   if (context.pure) context.push(pureAnnotation);
-  context.push('$callee(');
+  context.push('$callee(', newlineIndex: -2, node: node);
   genNodeList(node.arguments, context);
   context.push(')');
 }
@@ -204,7 +205,7 @@ void _genFunctionExpression(JSFunctionExpression node, CodegenContext context) {
   if (node.isSlot) {
     context.push('_$hWithCtx(');
   }
-  context.push('(');
+  context.push('(', newlineIndex: -2, node: node);
   if (params is List) {
     genNodeList(params.cast<Object?>(), context);
   } else if (params != null) {
@@ -350,7 +351,8 @@ void _genVNodeCall(VNodeCall node, CodegenContext context) {
   final callHelper = node.isBlock
       ? getVNodeBlockHelper(context.options.inSSR, node.isComponent)
       : getVNodeHelper(context.options.inSSR, node.isComponent);
-  context.push('${context.helper(callHelper)}(');
+  context.push('${context.helper(callHelper)}(',
+      newlineIndex: -2, node: node);
   genNodeList(
       _genNullableArgs([
         node.tag,

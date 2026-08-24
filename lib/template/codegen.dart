@@ -1,10 +1,11 @@
 // Port of compiler-core codegen.ts: generate() + genNode* family.
-// Sourcemap emission is not needed for output parity, so push() only appends.
+// Sourcemap emission mirrors createCodegenContext's push(newlineIndex, node).
 import 'dart:convert';
 
 import 'codegen_nodes_gen.dart';
 import 'js_nodes.dart';
 import 'shared_utils.dart';
+import 'source_map.dart';
 import 'tmpl_ast.dart';
 
 const pureAnnotation = '/*@__PURE__*/';
@@ -20,6 +21,7 @@ final class CodegenOptions {
   bool isTS = false;
   bool inSSR = false;
   bool inline = false;
+  bool sourceMap = false;
   Map<String, String>? bindingMetadata;
 }
 
@@ -29,14 +31,85 @@ final class CodegenContext {
   final StringBuffer _buf = StringBuffer();
   int indentLevel = 0;
   bool pure = false;
+  // 官方 context 的生成位置跟踪（1-based line/column）。
+  int line = 1;
+  int column = 1;
+  int offset = 0;
+  SourceMapGenerator? map;
 
-  CodegenContext(RootNode ast, this.options) : source = _sourceOf(ast);
+  CodegenContext(RootNode ast, this.options) : source = _sourceOf(ast) {
+    if (options.sourceMap) {
+      map = SourceMapGenerator()
+        ..setSourceContent(options.filename, source);
+    }
+  }
 
   static String _sourceOf(RootNode ast) => ast.loc.source;
 
   String get code => _buf.toString();
 
-  void push(String code) => _buf.write(code);
+  /// 官方 push(code, newlineIndex = -2, node)：
+  /// -2=None 纯横向；-1=End 以换行结尾；0=Start 以换行开头；
+  /// -3=Unknown 扫描推进；node 非空且 map 开启时记录起止映射。
+  void push(String code, {int newlineIndex = -2, Object? node}) {
+    _buf.write(code);
+    final m = map;
+    if (m == null) return;
+    final TmplLoc? nloc = switch (node) {
+      TmplNode n => n.loc,
+      CodegenNode n => n.loc,
+      _ => null,
+    };
+    if (node != null && nloc != null && nloc.source.isNotEmpty) {
+      String? name;
+      if (node is SimpleExpression && !node.static_) {
+        final content = node.content.replaceFirst(RegExp('^_ctx\\.'), '');
+        if (content != node.content && isSimpleIdentifier(content)) {
+          name = content;
+        }
+      }
+      _addMapping(nloc.start, name);
+    }
+    if (newlineIndex == -3) {
+      _advance(code);
+    } else {
+      offset += code.length;
+      if (newlineIndex == -2) {
+        column += code.length;
+      } else {
+        var ni = newlineIndex;
+        if (ni == -1) ni = code.length - 1;
+        line++;
+        column = code.length - ni;
+      }
+    }
+    if (node != null && nloc != null && nloc.source.isNotEmpty) {
+      _addMapping(nloc.end, null);
+    }
+  }
+
+  void _addMapping(TmplPosition pos, String? name) {
+    map!.addMapping(SourceMapMapping(
+      originalLine: pos.line,
+      originalColumn: pos.column - 1,
+      generatedLine: line,
+      generatedColumn: column - 1,
+      source: options.filename,
+      name: name,
+    ));
+  }
+
+  void _advance(String code) {
+    for (var i = 0; i < code.length; i++) {
+      if (code.codeUnitAt(i) == 10) {
+        line++;
+        column = 1;
+      } else {
+        column++;
+      }
+    }
+    offset += code.length;
+  }
 
   void indent() => _newline(++indentLevel);
 
@@ -50,7 +123,7 @@ final class CodegenContext {
 
   void newline() => _newline(indentLevel);
 
-  void _newline(int n) => push('\n${'  ' * n}');
+  void _newline(int n) => push('\n${'  ' * n}', newlineIndex: 0);
 
   String helper(String name) => '_$name';
 }
@@ -59,7 +132,8 @@ final class CodegenResult {
   final RootNode ast;
   final String code;
   final String preamble;
-  CodegenResult(this.ast, this.code, this.preamble);
+  final Map<String, Object?>? map;
+  CodegenResult(this.ast, this.code, this.preamble, [this.map]);
 }
 
 CodegenResult generate(RootNode ast, CodegenOptions options) {
@@ -75,7 +149,8 @@ CodegenResult generate(RootNode ast, CodegenOptions options) {
   }
   _genRenderFunction(ast, context, options);
   return CodegenResult(ast, context.code,
-      isSetupInlined ? preambleContext.code : '');
+      isSetupInlined ? preambleContext.code : '',
+      context.map?.toJSON(file: options.filename));
 }
 
 void _genRenderFunction(
@@ -125,7 +200,7 @@ void _genAssetsAndTemps(RootNode ast, CodegenContext context) {
   if (ast.components.isNotEmpty ||
       ast.directives.isNotEmpty ||
       ast.temps > 0) {
-    context.push('\n');
+    context.push('\n', newlineIndex: 0);
     context.newline();
   }
 }
@@ -151,12 +226,15 @@ void _genModulePreamble(RootNode ast, CodegenContext context, bool genScopeId,
     final helpers = ast.helpers.toList();
     if (context.options.optimizeImports) {
       context.push(
-          'import { ${helpers.join(', ')} } from ${jsonEncode(context.options.runtimeModuleName)}\n');
+          'import { ${helpers.join(', ')} } from ${jsonEncode(context.options.runtimeModuleName)}\n',
+          newlineIndex: -1);
       context.push(
-          '\n// Binding optimization for webpack code-split\nconst ${helpers.map((s) => '_$s = $s').join(', ')}\n');
+          '\n// Binding optimization for webpack code-split\nconst ${helpers.map((s) => '_$s = $s').join(', ')}\n',
+          newlineIndex: -1);
     } else {
       context.push(
-          'import { ${helpers.map((s) => '$s as _$s').join(', ')} } from ${jsonEncode(context.options.runtimeModuleName)}\n');
+          'import { ${helpers.map((s) => '$s as _$s').join(', ')} } from ${jsonEncode(context.options.runtimeModuleName)}\n',
+          newlineIndex: -1);
     }
   }
   if (ast.imports.isNotEmpty) {
