@@ -9,6 +9,7 @@ class SfcDescriptor {
   final ScriptBlock? scriptSetup;
   final List<StyleBlock> styles;
   final List<SFCBlock> customBlocks;
+  final List<String> cssVars;
   SfcDescriptor({
     required this.filename,
     required this.source,
@@ -17,6 +18,7 @@ class SfcDescriptor {
     required this.styles,
     required this.customBlocks,
     this.scriptSetup,
+    this.cssVars = const [],
   });
 
   /// 转换为JSON格式

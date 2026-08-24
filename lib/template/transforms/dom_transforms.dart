@@ -15,7 +15,6 @@ import 'v_on_bind.dart';
 
 final _styleCommentRE = RegExp(r'/\*[^]*?\*/');
 final _listDelimiterRE = RegExp(r';(?![^(]*\))');
-final _propertyDelimiterRE = RegExp(r':([^]+)');
 
 Map<String, String> parseStringStyle(String cssText) {
   final ret = <String, String>{};

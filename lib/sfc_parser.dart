@@ -1,6 +1,7 @@
 import 'package:vue_sfc_parser/block.dart';
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
 import 'package:vue_sfc_parser/sfc_error.dart';
+import 'package:vue_sfc_parser/script/css_vars.dart';
 
 /// 最小化的SFC解析器实现
 class SfcParser {
@@ -154,6 +155,7 @@ class SfcParser {
       styles: styles,
       customBlocks: customBlocks,
       scriptSetup: scriptSetup,
+      cssVars: parseCssVars(styles.map((s) => s.content)),
     );
   }
 

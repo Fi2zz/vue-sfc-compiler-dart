@@ -6,6 +6,7 @@ import 'package:vue_sfc_parser/ts_parser.dart';
 import 'await_transform.dart';
 import 'binding_metadata.dart';
 import 'bindings.dart';
+import 'css_vars.dart';
 import 'destructure_transform.dart';
 import 'macro_process.dart';
 import 'mini_magic.dart';
@@ -176,6 +177,17 @@ final class _Specifier {
 
   // 9. generate return statement
   final propsDecl = genRuntimeProps(ctx);
+  // 官方：style 块含 v-bind() 时注入 useCssVars 注册（SSR 除外）。
+  // 注入点在 setup 体内最前——并入 header 字符串以保证与 exposeCall 的顺序。
+  String cssVarsPrefix = '';
+  if (descriptor.cssVars.isNotEmpty) {
+    final scopeId = filename.replaceFirst(RegExp('^data-v-'), '');
+    ctx.helperImports
+      ..add('useCssVars')
+      ..add(hUnref);
+    cssVarsPrefix =
+        '\n${genCssVarsCode(descriptor.cssVars, buildBindingMetadata(ctx), scopeId)}\n';
+  }
   if (inlineTemplate && descriptor.template != null) {
     // 官方 inlineTemplate：模板编译为箭头函数，作为 setup 的 return 内联。
     _appendInlineRender(ctx, s, descriptor, endOffset);
@@ -192,7 +204,7 @@ final class _Specifier {
 
   // 10. finalize default export
   _assembleHeader(ctx, s, args, propsDecl, defaultExport != null,
-      inlineTemplate: inlineTemplate);
+      inlineTemplate: inlineTemplate, bodyPrefix: cssVarsPrefix);
 
   // 11. finalize Vue helper imports
   if (ctx.helperImports.isNotEmpty) {
@@ -750,6 +762,7 @@ void _assembleHeader(
   String? propsDecl,
   bool hasDefaultExport, {
   bool inlineTemplate = false,
+  String bodyPrefix = '',
 }) {
   var runtimeOptions = '';
   final match = RegExp(r'([^/\\]+)\.\w+$').firstMatch(ctx.filename);
@@ -778,7 +791,7 @@ void _assembleHeader(
       ctx.startOffset,
       '\nexport default /*@__PURE__*/${ctx.helper('defineComponent')}'
       '({$def$runtimeOptions\n  $async'
-      'setup($args) {\n$exposeCall',
+      'setup($args) {\n$exposeCall$bodyPrefix',
     );
     s.appendRight(ctx.endOffset, '})');
   } else if (hasDefaultExport || definedOptions.isNotEmpty) {
@@ -788,14 +801,14 @@ void _assembleHeader(
       '${hasDefaultExport ? '$normalScriptDefaultVar, ' : ''}'
       '${definedOptions.isNotEmpty ? '$definedOptions, ' : ''}'
       '{$runtimeOptions\n  $async'
-      'setup($args) {\n$exposeCall',
+      'setup($args) {\n$exposeCall$bodyPrefix',
     );
     s.appendRight(ctx.endOffset, '})');
   } else {
     s.prependLeft(
       ctx.startOffset,
       '\nexport default {$runtimeOptions\n  $async'
-      'setup($args) {\n$exposeCall',
+      'setup($args) {\n$exposeCall$bodyPrefix',
     );
     s.appendRight(ctx.endOffset, '}');
   }

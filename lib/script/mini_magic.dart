@@ -116,6 +116,9 @@ final class MiniMagic {
       }
     }
     if (cursor < to) buf.write(source.substring(cursor, to));
+    // 官方 MagicString：prependLeft(to) 属于"结束于 to 的块"，随块渲染；
+    // 移动区间起点处的插入在内容之后补齐，避免被区间覆盖而丢失。
+    buf.write(_takeOutro(from));
     buf.write(_takeOutro(to));
     return buf.toString();
   }

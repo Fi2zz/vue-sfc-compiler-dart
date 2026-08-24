@@ -622,5 +622,9 @@
  {
   "name": "script_type_scope_cross_block",
   "sfc": "<template><p>{{ title }}</p></template>\n<script lang=\"ts\">\nexport interface CrossBlockProps {\n  title: string\n  count?: number\n  onChange: (v: string) => void\n}\n</script>\n<script setup lang=\"ts\">\nconst props = defineProps<CrossBlockProps>()\nconsole.log(props)\n</script>"
+ },
+ {
+  "name": "script_css_vars_inject",
+  "sfc": "<script setup>\nimport { ref } from 'vue'\nconst color = ref('red')\n</script>\n<style>\nlabel { color: v-bind(color); }\n</style>"
  }
 ]
