@@ -1,7 +1,5 @@
-// Port of walkDeclaration / walkPattern binding registration.
-// Only the SETUP_LET distinction and key insertion order affect the
-// generated __returned__ object, so binding kinds are coarsened to
-// setupLet vs. everything else.
+// Port of walkDeclaration / walkPattern binding registration (official
+// compiler-sfc rules incl. literal-const / setup-ref / setup-reactive-const).
 import 'package:vue_sfc_parser/ts_parser.dart';
 
 import 'macro_process.dart';
@@ -15,6 +13,16 @@ const _macroConstCalls = {
   'defineSlots',
 };
 
+/// ref 家族 + defineModel：const 初始化为这些调用时登记 setup-ref。
+const _refFamilyImports = {
+  'ref',
+  'computed',
+  'shallowRef',
+  'customRef',
+  'toRef',
+  'useTemplateRef',
+};
+
 String declarationKind(AstNode node, SrcView view) {
   // lexical_declaration (let/const) or variable_declaration (var);
   // the kind keyword precedes the first named child.
@@ -23,38 +31,34 @@ String declarationKind(AstNode node, SrcView view) {
   return head;
 }
 
-/// Port of walkDeclaration. Returns true when all inits are static literals.
-void walkDeclaration(
+bool _isCallOfName(SrcView view, AstNode? init, Set<String> names) {
+  if (init == null || init.type != 'call_expression') return false;
+  final id = childOfType(init, 'identifier');
+  return id != null && names.contains(view.textOf(id));
+}
+
+/// Port of walkDeclaration. Returns true when all inits are static literals
+/// (VariableDeclaration) or all enum members are literal (enum) — the caller
+/// hoists the statement when hoistStatic is on.
+bool walkDeclaration(
   SetupContext ctx,
   AstNode node,
   Map<String, BindingKind> bindings, {
+  Map<String, String> vueImportAliases = const {},
+  bool hoistStatic = false,
+  bool fromScript = false,
   bool propsDestructureEnabled = false,
 }) {
   if (node.type == 'lexical_declaration' ||
       node.type == 'variable_declaration') {
-    final isConst = declarationKind(node, ctx.view) == 'const';
-    for (final decl in childrenOfType(node, 'variable_declarator')) {
-      final id = decl.children.first;
-      final init = _declInit(decl);
-      if (id.type == 'identifier') {
-        final kind = isConst ? BindingKind.setupConst : BindingKind.setupLet;
-        bindings[ctx.view.textOf(id)] = kind;
-      } else {
-        final isConstMacroCall = isConst && _isMacroCall(ctx, init);
-        if (_isDefinePropsCall(ctx, init) && propsDestructureEnabled) {
-          continue;
-        }
-        if (id.type == 'object_pattern') {
-          _walkObjectPattern(ctx, id, bindings, isConst, isConstMacroCall);
-        } else if (id.type == 'array_pattern') {
-          _walkArrayPattern(ctx, id, bindings, isConst, isConstMacroCall);
-        }
-      }
-    }
-  } else if (node.type == 'enum_declaration') {
-    final id = childOfType(node, 'identifier');
-    if (id != null) bindings[ctx.view.textOf(id)] = BindingKind.setupConst;
-  } else if (node.type == 'function_declaration' ||
+    return _walkVarDecl(ctx, node, bindings,
+        vueImportAliases: vueImportAliases,
+        hoistStatic: hoistStatic,
+        fromScript: fromScript,
+        propsDestructureEnabled: propsDestructureEnabled);
+  }
+  if (node.type == 'enum_declaration') return _walkEnum(ctx, node, bindings);
+  if (node.type == 'function_declaration' ||
       node.type == 'generator_function_declaration' ||
       node.type == 'class_declaration' ||
       node.type == 'abstract_class_declaration') {
@@ -62,7 +66,164 @@ void walkDeclaration(
         childOfType(node, 'type_identifier');
     if (id != null) bindings[ctx.view.textOf(id)] = BindingKind.setupConst;
   }
+  return false;
 }
+
+bool _walkVarDecl(
+  SetupContext ctx,
+  AstNode node,
+  Map<String, BindingKind> bindings, {
+  required Map<String, String> vueImportAliases,
+  required bool hoistStatic,
+  required bool fromScript,
+  required bool propsDestructureEnabled,
+}) {
+  final isConst = declarationKind(node, ctx.view) == 'const';
+  final declarators = childrenOfType(node, 'variable_declarator').toList();
+  final allLiteral = isConst &&
+      declarators.isNotEmpty &&
+      declarators.every((d) =>
+          d.children.first.type == 'identifier' &&
+          _isStaticNode(_declInit(d)));
+  for (final decl in declarators) {
+    final id = decl.children.first;
+    final init = _declInit(decl);
+    if (id.type == 'identifier') {
+      final kind = _identifierKind(ctx, init, isConst, allLiteral,
+          vueImportAliases: vueImportAliases,
+          hoistStatic: hoistStatic,
+          fromScript: fromScript);
+      bindings[ctx.view.textOf(id)] = kind;
+    } else {
+      final isConstMacroCall = isConst && _isMacroCall(ctx, init);
+      if (_isDefinePropsCall(ctx, init) && propsDestructureEnabled) {
+        continue;
+      }
+      if (id.type == 'object_pattern') {
+        _walkObjectPattern(ctx, id, bindings, isConst, isConstMacroCall);
+      } else if (id.type == 'array_pattern') {
+        _walkArrayPattern(ctx, id, bindings, isConst, isConstMacroCall);
+      }
+    }
+  }
+  return allLiteral;
+}
+
+bool _walkEnum(SetupContext ctx, AstNode node, Map<String, BindingKind> bindings) {
+  final id = childOfType(node, 'identifier');
+  if (id == null) return false;
+  // 官方：成员无初始化器或初始化器为静态字面量 → literal-const。
+  final body = childOfType(node, 'enum_body');
+  final members = body?.children ?? const [];
+  final allLiteral = members.every((m) =>
+      m.type == 'property_identifier' ||
+      (m.type == 'enum_assignment' &&
+          m.children.isNotEmpty &&
+          _isStaticNode(m.children.last)));
+  bindings[ctx.view.textOf(id)] =
+      allLiteral ? BindingKind.literalConst : BindingKind.setupConst;
+  return allLiteral;
+}
+
+BindingKind _identifierKind(
+  SetupContext ctx,
+  AstNode? init,
+  bool isConst,
+  bool allLiteral, {
+  required Map<String, String> vueImportAliases,
+  required bool hoistStatic,
+  required bool fromScript,
+}) {  // 官方：(hoistStatic || from === 'script') && (isAllLiteral || 静态字面量)
+  final staticInit = allLiteral || (init != null && _isStaticNode(init));
+  if ((hoistStatic || fromScript) && isConst && staticInit) {
+    return BindingKind.literalConst;
+  }
+  final reactiveLocal = vueImportAliases['reactive'];
+  if (reactiveLocal != null && _isCallOfName(ctx.view, init, {reactiveLocal})) {
+    return isConst ? BindingKind.setupReactiveConst : BindingKind.setupLet;
+  }
+  if (isConst && (_isMacroCall(ctx, init) || _neverRef(ctx, init, reactiveLocal))) {
+    return BindingKind.setupConst;
+  }
+  if (isConst && _refFamilyCall(ctx, init, vueImportAliases)) {
+    return BindingKind.setupRef;
+  }
+  if (isConst) return BindingKind.setupMaybeRef;
+  return BindingKind.setupLet;
+}
+
+bool _refFamilyCall(
+    SetupContext ctx, AstNode? init, Map<String, String> aliases) {
+  if (init == null || init.type != 'call_expression') return false;
+  final names = <String>{_kDefineModel};
+  for (final imported in _refFamilyImports) {
+    final local = aliases[imported];
+    if (local != null) names.add(local);
+  }
+  return _isCallOfName(ctx.view, init, names);
+}
+
+const _kDefineModel = 'defineModel';
+
+/// canNeverBeRef：reactive 调用或纯值表达式，永远不可能是 ref。
+bool _neverRef(SetupContext ctx, AstNode? init, String? reactiveLocal) {
+  if (init == null) return false;
+  if (reactiveLocal != null &&
+      _isCallOfName(ctx.view, init, {reactiveLocal})) {
+    return true;
+  }
+  switch (init.type) {
+    case 'unary_expression':
+    case 'binary_expression':
+    case 'array':
+    case 'object':
+    case 'function_expression':
+    case 'arrow_function':
+    case 'update_expression':
+    case 'class':
+      return true;
+    case 'sequence_expression':
+      return init.children.isEmpty
+          ? false
+          : _neverRef(ctx, init.children.last, reactiveLocal);
+    default:
+      return false;
+  }
+}
+
+/// isStaticNode：字面量及字面量间的运算/模板/三元。
+bool _isStaticNode(AstNode? raw) {
+  if (raw == null) return false;
+  final node = unwrapForCall(raw);
+  switch (node.type) {
+    case 'unary_expression':
+      return node.children.isNotEmpty && _isStaticNode(node.children.last);
+    case 'binary_expression':
+    case 'logical_expression':
+      return node.children.length == 2 &&
+          _isStaticNode(node.children[0]) &&
+          _isStaticNode(node.children[1]);
+    case 'ternary_expression':
+      return node.children.length == 3 &&
+          node.children.every(_isStaticNodeAble);
+    case 'sequence_expression':
+      return node.children.every(_isStaticNodeAble);
+    case 'template_string':
+      return node.children
+          .where((c) => c.type == 'template_substitution')
+          .every((c) => c.children.isNotEmpty && _isStaticNode(c.children.first));
+    case 'string':
+    case 'number':
+    case 'true':
+    case 'false':
+    case 'null':
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool _isStaticNodeAble(AstNode n) => _isStaticNode(n);
 
 AstNode? _declInit(AstNode declarator) {
   // variable_declarator: id [type_annotation] [= value]; init is last when

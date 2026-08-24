@@ -38,8 +38,17 @@ final class DestructureBinding {
   DestructureBinding(this.local, this.defaultNode);
 }
 
-/// Binding type tags; only [setupLet] changes codegen shape.
-enum BindingKind { literalConst, setupConst, setupLet, setupMaybeRef, props }
+/// Binding type tags; kinds beyond [setupLet] matter for inline-mode
+/// template expression rewriting and literal-const hoisting.
+enum BindingKind {
+  literalConst,
+  setupConst,
+  setupLet,
+  setupMaybeRef,
+  setupRef,
+  setupReactiveConst,
+  props,
+}
 
 final class SetupContext {
   final String source; // full SFC source

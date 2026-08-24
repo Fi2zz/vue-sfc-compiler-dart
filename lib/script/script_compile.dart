@@ -30,7 +30,8 @@ final class _Specifier {
 /// Compile <script setup> into runtime code. Returns the generated code plus
 /// the official-style bindingMetadata consumed by compileTemplate.
 ({String code, Map<String, String> bindings}) compileScriptSetup(
-    SfcDescriptor descriptor) {
+    SfcDescriptor descriptor,
+    {bool hoistStatic = false}) {
   final source = descriptor.source;
   final filename = descriptor.filename;
   final script = descriptor.script;
@@ -116,6 +117,7 @@ final class _Specifier {
       scriptView!,
       scriptStartOffset,
       scriptEndOffset,
+      vueImportAliases,
     );
     if (scriptStartOffset > startOffset) {
       // <script> after <script setup>: move the block up front so that
@@ -126,7 +128,8 @@ final class _Specifier {
   }
 
   // 2.2 process <script setup> body
-  _processSetupBody(ctx, s, setupRoot, vueImportAliases);
+  _processSetupBody(ctx, s, setupRoot, vueImportAliases,
+      hoistStatic: hoistStatic);
 
   // 3 props destructure transform
   if (ctx.propsDestructureDecl != null) {
@@ -346,6 +349,7 @@ AstNode? _processNormalScript(
   SrcView view,
   int scriptStartOffset,
   int scriptEndOffset,
+  Map<String, String> vueImportAliases,
 ) {
   AstNode? defaultExport;
   int abs(int byteOffset) => scriptStartOffset + view.charOf(byteOffset);
@@ -368,10 +372,13 @@ AstNode? _processNormalScript(
             scriptEndOffset);
       }
       if (decl != null && _isDeclarable(decl)) {
-        walkDeclaration(ctx, decl, ctx.scriptBindings);
+        // 官方 from === 'script'：静态 const 一律登记 literal-const。
+        walkDeclaration(ctx, decl, ctx.scriptBindings,
+            vueImportAliases: vueImportAliases, fromScript: true);
       }
     } else if (_isDeclarable(node)) {
-      walkDeclaration(ctx, node, ctx.scriptBindings);
+      walkDeclaration(ctx, node, ctx.scriptBindings,
+          vueImportAliases: vueImportAliases, fromScript: true);
     }
   }
   return defaultExport;
@@ -466,8 +473,9 @@ void _processSetupBody(
   SetupContext ctx,
   MiniMagic s,
   AstNode root,
-  Map<String, String> vueImportAliases,
-) {
+  Map<String, String> vueImportAliases, {
+  bool hoistStatic = false,
+}) {
   for (final node in root.children) {
     if (node.type == 'expression_statement' && node.children.isNotEmpty) {
       final expr = unwrapTSNode(node.children.first);
@@ -485,10 +493,18 @@ void _processSetupBody(
     if (node.type == 'lexical_declaration' ||
         node.type == 'variable_declaration') {
       _processVarDeclMacros(ctx, s, node);
-      walkDeclaration(
+    }
+
+    // 官方：walkDeclaration 返回 isAllLiteral，hoistStatic 时整条语句提升。
+    var allLiteral = false;
+    if (node.type == 'lexical_declaration' ||
+        node.type == 'variable_declaration') {
+      allLiteral = walkDeclaration(
         ctx,
         node,
         ctx.setupBindings,
+        vueImportAliases: vueImportAliases,
+        hoistStatic: hoistStatic,
         propsDestructureEnabled: ctx.propsDestructureDecl != null,
       );
     } else if (node.type == 'function_declaration' ||
@@ -496,7 +512,16 @@ void _processSetupBody(
         node.type == 'class_declaration' ||
         node.type == 'abstract_class_declaration' ||
         node.type == 'enum_declaration') {
-      walkDeclaration(ctx, node, ctx.setupBindings);
+      allLiteral = walkDeclaration(
+        ctx,
+        node,
+        ctx.setupBindings,
+        vueImportAliases: vueImportAliases,
+        hoistStatic: hoistStatic,
+      );
+    }
+    if (hoistStatic && allLiteral) {
+      _hoistNode(ctx, s, node.startByte, node.endByte);
     }
 
     // top-level await

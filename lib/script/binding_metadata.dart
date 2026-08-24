@@ -45,6 +45,8 @@ String _kindName(BindingKind kind) => switch (kind) {
       BindingKind.setupConst => 'setup-const',
       BindingKind.setupLet => 'setup-let',
       BindingKind.setupMaybeRef => 'setup-maybe-ref',
+      BindingKind.setupRef => 'setup-ref',
+      BindingKind.setupReactiveConst => 'setup-reactive-const',
       BindingKind.props => 'props',
     };
 
