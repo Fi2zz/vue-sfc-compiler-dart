@@ -27,7 +27,9 @@ final class TmplCompileResult {
   final RootNode ast;
   final List<TmplCompileError> errors;
   final List<TmplCompileError> warnings;
-  TmplCompileResult(this.code, this.ast, this.errors, this.warnings);
+  final String preamble;
+  TmplCompileResult(this.code, this.ast, this.errors, this.warnings,
+      {this.preamble = ''});
 }
 
 /// Mirrors doCompileTemplate({source, filename, id, scoped, slotted}) with
@@ -43,6 +45,8 @@ TmplCompileResult compileTemplateSource(
   bool? slotted,
   Map<String, String>? bindingMetadata,
   String whitespace = 'condense',
+  bool inline = false,
+  bool isTS = false,
 }) {
   final errors = <TmplCompileError>[];
   final warnings = <TmplCompileError>[];
@@ -51,9 +55,12 @@ TmplCompileResult compileTemplateSource(
   final ast = baseParse(source,
       _parseOptions(filename, scopeId, slotted, errors, warnings, whitespace));
   transform(ast, _transformOptions(filename, scopeId, slotted,
-      errors, warnings, bindingMetadata ?? const {}));
-  final gen = generate(ast, _codegenOptions(filename, scopeId, bindingMetadata));
-  return TmplCompileResult(gen.code, ast, errors, warnings);
+      errors, warnings, bindingMetadata ?? const {},
+      inline: inline, isTS: isTS));
+  final gen = generate(ast, _codegenOptions(filename, scopeId, bindingMetadata,
+      inline: inline));
+  return TmplCompileResult(gen.code, ast, errors, warnings,
+      preamble: gen.preamble);
 }
 
 TmplParserOptions _parseOptions(String filename, String? scopeId,
@@ -80,7 +87,8 @@ List<TmplCompileError> collectTemplateParseErrors(String content) {
 
 TransformOptions _transformOptions(String filename, String? scopeId,
     bool? slotted, List<TmplCompileError> errors,
-    List<TmplCompileError> warnings, Map<String, String> bindingMetadata) {
+    List<TmplCompileError> warnings, Map<String, String> bindingMetadata,
+    {bool inline = false, bool isTS = false}) {
   return TransformOptions()
     ..filename = filename
     ..prefixIdentifiers = true
@@ -88,6 +96,8 @@ TransformOptions _transformOptions(String filename, String? scopeId,
     ..cacheHandlers = true
     ..hmr = true
     ..bindingMetadata = bindingMetadata
+    ..inline = inline
+    ..isTS = isTS
     ..nodeTransforms = _nodeTransforms()
     ..directiveTransforms = _directiveTransforms()
     ..transformHoist = stringifyStatic
@@ -149,11 +159,13 @@ String? _domBuiltInComponent(String tag) {
 }
 
 CodegenOptions _codegenOptions(String filename, String? scopeId,
-    Map<String, String>? bindingMetadata) {
+    Map<String, String>? bindingMetadata,
+    {bool inline = false}) {
   return CodegenOptions()
     ..mode = 'module'
     ..prefixIdentifiers = true
     ..filename = filename
     ..scopeId = scopeId
-    ..bindingMetadata = bindingMetadata;
+    ..bindingMetadata = bindingMetadata
+    ..inline = inline;
 }

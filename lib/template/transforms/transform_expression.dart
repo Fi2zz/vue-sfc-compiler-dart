@@ -93,21 +93,78 @@ TmplNode _processSimpleIdentifier(SimpleExpression node,
 bool _isConstBinding(String? type) =>
     type == 'setup-const' || type == 'literal-const';
 
-String _rewriteIdentifier(String raw, TransformContext context) {
+String _rewriteIdentifier(String raw, TransformContext context,
+    {AstNode? parent, WalkedIdent? id, int Function(int)? byteToChar}) {
   final bindings = context.bindingMetadata;
   final type = bindings[raw];
-  if (!context.inline) {
-    if (type != null && (type.startsWith('setup') || type == 'literal-const')) {
-      return '\$setup.$raw';
-    }
-    if (type == 'props-aliased') {
-      return "\$props['${bindings['__propsAliases:$raw'] ?? raw}']";
-    }
-    if (type != null) {
-      return '\$$type.$raw';
-    }
+  if (context.inline) {
+    return _rewriteInline(raw, type, context,
+        parent: parent, id: id, byteToChar: byteToChar);
+  }
+  if (type != null && (type.startsWith('setup') || type == 'literal-const')) {
+    return '\$setup.$raw';
+  }
+  if (type == 'props-aliased') {
+    return "\$props['${bindings['__propsAliases:$raw'] ?? raw}']";
+  }
+  if (type != null) {
+    return '\$$type.$raw';
   }
   return '_ctx.$raw';
+}
+
+/// 官方 rewriteIdentifier 的 inline 分支：render 内联进 setup 后，绑定按
+/// kind 直接引用（ref 类补 .value / unref），不再有 $setup 前缀。
+String _rewriteInline(String raw, String? type, TransformContext context,
+    {AstNode? parent, WalkedIdent? id, int Function(int)? byteToChar}) {
+  final lval = _isLValPosition(parent, id, byteToChar ?? (b) => b);
+  switch (type) {
+    case 'setup-const':
+    case 'literal-const':
+    case 'setup-reactive-const':
+      return raw;
+    case 'setup-ref':
+      return '$raw.value';
+    case 'setup-maybe-ref':
+      return lval ? '$raw.value' : '${context.helperString(hUnref)}($raw)';
+    case 'setup-let':
+      if (!lval) return '${context.helperString(hUnref)}($raw)';
+      // 赋值/自更新左值：isRef 三元（官方形态）。
+      final tsIgnore = context.isTS ? ' //@ts-ignore\n' : '';
+      return '${context.helperString(hIsRef)}($raw)$tsIgnore'
+          '? $raw.value : $raw';
+    case 'props':
+      return _propsAccessExp(raw);
+    case 'props-aliased':
+      final alias =
+          context.bindingMetadata['__propsAliases:$raw'] ?? raw;
+      return _propsAccessExp(alias);
+  }
+  return '_ctx.$raw';
+}
+
+/// 官方 genPropsAccessExp。
+String _propsAccessExp(String name) {
+  final plain = RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$').hasMatch(name);
+  return plain ? '__props.$name' : '__props[${_jsStr(name)}]';
+}
+
+String _jsStr(String s) =>
+    '"${s.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
+
+/// 赋值表达式/自更新表达式的左值位置判定（首子节点即左值）。
+/// [byteToChar] 由调用方注入（walker 的 SrcView），统一字节/字符坐标；
+/// WalkedIdent 的 startChar/endChar 与转换结果同处包裹源 char 空间。
+bool _isLValPosition(AstNode? parent, WalkedIdent? id,
+    int Function(int byteOffset) byteToChar) {
+  if (parent == null || id == null || parent.children.isEmpty) return false;
+  const lvalParents = {'assignment_expression', 'update_expression'};
+  if (!lvalParents.contains(parent.type)) return false;
+  final first = parent.children.first;
+  if (first.type != 'identifier') return false;
+  final start = byteToChar(first.startByte);
+  final end = byteToChar(first.endByte);
+  return start <= id.startChar && id.endChar <= end;
 }
 
 _ParsedExp? _parseExpression(SimpleExpression node, TransformContext context,
@@ -140,12 +197,15 @@ bool _hasErrorNode(AstNode node) {
 
 TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
     String rawExp, _ParsedExp parsed) {
-  final view = SrcView(parsed.source);
+  final srcView = SrcView(parsed.source);
   final knownIds = KnownIds(context.identifiers);
   final ids = <WalkedIdent>[];
-  final walker = ExpressionWalker(view, (id, parent, isRefed, isLocal) {
-    _onIdentifier(id, parent, isRefed, isLocal, context, ids);
-  }, knownIds);
+  void onIdent(WalkedIdent id, AstNode? parent, bool isRefed, bool isLocal) {
+    _onIdentifier(id, parent, isRefed, isLocal, context, ids,
+        srcView.charOf);
+  }
+
+  final walker = ExpressionWalker(srcView, onIdent, knownIds);
   walker.rootExp = _unwrapTop(parsed.root);
   walker.walk(parsed.root);
   ids.sort((a, b) => a.startChar.compareTo(b.startChar));
@@ -153,14 +213,16 @@ TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
 }
 
 void _onIdentifier(WalkedIdent id, AstNode? parent, bool isRefed,
-    bool isLocal, TransformContext context, List<WalkedIdent> ids) {
+    bool isLocal, TransformContext context, List<WalkedIdent> ids,
+    int Function(int byteOffset) byteToChar) {
   if (id.name.startsWith('_filter_')) return;
   final needPrefix = isRefed && _canPrefix(id.name);
   if (needPrefix && !isLocal) {
     if (parent != null && parent.type == 'object') {
       id.prefix = '${id.name}: ';
     }
-    id.rewritten = _rewriteIdentifier(id.name, context);
+    id.rewritten =
+        _rewriteIdentifier(id.name, context, parent: parent, id: id, byteToChar: byteToChar);
     ids.add(id);
   } else {
     if (!(needPrefix && isLocal) && !_isCallOrMember(parent)) {

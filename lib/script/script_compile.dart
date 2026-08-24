@@ -15,6 +15,8 @@ import 'script_error.dart';
 import 'setup_context.dart';
 import 'src_view.dart';
 import 'type_infer.dart';
+import '../template/compile_template.dart';
+import '../template/js_nodes.dart' show hUnref;
 
 const normalScriptDefaultVar = '__default__';
 
@@ -31,7 +33,8 @@ final class _Specifier {
 /// the official-style bindingMetadata consumed by compileTemplate.
 ({String code, Map<String, String> bindings}) compileScriptSetup(
     SfcDescriptor descriptor,
-    {bool hoistStatic = false}) {
+    {bool hoistStatic = false,
+    bool inlineTemplate = false}) {
   final source = descriptor.source;
   final filename = descriptor.filename;
   final script = descriptor.script;
@@ -162,23 +165,34 @@ final class _Specifier {
     final any = ts ? ': any' : '';
     s.prependLeft(startOffset, '\nlet __temp$any, __restore$any\n');
   }
-  final destructureElements = ['expose: __expose'];
+  final destructureElements = <String>[
+    // 官方：hasDefineExposeCall || !inlineTemplate 时才解构 expose
+    if (ctx.hasDefineExposeCall || !inlineTemplate) 'expose: __expose',
+  ];
   if (ctx.emitAssigned) destructureElements.add('emit: __emit');
-  args += ', { ${destructureElements.join(', ')} }';
+  if (destructureElements.isNotEmpty) {
+    args += ', { ${destructureElements.join(', ')} }';
+  }
 
   // 9. generate return statement
   final propsDecl = genRuntimeProps(ctx);
-  final returned = _genReturned(ctx);
-  s.appendRight(
-    endOffset,
-    '\nconst __returned__ = $returned\n'
-    "Object.defineProperty(__returned__, '__isScriptSetup', "
-    '{ enumerable: false, value: true })\n'
-    'return __returned__\n}\n\n',
-  );
+  if (inlineTemplate && descriptor.template != null) {
+    // 官方 inlineTemplate：模板编译为箭头函数，作为 setup 的 return 内联。
+    _appendInlineRender(ctx, s, descriptor, endOffset);
+  } else {
+    final returned = _genReturned(ctx);
+    s.appendRight(
+      endOffset,
+      '\nconst __returned__ = $returned\n'
+      "Object.defineProperty(__returned__, '__isScriptSetup', "
+      '{ enumerable: false, value: true })\n'
+      'return __returned__\n}\n\n',
+    );
+  }
 
   // 10. finalize default export
-  _assembleHeader(ctx, s, args, propsDecl, defaultExport != null);
+  _assembleHeader(ctx, s, args, propsDecl, defaultExport != null,
+      inlineTemplate: inlineTemplate);
 
   // 11. finalize Vue helper imports
   if (ctx.helperImports.isNotEmpty) {
@@ -187,6 +201,30 @@ final class _Specifier {
   }
 
   return (code: s.toString(), bindings: buildBindingMetadata(ctx));
+}
+
+/// 官方 inlineTemplate 分支：模板以 inline 模式编译为箭头函数，preamble
+/// （helper 导入等）前置到模块顶部，render 作为 setup 的返回值内联。
+void _appendInlineRender(
+  SetupContext ctx,
+  MiniMagic s,
+  SfcDescriptor descriptor,
+  int endOffset,
+) {
+  final template = descriptor.template!;
+  final tpl = compileTemplateSource(
+    template.content,
+    filename: ctx.filename,
+    id: ctx.filename,
+    scoped: descriptor.styles.any((st) => st.scoped),
+    bindingMetadata: buildBindingMetadata(ctx),
+    inline: true,
+    isTS: ctx.ts,
+  );
+  if (tpl.preamble.isNotEmpty) s.prepend(tpl.preamble);
+  // 官方：模板 preamble 已提供 unref 时，script 运行时导入里去掉重复项。
+  if (tpl.ast.helpers.contains(hUnref)) ctx.helperImports.remove(hUnref);
+  s.appendRight(endOffset, '\nreturn ${tpl.code}\n}\n\n');
 }
 
 bool _isTs(String? lang) => lang == 'ts' || lang == 'tsx';
@@ -706,8 +744,9 @@ void _assembleHeader(
   MiniMagic s,
   String args,
   String? propsDecl,
-  bool hasDefaultExport,
-) {
+  bool hasDefaultExport, {
+  bool inlineTemplate = false,
+}) {
   var runtimeOptions = '';
   final match = RegExp(r'([^/\\]+)\.\w+$').firstMatch(ctx.filename);
   if (!ctx.hasDefaultExportName &&
@@ -724,7 +763,8 @@ void _assembleHeader(
   if (ctx.optionsRuntimeDecl != null) {
     definedOptions = ctx.view.textOf(ctx.optionsRuntimeDecl!).trim();
   }
-  final exposeCall = ctx.hasDefineExposeCall ? '' : '  __expose();\n';
+  final exposeCall =
+      ctx.hasDefineExposeCall || inlineTemplate ? '' : '  __expose();\n';
   final async = ctx.hasAwait ? 'async ' : '';
 
   if (ctx.ts) {
