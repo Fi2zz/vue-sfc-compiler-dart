@@ -3,6 +3,7 @@ import '../js_nodes.dart';
 import '../shared_utils.dart';
 import '../transform_context.dart';
 import '../tmpl_ast.dart';
+import '../tmpl_error_messages.dart';
 import 'transform_utils.dart';
 import 'v_for.dart';
 
@@ -185,7 +186,7 @@ void _slotWithFor(DirectiveNode vFor, Object slotName,
     ]));
   } else {
     context.onError(
-        TmplCompileError(32, 'v-for expression is invalid.', vFor.loc));
+        TmplCompileError(32, tmplErrorMessage(32), vFor.loc));
   }
 }
 
@@ -195,7 +196,7 @@ void _plainSlot(Object slotName, String? staticSlotName,
   if (staticSlotName != null) {
     if (st.seenSlotNames.contains(staticSlotName)) {
       context.onError(TmplCompileError(
-          38, 'Duplicate slot name found.', slotDir.loc));
+          38, tmplErrorMessage(38), slotDir.loc));
       return;
     }
     st.seenSlotNames.add(staticSlotName);
@@ -220,7 +221,7 @@ void _buildDefaultSlot(ElementNode node, TransformContext context,
       st.implicitDefaultChildren.any(isNonWhitespaceContent)) {
     if (st.hasNamedDefaultSlot) {
       context.onError(TmplCompileError(
-          39, 'Default slot mixed with named slots.',
+          39, tmplErrorMessage(39),
           st.implicitDefaultChildren[0].loc));
     } else {
       st.slotsProperties

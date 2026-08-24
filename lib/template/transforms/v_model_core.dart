@@ -3,24 +3,27 @@ import '../js_nodes.dart';
 import '../shared_utils.dart';
 import '../transform_context.dart';
 import '../tmpl_ast.dart';
+import '../tmpl_error_messages.dart';
 import 'transform_expression.dart';
 import 'transform_utils.dart';
 
 DirTransformResult transformModelCore(
     DirectiveNode dir, ElementNode node, TransformContext context) {
-  final exp = dir.exp as SimpleExpression?;
+  final dirExp = dir.exp;
   final arg = dir.arg;
-  if (exp == null) {
+  if (dirExp == null) {
     context.onError(
         TmplCompileError(41, 'v-model is missing expression.', dir.loc));
     return DirTransformResult([]);
   }
-  final rawExp = exp.loc.source.trim();
-  final expString = exp.content;
+  // 官方：exp.type === 4 ? exp.content : rawExp——transformExpression 可能
+  // 已把 dir.exp 替换成 CompoundExpression，此时按原始 source 处理。
+  final rawExp = dirExp.loc.source.trim();
+  final expString = dirExp is SimpleExpression ? dirExp.content : rawExp;
   final bindingType = context.bindingMetadata[rawExp];
   if (bindingType == 'props' || bindingType == 'props-aliased') {
-    context.onError(TmplCompileError(
-        44, 'v-model cannot be used on a prop.', exp.loc));
+    context.onError(
+        TmplCompileError(44, tmplErrorMessage(44), dirExp.loc));
     return DirTransformResult([]);
   }
   final maybeRef = context.inline &&
@@ -28,21 +31,18 @@ DirTransformResult transformModelCore(
           bindingType == 'setup-ref' ||
           bindingType == 'setup-maybe-ref');
   if (expString.trim().isEmpty ||
-      (!isMemberExpressionOf(exp, context) && !maybeRef)) {
-    context.onError(TmplCompileError(
-        42, 'v-model value must be a valid JavaScript member expression.',
-        exp.loc));
+      (!isMemberExpressionOf(dirExp, context) && !maybeRef)) {
+    context.onError(TmplCompileError(42, tmplErrorMessage(42), dirExp.loc));
     return DirTransformResult([]);
   }
   if (context.prefixIdentifiers &&
       isSimpleIdentifier(expString) &&
       (context.identifiers[expString] ?? 0) != 0) {
-    context.onError(TmplCompileError(
-        43, 'v-model cannot be used on v-for or v-slot scope variables.',
-        exp.loc));
+    context.onError(
+        TmplCompileError(43, tmplErrorMessage(43), dirExp.loc));
     return DirTransformResult([]);
   }
-  final props = _modelProps(dir, node, context, exp, arg, rawExp,
+  final props = _modelProps(dir, node, context, dirExp, arg, rawExp,
       bindingType, maybeRef);
   return DirTransformResult(props);
 }
@@ -51,7 +51,7 @@ List<JSProperty> _modelProps(
     DirectiveNode dir,
     ElementNode node,
     TransformContext context,
-    SimpleExpression exp,
+    TmplNode exp,
     Object? arg,
     String rawExp,
     String? bindingType,
@@ -78,7 +78,7 @@ List<JSProperty> _modelProps(
   return props;
 }
 
-Object _modelAssignment(TransformContext context, SimpleExpression exp,
+Object _modelAssignment(TransformContext context, TmplNode exp,
     String rawExp, String? bindingType, bool maybeRef) {
   final eventArg = context.isTS ? '(\$event: any)' : '\$event';
   if (maybeRef) {

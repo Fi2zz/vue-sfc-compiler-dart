@@ -3,6 +3,7 @@ import '../js_nodes.dart';
 import '../shared_utils.dart';
 import '../transform_context.dart';
 import '../tmpl_ast.dart';
+import '../tmpl_error_messages.dart';
 
 final _seenOnce = <TmplNode>{};
 final _seenMemo = <TmplNode>{};
@@ -88,7 +89,7 @@ Object? transformVBindShorthand(TmplNode node, TransformContext context) {
       final arg = prop.arg!;
       if (arg is! SimpleExpression || !arg.static_) {
         context.onError(TmplCompileError(
-            52, 'Invalid v-bind shorthand argument.', arg.loc));
+            52, tmplErrorMessage(52), arg.loc));
         prop.exp = createSimpleExp('', true, arg.loc);
       } else {
         final propName = camelize(arg.content);

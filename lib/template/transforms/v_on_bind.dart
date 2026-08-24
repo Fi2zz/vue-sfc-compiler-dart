@@ -3,6 +3,7 @@ import '../js_nodes.dart';
 import '../shared_utils.dart';
 import '../transform_context.dart';
 import '../tmpl_ast.dart';
+import '../tmpl_error_messages.dart';
 import 'transform_expression.dart';
 import 'transform_utils.dart';
 
@@ -50,6 +51,10 @@ Object _resolveEventName(DirectiveNode dir, ElementNode node,
   if (arg is SimpleExpression) {
     if (arg.static_) {
       var rawName = arg.content;
+      if (rawName.startsWith('vnode')) {
+        context.onError(
+            TmplCompileError(51, tmplErrorMessage(51), arg.loc));
+      }
       if (rawName.startsWith('vue:')) {
         rawName = 'vnode-${rawName.substring(4)}';
       }

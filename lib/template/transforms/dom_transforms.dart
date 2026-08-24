@@ -6,6 +6,7 @@ import '../js_nodes.dart';
 import '../shared_utils.dart';
 import '../transform_context.dart';
 import '../tmpl_ast.dart';
+import '../tmpl_error_messages.dart';
 import 'hoist_static.dart';
 import 'v_model_core.dart';
 import 'v_on_bind.dart';
@@ -125,7 +126,7 @@ void _applyDomModelDirective(DirectiveNode dir, ElementNode node,
       tag != 'select' &&
       !isCustomElement) {
     context.onError(TmplCompileError(
-        57, 'v-model can only be used on <input>, <textarea> and <select>.',
+        57, tmplErrorMessage(57),
         dir.loc));
     return;
   }
@@ -167,7 +168,7 @@ void _applyDomModelDirective(DirectiveNode dir, ElementNode node,
       return (hVModelCheckbox, false);
     case 'file':
       context.onError(TmplCompileError(
-          59, 'v-model cannot be used on file inputs.', dir.loc));
+          59, tmplErrorMessage(59), dir.loc));
       return (hVModelText, true);
     default:
       _checkDuplicatedValue(node, context);
@@ -351,7 +352,7 @@ Object? ignoreSideEffectTags(TmplNode node, TransformContext context) {
       node.tagType == etElement &&
       (node.tag == 'script' || node.tag == 'style')) {
     context.onError(TmplCompileError(
-        63, 'Tags with side effect (<script> and <style>) are ignored.',
+        63, tmplErrorMessage(63),
         node.loc));
     context.removeNode();
   }

@@ -158,12 +158,12 @@ JSFunctionExpression? _getSlotNode(Object? children, String name) {
 }
 
 JSFunctionExpression? _getSlotNodeFromArg(Object? children, Object arg) {
+  // 官方语义：p.key === name || p.key.content === name——name 是 arg 节点，
+  // content(string) 永远不等于节点，实际只有对象身份能命中。重复插槽名
+  // （dup names）因此匹配失败，走官方的逐子缓存回退路径。
   if (children is JSObjectExpression) {
     for (final p in children.properties) {
-      if (identical(p.key, arg) ||
-          (arg is SimpleExpression &&
-              p.key is SimpleExpression &&
-              (p.key as SimpleExpression).content == arg.content)) {
+      if (identical(p.key, arg)) {
         return p.value as JSFunctionExpression?;
       }
     }

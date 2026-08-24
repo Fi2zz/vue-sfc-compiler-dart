@@ -4,6 +4,7 @@ import '../shared_utils.dart';
 import '../transform.dart';
 import '../transform_context.dart';
 import '../tmpl_ast.dart';
+import '../tmpl_error_messages.dart';
 import 'transform_expression.dart';
 import 'transform_utils.dart';
 
@@ -210,7 +211,7 @@ Object? _processFor(TmplNode node, DirectiveNode dir,
   final parseResult = dir.forParseResult;
   if (parseResult == null) {
     context.onError(
-        TmplCompileError(32, 'v-for expression is invalid.', dir.loc));
+        TmplCompileError(32, tmplErrorMessage(32), dir.loc));
     return null;
   }
   finalizeForParseResult(parseResult, context);

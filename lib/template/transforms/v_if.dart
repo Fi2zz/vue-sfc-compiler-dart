@@ -4,6 +4,7 @@ import '../shared_utils.dart';
 import '../transform.dart';
 import '../transform_context.dart';
 import '../tmpl_ast.dart';
+import '../tmpl_error_messages.dart';
 import 'transform_expression.dart';
 import 'transform_utils.dart';
 
@@ -127,7 +128,7 @@ void _mergeIntoIfNode(
     for (final b in sibling.branches) {
       if (_isSameKey(b.userKey, key)) {
         context.onError(TmplCompileError(
-            29, 'Duplicate key found in v-if/v-else-if branches.', null));
+            29, tmplErrorMessage(29), null));
       }
     }
   }

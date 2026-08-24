@@ -5,6 +5,7 @@ library;
 import 'package:vue_sfc_parser/sfc_compile_script.dart';
 import 'package:vue_sfc_parser/sfc_compiler.dart';
 import 'package:vue_sfc_parser/sfc_descriptor.dart';
+import 'package:vue_sfc_parser/sfc_error.dart';
 import 'package:vue_sfc_parser/sfc_parser.dart';
 import 'package:vue_sfc_parser/script/options_bindings.dart';
 import 'package:vue_sfc_parser/script/script_compile.dart';
@@ -40,7 +41,8 @@ class Vue {
       }
       return SfcParseOutcome(descriptor, errors);
     } catch (e) {
-      return SfcParseOutcome(null, ['$e']);
+      final message = e is SfcError ? e.message ?? '$e' : '$e';
+      return SfcParseOutcome(null, [message]);
     }
   }
 

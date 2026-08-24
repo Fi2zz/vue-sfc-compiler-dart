@@ -55,6 +55,14 @@ class SfcCompileError extends SfcError {
   }
 }
 
+/// 官方 X_MISSING_END_TAG（code 24）：顶层块在 EOF 前没有闭合标签。
+class UnclosedBlockError extends SfcError {
+  @override
+  String? get message => 'Element is missing end tag.';
+
+  UnclosedBlockError({required super.locStart, required super.locEnd});
+}
+
 class MissingTemplateOrScript extends SfcError {
   @override
   String? get message =>

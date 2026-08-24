@@ -180,6 +180,11 @@ class SfcParser {
           locStart: openLt, locEnd: openEnd);
     }
     final closeStart = _findCloseStart(name, openEnd);
+    // 官方 X_MISSING_END_TAG：闭合标签缺失（扫描到 EOF）。
+    if (closeStart >= source.length &&
+        _matchCloseTag(name, closeStart) <= 0) {
+      throw UnclosedBlockError(locStart: closeStart, locEnd: closeStart);
+    }
     return Raw(
       type: name.toLowerCase(),
       content: source.substring(openEnd, closeStart).trim(),
