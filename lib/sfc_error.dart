@@ -66,7 +66,7 @@ class UnclosedBlockError extends SfcError {
 class MissingTemplateOrScript extends SfcError {
   @override
   String? get message =>
-      " At least one <template> or <script setup> is required in a single file component. $filename";
+      "At least one <template> or <script> is required in a single file component. $filename";
 
   String filename;
 

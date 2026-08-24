@@ -79,6 +79,11 @@ void _assignProps(
     if (parentCall != null) {
       parentCall.arguments[0] = propsWithInjection;
     } else {
+      // 官方依赖 JS arguments[2]= 的自动扩容语义（如 renderSlot 调用在
+      // v-if 分支 key 注入时仅含 slots+name 两参）。
+      while (node.arguments.length < 3) {
+        node.arguments.add(null);
+      }
       node.arguments[2] = propsWithInjection;
     }
   }

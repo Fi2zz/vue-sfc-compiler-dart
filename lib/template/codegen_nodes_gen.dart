@@ -83,7 +83,8 @@ void genNode(Object? node, CodegenContext context) {
 
 void _genCodegenOf(Object? codegenNode, CodegenContext context, Object node) {
   if (codegenNode == null) {
-    throw StateError('Codegen node is missing for $node. '
+    // 与官方 assert 文案逐字对齐（错误文本会进样例 ground truth）。
+    throw StateError('Codegen node is missing for element/if/for node. '
         'Apply appropriate transforms first.');
   }
   genNode(codegenNode, context);

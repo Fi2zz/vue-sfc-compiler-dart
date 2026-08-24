@@ -193,15 +193,17 @@ Object? normalizeStyle(Object? value) {
 }
 
 final _listDelimiterRE = RegExp(r';(?![^(]*\))');
-final _propertyDelimiterRE = RegExp(':([^]+)');
 final _styleCommentRE = RegExp(r'/\*[^]*?\*/');
 
 Map<String, Object?> parseStringStyle(String cssText) {
   final ret = <String, Object?>{};
   for (final item in cssText.replaceAll(_styleCommentRE, '').split(_listDelimiterRE)) {
     if (item.isEmpty) continue;
-    final tmp = item.split(_propertyDelimiterRE);
-    if (tmp.length > 1) ret[tmp[0].trim()] = tmp[1].trim();
+    // 官方 JS 用 /:(.+)/ split 捕获；Dart 的 split 会插入捕获组且 [^] 语义
+    // 不同，改为手动首个冒号切分（与 /:(.+)/ 首匹配等价）。
+    final colon = item.indexOf(':');
+    if (colon <= 0) continue;
+    ret[item.substring(0, colon).trim()] = item.substring(colon + 1).trim();
   }
   return ret;
 }

@@ -22,10 +22,11 @@ Map<String, String> parseStringStyle(String cssText) {
   final cleaned = cssText.replaceAll(_styleCommentRE, '');
   for (final item in cleaned.split(_listDelimiterRE)) {
     if (item.isEmpty) continue;
-    final tmp = item.split(_propertyDelimiterRE);
-    if (tmp.length > 1) {
-      ret[tmp[0].trim()] = tmp[1].trim();
-    }
+    // 官方 JS /:(.+)/ split 捕获；Dart split 会插入捕获组且 [^] 语义不同，
+    // 手动首个冒号切分与之等价。
+    final colon = item.indexOf(':');
+    if (colon <= 0) continue;
+    ret[item.substring(0, colon).trim()] = item.substring(colon + 1).trim();
   }
   return ret;
 }
@@ -179,8 +180,8 @@ void _applyDomModelDirective(DirectiveNode dir, ElementNode node,
 void _checkDuplicatedValue(ElementNode node, TransformContext context) {
   final value = findDir(node, 'bind');
   if (value != null && isStaticArgOf(value.arg, 'value')) {
-    context.onError(TmplCompileError(
-        60, 'v-model and :value must not be used together.', value.loc));
+    context.onError(
+        TmplCompileError(60, tmplErrorMessage(60), value.loc));
   }
 }
 
@@ -341,8 +342,16 @@ bool _hasMultipleChildren(ElementNode node) {
 }
 
 bool _branchMultiple(IfBranchNode branch) {
-  final first = branch.children.isNotEmpty ? branch.children[0] : null;
-  return first is ElementNode && _hasMultipleChildren(first);
+  // 官方 hasMultipleChildren 对 branch 递归：过滤注释/空白后检查长度。
+  final children = branch.children
+      .where((c) =>
+          c.type != ntComment &&
+          !(c.type == ntText && (c as TextNode).content.trim().isEmpty))
+      .toList();
+  final first = children.isNotEmpty ? children[0] : null;
+  return children.length != 1 ||
+      first is ForNode ||
+      (first is IfNode && first.branches.any(_branchMultiple));
 }
 
 // --- ignoreSideEffectTags / validateHtmlNesting ---

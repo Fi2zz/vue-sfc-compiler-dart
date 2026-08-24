@@ -310,7 +310,7 @@ void _applyPatchFlags(_BuildPropsState st, bool isComponent) {
     st.patchFlag |= 16;
   } else {
     if (st.hasClassBinding && !isComponent) st.patchFlag |= 2;
-    if (st.hasStyleBinding) st.patchFlag |= 4;
+    if (st.hasStyleBinding && !isComponent) st.patchFlag |= 4;
     if (st.dynamicPropNames.isNotEmpty) st.patchFlag |= 8;
     if (st.hasHydrationEventBinding) st.patchFlag |= 32;
   }
