@@ -114,7 +114,9 @@ void _genInterpolation(InterpolationNode node, CodegenContext context) {
 void _genComment(CommentNode node, CodegenContext context) {
   if (context.pure) context.push(pureAnnotation);
   context.push(
-      '${context.helper(hCreateComment)}(${jsonEncode(node.content)})');
+      '${context.helper(hCreateComment)}(${jsonEncode(node.content)})',
+      newlineIndex: -3,
+      node: node);
 }
 
 void _genCompoundExpression(CompoundExpression node, CodegenContext context) {

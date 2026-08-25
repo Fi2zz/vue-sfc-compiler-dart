@@ -119,11 +119,11 @@ final class ExpressionWalker {
       _onIdent(node, parent);
     } else if (type == 'property_identifier') {
       // 官方 babel 全标识符遍历：成员属性 b（a.b）也生成子表达式以支持
-      // sourcemap；但对象字面量静态键（{ k: v } 的 k）按 isStaticPropertyKey
-      // 跳过。
+      // sourcemap；但对象字面量/解构模式的静态键按 isStaticPropertyKey 跳过。
       if (!_isStaticPairKey(node, parent)) _onIdent(node, parent);
     } else if (type == 'shorthand_property_identifier_pattern') {
-      // 解构模式简写 { a }：官方同样生成子表达式（非引用标识符路径）。
+      // 解构模式简写 { a }：对应 babel 简写属性的 value 节点（key!==value），
+      // 官方同样生成子表达式（非引用标识符路径）。
       _onIdent(node, parent);
     } else if (_isFunctionType(type)) {
       _walkFunctionParams(node);
@@ -155,11 +155,21 @@ final class ExpressionWalker {
       node.type == 'catch_clause' ||
       _isForStatement(node.type);
 
-  bool _isStaticPairKey(AstNode node, AstNode? parent) =>
-      parent != null &&
-      parent.type == 'pair' &&
-      parent.children.isNotEmpty &&
-      identical(parent.children.first, node);
+  /// 官方 isStaticPropertyKey：ObjectProperty/ObjectMethod 的非计算键不产生
+  /// 子表达式。tree-sitter 对应：pair（字面量键）、pair_pattern（模式键）、
+  /// method_definition 首个 property_identifier（方法名简写）。
+  bool _isStaticPairKey(AstNode node, AstNode? parent) {
+    if (parent == null || parent.children.isEmpty) return false;
+    if (parent.type == 'pair' || parent.type == 'pair_pattern') {
+      return identical(parent.children.first, node);
+    }
+    if (parent.type == 'method_definition') {
+      return parent.children.isNotEmpty &&
+          parent.children.first.type == 'property_identifier' &&
+          identical(parent.children.first, node);
+    }
+    return false;
+  }
 
   void _onIdent(AstNode node, AstNode? parent) {
     final name = view.textOf(node);

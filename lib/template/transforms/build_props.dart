@@ -202,8 +202,10 @@ void _buildArglessDirective(
     st.mergeArgs.add(exp);
   } else {
     context.helper(hToHandlers);
-    pushMergeArg(
-        createCallExp(hToHandlers, isComponent ? [exp] : [exp, 'true']));
+    // 官方：toHandlers 调用携带指令 loc（映射起点/终点）。
+    pushMergeArg(createCallExp(
+        hToHandlers, isComponent ? [exp] : [exp, 'true'],
+        prop.loc));
   }
 }
 

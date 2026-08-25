@@ -2,10 +2,21 @@
 // High-level Dart wrapper for parsing TypeScript/TSX via Tree-sitter FFI.
 // Provides AST traversal utilities and conversion to a simple Dart model.
 
+import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 import 'ts_ffi.dart';
+
+/// Dev-only corpus recorder: when TS_AST_CORPUS points to a file, every
+/// parse() input is appended as one JSON line for the ast_diff harness.
+void recordCorpusEntry(String code, String language) {
+  final path = Platform.environment['TS_AST_CORPUS'];
+  if (path == null || path.isEmpty) return;
+  final line = jsonEncode({'code': code, 'language': language});
+  File(path).writeAsStringSync('$line\n', mode: FileMode.append);
+}
 
 class AstNode {
   final String type;
