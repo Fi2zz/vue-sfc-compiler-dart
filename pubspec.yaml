@@ -12,7 +12,6 @@ dependencies:
   html: ^0.15.6
   analyzer: ^9.0.0
   pub_semver: ^2.2.0
-  tree_sitter: ^0.2.1
   ffi: ^2.1.2
 
 dev_dependencies:

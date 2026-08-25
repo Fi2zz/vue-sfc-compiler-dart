@@ -125,3 +125,16 @@ dart analyze                              # 零 error/warning（info 可忽略�
    归零后再切默认
 4. 跑第五节全套；map 700/700 是最灵敏的偏移正确性指标——它过了，
    偏移链路基本就是对的
+
+---
+
+## 七、切换完成记录（2026-08-25，oxc 侧）
+
+- 切换提交 `b6d19aa`：`TSParser.parse` 内部 = OxcFFI + OxcMapper（签名/AstNode 契约不变）；
+  oxc panic 输入降级为 program>ERROR 单节点树（`_hasErrorNode` 布尔语义保持）。
+- 验收结果（第五节全套）：v1 157/157、v2 114/114、v3 75/75、v4 12/12、batch 783/786
+  （同一豁免族）、map 700/700、entity fuzz 一致、analyze 零 error/warning。
+- 拆除提交（紧随切换）：删 `lib/ts_ffi.dart`、tree-sitter 动态库、makefile 三个 build 目标、
+  pubspec `tree_sitter` 僵尸依赖。TS 解析后端 = `make build-worker` 产出的 `liboxc_ts`。
+- 规格与运维（构建/bump/FFI 契约）见 `OXC_REFERENCE.md`；形状清单在 `NODE_SHAPES.md`
+  已合并本文第三节。
