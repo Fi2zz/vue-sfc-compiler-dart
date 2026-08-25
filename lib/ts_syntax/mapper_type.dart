@@ -113,6 +113,13 @@ extension OxcTypeMapper on OxcMapper {
         ]);
       case 'TSTypeParameter':
         return mapTypeParameter(n);
+      case 'TSTypeAssertion':
+        final inner = _m(n['typeAnnotation']);
+        return buildNode('type_assertion', start, end, [
+          buildNode('type_arguments', (inner['start'] as int) - 1,
+              (inner['end'] as int) + 1, [mapTypeNode(inner)]),
+          mapExpression(_m(n['expression'])),
+        ]);
       case 'TSAsExpression':
         return mapAsExpression(n);
       case 'TSSatisfiesExpression':

@@ -84,11 +84,16 @@ class OxcFFI {
   }
 
   /// Load liboxc_ts from lib/native first, then the cargo build output.
-  static OxcFFI load() {
+  /// The handle is process-global; cache it (call sites construct TSParser
+  /// per parse).
+  static OxcFFI load() => _cached ??= _loadUncached();
+  static OxcFFI? _cached;
+
+  static OxcFFI _loadUncached() {
     final lib = _openFirst(_candidates());
     if (lib == null) {
       throw StateError(
-        'liboxc_ts not found. Build with: cd worker/oxc_ts && cargo build --release',
+        'liboxc_ts not found. Build with: make build-worker',
       );
     }
     return OxcFFI._(lib);

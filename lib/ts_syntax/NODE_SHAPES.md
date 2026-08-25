@@ -6,13 +6,22 @@
 ## 关键形状约定（消费端硬编码的结构假设）
 
 - `binary_expression` / `logical_expression` / `assignment_expression`：`children[0]`=左，`children[1]`=右（const_eval、bindings 按下标取）
-- `conditional_expression`：`children[0..2]` = test/consequent/alternate
-- `pair`（对象字面量）：`children[0]`=key，`children[1]`=value
+- `ternary_expression`：`children[0..2]` = test/consequent/alternate
+- `pair`（对象字面量）：`children[0]`=key，末子=value；`pair_pattern` 同构
 - `export_statement`：包装 export 的声明，类型收集需解包（type_infer / script_compile）
 - `for_in_statement` / `for_of_statement`：循环头压平，无 `lexical_declaration` 包裹，首个具名子节点即左值模式（expression_walk）
 - `switch_statement`：声明收集须下钻 `switch_body` → `switch_case`/`switch_default`
 - `comment`：作为 named child 编排在树内原位置（hoistNode trailingComments 依赖）
-- `ERROR`：tree-sitter 错误恢复节点（语料中 3 处，均为已豁免的 babel errorRecovery 家族）
+- `ERROR`：tree-sitter 错误恢复节点（语料中 3 处，均为已豁免的 babel errorRecovery 家族；唯一消费点 transform_expression `_hasErrorNode`，只要布尔信号）
+- `undefined` 是**专用节点类型**（非 identifier）；`true/false/null` 是各自字面量节点（babel Literal，不作为标识符访问）
+- `type_annotation` 是标识符的**紧邻兄弟节点**（vOn 注解剥离靠 WalkedIdent 区间扩到注解尾）
+- 解包链家族：`as_expression` / `satisfies_expression` / `non_null_expression` / `type_assertion` / `parenthesized_expression`（bindings.unwrapForCall、transform_expression._unwrapTop 依赖）
+- `assignment_pattern` / `object_assignment_pattern`：首子节点=绑定名（默认值是外层引用）
+- catch 参数三种形态：identifier / 模式 / formal_parameter 包裹
+- tagged template：`call_expression` 末子节点为 template_string（无 arguments）
+- member_expression 末子节点=属性（property_identifier），其余=object
+- union_type / intersection_type 左深嵌套；`as const` 无类型子节点；签名类节点（property/method/call/construct signature）区间截到注解尾不含 `;`
+- js 语法差异：无 `required_parameter` 包装、class 名用 `identifier`、`field_definition`、heritage 无 `extends_clause`（ts 侧为 type_identifier / public_field_definition / extends_clause+implements_clause）
 
 ## 全量节点清单（103 种，按字母序）
 

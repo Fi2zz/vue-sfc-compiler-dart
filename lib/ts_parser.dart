@@ -1,13 +1,14 @@
 // English comments per ~/REPO rule.
-// High-level Dart wrapper for parsing TypeScript/TSX via Tree-sitter FFI.
-// Provides AST traversal utilities and conversion to a simple Dart model.
+// High-level Dart wrapper for parsing TypeScript/TSX.
+// Backend: oxc (see OXC_REFERENCE.md) since Phase 4; the tree-sitter
+// bindings in ts_ffi.dart remain on disk for reference but are no longer
+// used by this wrapper.
 
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:io';
-import 'package:ffi/ffi.dart';
 
-import 'ts_ffi.dart';
+import 'ts_syntax/oxc_ffi.dart';
+import 'ts_syntax/oxc_mapper.dart';
 
 /// Dev-only corpus recorder: when TS_AST_CORPUS points to a file, every
 /// parse() input is appended as one JSON line for the ast_diff harness.
@@ -51,17 +52,13 @@ class AstNode {
   String toString() => 'AstNode(type=$type, children=${children.length})';
 }
 
-/// Parser wrapper that manages core and language loading.
+/// Parser wrapper: oxc FFI + ESTree-to-tree-sitter mapper.
 class TSParser {
-  final TSFFI _ffi = TSFFI.loadCore();
-
-  /// Create instance with loaded core library.
-  // static TSParser create() => TSParser._(TSFFI.loadCore());
-
-  /// Parse TypeScript code and return the root AstNode.
-  /// If [tsx] is true, uses the TSX grammar.
-  /// When [namedOnly] is true, traverses only named children (recommended).
-  /// [maxDepth] can be used to limit recursion; set <= 0 for full traversal.
+  /// Parse [code] in [language] (ts/tsx/js/jsx) and return the root AstNode
+  /// in tree-sitter-compatible shape. [namedOnly] and [maxDepth] are kept
+  /// for signature compatibility; the mapper always produces a full
+  /// named-children tree. Inputs oxc cannot parse (parser panic, e.g. the
+  /// exempt errorRecovery family) yield a program holding one ERROR node.
   AstNode parse({
     required String code,
     required String language,
@@ -69,84 +66,12 @@ class TSParser {
     int maxDepth = 0,
   }) {
     recordCorpusEntry(code, language);
-    final lang = TSFFI.load(language);
-    // Create parser
-    final parser = _ffi.tsParserNew();
+    final mapper = OxcMapper(code, language: language);
     try {
-      final ok = _ffi.tsParserSetLanguage(parser, lang);
-      if (!ok) {
-        throw StateError('Failed to set language on parser');
-      }
-
-      final codePtr = code.toNativeUtf8();
-      try {
-        final tree = _ffi.tsParserParseString(
-          parser,
-          Pointer.fromAddress(0),
-          codePtr,
-          codePtr.length, // UTF-8 byte length, not UTF-16 code units
-        );
-        if (tree.address == 0) {
-          throw StateError('Failed to parse input string');
-        }
-        try {
-          final root = _ffi.tsTreeRootNode(tree);
-          return _toAst(root, namedOnly: namedOnly, maxDepth: maxDepth);
-        } finally {
-          _ffi.tsTreeDelete(tree);
-        }
-      } finally {
-        malloc.free(codePtr);
-      }
-    } finally {
-      _ffi.tsParserDelete(parser);
+      final payload = OxcFFI.load().parseJson(code, language);
+      return mapper.mapProgram(payload);
+    } on OxcParseException {
+      return mapper.errorTree();
     }
-  }
-
-  /// Convert a TSNode into a Dart AstNode with optional depth limit.
-  AstNode _toAst(
-    TSNode node, {
-    required bool namedOnly,
-    required int maxDepth,
-    int current = 0,
-  }) {
-    final type = _ffi.tsNodeType(node).toDartString();
-    final sp = _ffi.tsNodeStartPoint(node);
-    final ep = _ffi.tsNodeEndPoint(node);
-    final sb = _ffi.tsNodeStartByte(node);
-    final eb = _ffi.tsNodeEndByte(node);
-
-    // Depth handling: if maxDepth > 0 and current >= maxDepth, stop.
-    final shouldStop = maxDepth > 0 && current >= maxDepth;
-    final children = <AstNode>[];
-    if (!shouldStop) {
-      final count = namedOnly
-          ? _ffi.tsNodeNamedChildCount(node)
-          : _ffi.tsNodeChildCount(node);
-      for (var i = 0; i < count; i++) {
-        final child = namedOnly
-            ? _ffi.tsNodeNamedChild(node, i)
-            : _ffi.tsNodeChild(node, i);
-        children.add(
-          _toAst(
-            child,
-            namedOnly: namedOnly,
-            maxDepth: maxDepth,
-            current: current + 1,
-          ),
-        );
-      }
-    }
-
-    return AstNode(
-      type: type,
-      startByte: sb,
-      endByte: eb,
-      startRow: sp.row,
-      startColumn: sp.column,
-      endRow: ep.row,
-      endColumn: ep.column,
-      children: children,
-    );
   }
 }

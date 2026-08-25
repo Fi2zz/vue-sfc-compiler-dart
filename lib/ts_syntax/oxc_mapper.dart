@@ -47,6 +47,16 @@ class OxcMapper {
     return root;
   }
 
+  /// Fallback tree for inputs oxc cannot parse (parser panic): a program
+  /// holding a single ERROR node spanning the input. The only consumer of
+  /// ERROR nodes (transform_expression._hasErrorNode) needs the boolean
+  /// signal; behavior matches tree-sitter's error recovery for the
+  /// already-exempt babel errorRecovery family.
+  AstNode errorTree() {
+    final error = buildNode('ERROR', 0, bytes.length, const []);
+    return buildNode('program', 0, bytes.length, [error]);
+  }
+
   /// Attach every comment to the deepest node whose span contains it.
   void _weaveComments(AstNode root, List comments) {
     for (final c in comments) {
