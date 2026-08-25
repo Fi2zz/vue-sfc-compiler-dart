@@ -1,7 +1,7 @@
 # PERF_BENCHMARK — 性能基准方案（2026-08-25 定稿，未实施）
 
 > 目的：为投产评估提供数据支撑。回答三个问题——单核吞吐多少、FFI 占比多少、并发能否线性扩展。
-> 与 HANDOFF.md（路线）、COMPILER_DOM.md（兼容层）互补。
+> 与 HANDOFF.md（路线）、OXC_REFERENCE.md（TS 解析后端）互补。
 
 ## 一、基准问题（按优先级）
 
