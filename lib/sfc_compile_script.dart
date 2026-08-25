@@ -17,7 +17,8 @@ String compileScript(SfcDescriptor descriptor) {
         scriptStartOffset: script.locStart,
       );
     }
-    return compileScriptSetup(descriptor).code;
+    // v1 管线契约对应官方 { hoistStatic: false }（gen_official.mjs 同款）。
+    return compileScriptSetup(descriptor, hoistStatic: false).code;
   }
   // Fallback: if only normal <script> exists, return its content as-is
   if (descriptor.script != null) {

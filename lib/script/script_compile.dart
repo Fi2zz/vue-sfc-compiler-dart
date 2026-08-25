@@ -34,12 +34,15 @@ final class _Specifier {
 /// the official-style bindingMetadata consumed by compileTemplate.
 ({String code, Map<String, String> bindings}) compileScriptSetup(
     SfcDescriptor descriptor,
-    {bool hoistStatic = false,
+    {bool hoistStatic = true,
     bool inlineTemplate = false}) {
   final source = descriptor.source;
   final filename = descriptor.filename;
   final script = descriptor.script;
   final scriptSetup = descriptor.scriptSetup!;
+  // 官方：options.hoistStatic !== false && !script —— 存在 normal <script>
+  // 时 hoistStatic 一律关闭。
+  final hoist = hoistStatic && script == null;
   final ts = _isTs(script?.lang) || _isTs(scriptSetup.lang);
 
   if (script != null && script.lang != scriptSetup.lang) {
@@ -133,7 +136,7 @@ final class _Specifier {
 
   // 2.2 process <script setup> body
   _processSetupBody(ctx, s, setupRoot, vueImportAliases,
-      hoistStatic: hoistStatic);
+      hoistStatic: hoist);
 
   // 3 props destructure transform
   if (ctx.propsDestructureDecl != null) {
