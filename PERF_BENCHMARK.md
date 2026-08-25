@@ -1,0 +1,58 @@
+# PERF_BENCHMARK — 性能基准方案（2026-08-25 定稿，未实施）
+
+> 目的：为投产评估提供数据支撑。回答三个问题——单核吞吐多少、FFI 占比多少、并发能否线性扩展。
+> 与 HANDOFF.md（路线）、COMPILER_DOM.md（兼容层）互补。
+
+## 一、基准问题（按优先级）
+
+1. **全管线吞吐**：典型 SFC 每秒可编译多少（files/s），P50/P90 延迟多少。
+2. **FFI 成本占比**：oxc_parse（Rust）+ JSON 反序列化 + mapper 在 TS 解析链路中各占多少；JSON 序列化是否是主要开销。
+3. **并发扩展性**：N 个 isolate 是否近线性（Rust 侧 `oxc_parse` 为纯函数、Allocator 局部，理论可并发，未实测）。
+4. **内存画像**：单次编译分配峰值、持续编译 RSS 是否稳定（FFI 泄漏已有 30 万次零增长结论，此处测 Dart 侧 GC 行为）。
+5. **规模曲线**：耗时随源码大小的增长阶（线性验证——mapper 的 `pointAt` 是逐节点线性扫描行表，大文件下可能暴露 O(nodes×lines)）。
+
+## 二、语料设计（`bench/corpus/`）
+
+| 档位 | 来源 | 说明 |
+|---|---|---|
+| tiny | 手写 5 个 | 单 script setup 块、无 TS |
+| typical | batch_inputs.json 抽 20 条 | 三块齐全、含指令/插值的真实形态 |
+| ts-heavy | 手写 5 个 | 复杂类型参数（defineProps 泛型、接口继承）——压 FFI/mapper 链路 |
+| tmpl-heavy | 手写 5 个 | ~500 行模板、深嵌套 v-for/v-if——压 transform/codegen |
+| large | 合成生成器 | typical × 10/× 50 倍拼接，验证增长阶 |
+| error | 既有错误样例抽 5 条 | 错误路径不能比成功路径慢得离谱 |
+
+合成生成器 `bench/gen_large.dart` 提交进仓库，保证语料可复现。
+
+## 三、测量方法
+
+- **计时**：`Stopwatch`；每档预热 20 次丢弃（JIT），正式测 200 次取 P50/P90/Mean；AOT 场景（`dart compile exe`）预热 3 次即可。
+- **分段打点**：parse(SFC) / TS 解析（FFI 调用与 OxcMapper 分别计时）/ compileScript / compileTemplate / compileStyle。分段用语料级开关而非改产品代码——在 bench 内直接调各层入口函数组合。
+- **FFI 微基准**：同一输入裸调 `OxcFFI.parseJson` 1 万次 vs `OxcMapper.mapProgram` 1 万次 vs `TSParser.parse` 全链路，差值即各段成本。
+- **并发**：`Isolate.run` 扇出 1/2/4/8 worker 各编 N 个文件，报总吞吐与加速比。注意 `OxcFFI._cached` 是进程级单例，DynamicLibrary 句柄跨 isolate 共享行为需先验证（isolate 不共享堆，FFI 句柄按 isolate 重新 open？实测确认）。
+- **内存**：每轮后 `ProcessInfo.currentRss`；单次分配用 `--profile`（Dart DevTools）离线采样，不进自动化。
+- **官方对照（可选第 2 期）**：同机 node 跑 @vue/compiler-sfc 3.5.41 同语料，输出**比值**（dart/js），避免绝对值误导。
+
+## 四、环境记录（结果必附）
+
+Dart SDK 版本、AOT/JIT 模式、机型/CPU/内存、OS、oxc cdylib 构建信息（cargo --version、liboxc_ts 大小）、是否插电/降频。结果存 `bench/results/<date>-<machine>.json`。
+
+## 五、坑位清单（实施前必读）
+
+1. **`TS_AST_CORPUS` 必须 unset**——corpus recorder 会把每次 parse 追加写盘，直接毁掉所有数据（ts_parser.dart:15）。
+2. `OxcFFI.load()` 有缓存，首次调用含 dlopen 成本——预热阶段天然吸收。
+3. prettier/verifier 等 node 工具链不在基准进程内，勿混入计时。
+4. large 档注意 mapper `_weaveComments` 的最深包含查找是 O(children) 递归，深嵌套模板可能平方级——正是要测的东西，别提前"修"。
+5. 错误语料走 `errorTree()` 快路径，与成功路径分开报告，不混平均。
+
+## 六、交付物与验收
+
+- `bench/bench.dart`（套件选择/档位/次数 CLI）+ `bench/gen_large.dart` + 结果 JSON schema
+- 首期产出：一张分段耗时表 + 吞吐数字 + 并发加速比曲线 + FFI 占比结论
+- 验收标准（首期测完基线后再定目标值，先记录不预设）：typical 档 P50、FFI 占比、8-isolate 加速比 ≥ 4x（预期）
+
+## 七、明确不做
+
+- 与 esbuild/swc 等第三方编译器的横向对比
+- 浏览器/WASM 场景（当前仅服务端 Dart）
+- CI 门禁化（先人工跑，数据稳定后再议）
