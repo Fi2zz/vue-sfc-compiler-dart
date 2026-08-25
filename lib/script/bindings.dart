@@ -266,7 +266,24 @@ bool _neverRef(SrcView view, AstNode? init, String? reactiveLocal) {
     case 'arrow_function':
     case 'update_expression':
     case 'class':
+    // 官方 default 分支的 isLiteralNode（*Literal）：字面量永不可能是 ref。
+    case 'string':
+    case 'number':
+    case 'true':
+    case 'false':
+    case 'null':
+    case 'regex':
+    // 官方 default 分支 isLiteralNode = type.endsWith('Literal')：
+    // TemplateLiteral 同样命中（`a${b}` 永不为 ref）。
+    case 'template_string':
       return true;
+    case 'call_expression':
+      // babel TaggedTemplateExpression 显式为 true；tree-sitter 中 tagged
+      // template 是无 arguments 的 call_expression，末子节点为模板串。
+      final last = init.children.isEmpty ? null : init.children.last;
+      return last != null &&
+          last.type == 'template_string' &&
+          !init.children.any((c) => c.type == 'call_arguments');
     case 'sequence_expression':
       return init.children.isEmpty
           ? false
