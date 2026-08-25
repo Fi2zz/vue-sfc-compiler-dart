@@ -1,5 +1,10 @@
 # oxc 替换 tree-sitter FFI 实施方案
 
+> **进度（2026-08-25）**：Phase 0–3 已完成并推送——Rust cdylib crate（`worker/oxc_ts/`）、
+> Dart FFI 绑定与 mapper（`lib/ts_syntax/`）、语料与 ast_diff 基座、makefile `build-worker`。
+> **ast_diff 449/452 EXACT（理论上限**，剩余 3 条为已豁免的 errorRecovery 家族）。
+> 剩余：Phase 4 切换（等待另一个会话收尾后进行）。规格与调用细节见 `OXC_REFERENCE.md`。
+
 ## 决策（已定）
 
 用 **oxc**（Rust 写的 TS/JS parser，crate 公开）替换 tree-sitter。目标是摆脱 tree-sitter（语法权威性一般、grammar 包 + C 构建链丑），**FFI 模型本身保留**——新方案是 Rust cdylib + dart:ffi，同步调用、零 IPC。

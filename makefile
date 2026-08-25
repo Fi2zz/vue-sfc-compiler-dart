@@ -81,6 +81,14 @@ clean-native:
 		$(CORE_OUT).dylib \
 		$(CORE_OUT).so
 
+# Build the oxc parser cdylib (tree-sitter replacement, see OXC_REFERENCE.md).
+# Requires Rust >= 1.95. The .so copy follows the macOS dual-suffix convention.
+build-worker:
+	mkdir -p $(OUT_DIR)
+	cd worker/oxc_ts && cargo build --release
+	cp worker/oxc_ts/target/release/liboxc_ts.dylib $(OUT_DIR)/
+	cp $(OUT_DIR)/liboxc_ts.dylib $(OUT_DIR)/liboxc_ts.so
+
 test: 
 	dart test -r expanded
 samples:
