@@ -114,18 +114,26 @@ final class ExpressionWalker {
 
   void _enter(AstNode node, AstNode? parent) {
     if (parent != null) parentStack.add(parent);
-    if (node.type == 'identifier' ||
-        node.type == 'shorthand_property_identifier') {
+    final type = node.type;
+    if (type == 'identifier' || type == 'shorthand_property_identifier') {
       _onIdent(node, parent);
-    } else if (_isFunctionType(node.type)) {
+    } else if (type == 'property_identifier') {
+      // 官方 babel 全标识符遍历：成员属性 b（a.b）也生成子表达式以支持
+      // sourcemap；但对象字面量静态键（{ k: v } 的 k）按 isStaticPropertyKey
+      // 跳过。
+      if (!_isStaticPairKey(node, parent)) _onIdent(node, parent);
+    } else if (type == 'shorthand_property_identifier_pattern') {
+      // 解构模式简写 { a }：官方同样生成子表达式（非引用标识符路径）。
+      _onIdent(node, parent);
+    } else if (_isFunctionType(type)) {
       _walkFunctionParams(node);
-    } else if (node.type == 'statement_block') {
+    } else if (type == 'statement_block') {
       _walkBlockDeclarations(node);
-    } else if (node.type == 'switch_statement') {
+    } else if (type == 'switch_statement') {
       _walkSwitchStatement(node, false);
-    } else if (node.type == 'catch_clause') {
+    } else if (type == 'catch_clause') {
       _walkCatchParam(node);
-    } else if (_isForStatement(node.type)) {
+    } else if (_isForStatement(type)) {
       _walkForStatement(node, false);
     }
   }
@@ -146,6 +154,12 @@ final class ExpressionWalker {
       node.type == 'switch_statement' ||
       node.type == 'catch_clause' ||
       _isForStatement(node.type);
+
+  bool _isStaticPairKey(AstNode node, AstNode? parent) =>
+      parent != null &&
+      parent.type == 'pair' &&
+      parent.children.isNotEmpty &&
+      identical(parent.children.first, node);
 
   void _onIdent(AstNode node, AstNode? parent) {
     final name = view.textOf(node);

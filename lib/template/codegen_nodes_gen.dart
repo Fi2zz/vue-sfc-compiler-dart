@@ -17,8 +17,13 @@ bool _isTextLike(Object? n) =>
 void genNode(Object? node, CodegenContext context) {
   if (node is String) {
     // Official prints Symbols via context.helper(); helper-name strings model
-    // symbol identity, so they get the `_` prefix here.
-    context.push(helperNames.contains(node) ? context.helper(node) : node);
+    // symbol identity, so they get the `_` prefix here. 其余字符串按官方
+    // NewlineType.Unknown 全扫描推进（可能含多行原文）。
+    if (helperNames.contains(node)) {
+      context.push(context.helper(node));
+    } else {
+      context.push(node, newlineIndex: -3);
+    }
     return;
   }
   switch (node) {
@@ -299,7 +304,7 @@ void _genTemplateLiteral(JSTemplateLiteral node, CodegenContext context) {
     final e = node.elements[i];
     if (e is String) {
       context.push(e.replaceAllMapped(
-          RegExp(r'(`|\$|\\)'), (m) => '\\${m[0]}'));
+          RegExp(r'(`|\$|\\)'), (m) => '\\${m[0]}'), newlineIndex: -3);
     } else {
       context.push('\${');
       if (multilines) context.indent();

@@ -176,8 +176,15 @@ extension TransformContextMethods on TransformContext {
   SimpleExpression hoist(Object? exp) {
     if (exp is String) exp = createSimpleExp(exp);
     hoists.add(exp);
-    final identifier = createSimpleExp('_hoisted_${hoists.length}', false,
-        exp is SimpleExpression ? exp.loc : null, ctCanHoist);
+    // 官方：引用标识符携带被提升表达式的 loc（映射到元素位置）。
+    final loc = switch (exp) {
+      SimpleExpression e => e.loc,
+      TmplNode n => n.loc,
+      CodegenNode n => n.loc,
+      _ => null,
+    };
+    final identifier =
+        createSimpleExp('_hoisted_${hoists.length}', false, loc, ctCanHoist);
     identifier.hoisted = exp;
     return identifier;
   }
