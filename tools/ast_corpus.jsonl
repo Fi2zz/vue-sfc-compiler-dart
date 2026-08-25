@@ -1,0 +1,452 @@
+{"code":"\nconst props = defineProps({ msg: String, count: { type: Number, default: 0 } })\n","language":"ts"}
+{"code":"\nconst props = defineProps(['msg','count'])\n","language":"js"}
+{"code":"\nconst props = defineProps({ count: { type: Number, required: true } })\n","language":"ts"}
+{"code":"\nconst props = defineProps({ count: { type: Number, validator: (v:number)=> v >= 0 } })\n","language":"ts"}
+{"code":"\nconst props = defineProps({ items: { type: Array, default: ()=> [] } })\n","language":"ts"}
+{"code":"\nconst props = defineProps({ enabled: { type: Boolean, default: true } })\n","language":"ts"}
+{"code":"\nconst props = defineProps<{ msg: string; count?: number }>()\n","language":"ts"}
+{"code":"\nconst { msg = 'hi', count = 1 } = defineProps<{ msg: string; count?: number }>()\n","language":"ts"}
+{"code":"\nconst props = defineProps<{ id: string | number; active?: boolean }>()\n","language":"ts"}
+{"code":"\nconst props = defineProps<{ items: string[]; config?: { title: string } }>()\n","language":"ts"}
+{"code":"\nconst props = defineProps<{ user: { name: string; roles: string[] } }>()\n","language":"ts"}
+{"code":"\nconst { size = 'medium' } = defineProps<{ size: 'small' | 'medium' | 'large' }>()\n","language":"ts"}
+{"code":"\nconst { msg, count } = withDefaults(defineProps<{ msg?: string; count?: number }>(), { msg: 'hi', count: 1 })\n","language":"ts"}
+{"code":"\nconst emit = defineEmits(['update','remove'])\nfunction onUpdate(id:number){ emit('update', id) }\n","language":"ts"}
+{"code":"\nconst emit = defineEmits({ submit(payload: { id: number }) { return true } })\nemit('submit', { id: 1 })\n","language":"ts"}
+{"code":"\nconst emit = defineEmits({ save(v: { id: number }) { return true }, cancel() { return true } })\nemit('save', { id: 1 })\nemit('cancel')\n","language":"ts"}
+{"code":"\nconst emit = defineEmits<{ (e:'update', id: number): void; (e:'remove'): void }>()\nemit('remove')\nemit('update', 1)\n","language":"ts"}
+{"code":"\nconst emit = defineEmits<{ (e:'save', payload: { id: number }): void }>()\nemit('save', { id: 1 })\n","language":"ts"}
+{"code":"\nconst emit = defineEmits<{ (e:'select', payload: { id: number } | { slug: string }): void }>()\nemit('select', { id: 1 })\n","language":"ts"}
+{"code":"\nfunction inc(){}\nconst count = 0\ndefineExpose({ inc, count })\n","language":"ts"}
+{"code":"\ndefineExpose()\n","language":"ts"}
+{"code":"\nconst slots = defineSlots<{ default(props:{msg:string}): any }>()\n","language":"ts"}
+{"code":"\nconst slots = defineSlots()\n","language":"js"}
+{"code":"\nconst slots = defineSlots<{ header(): any; default(props:{msg:string}): any; footer(): any }>()\n","language":"ts"}
+{"code":"\nconst slots = useSlots()\n","language":"ts"}
+{"code":"\nconst attrs = useAttrs()\n","language":"ts"}
+{"code":"\nconst color = 'red'\nuseCssVars(() => ({ color }))\n","language":"ts"}
+{"code":"\nconst uid = useId()\n","language":"ts"}
+{"code":"\nconst input = useTemplateRef('input')\n","language":"ts"}
+{"code":"\nimport { reactive } from 'vue'\nconst state = reactive({ count: 0 })\n","language":"ts"}
+{"code":"\nimport { ref } from 'vue'\nconst count = ref(0)\n","language":"ts"}
+{"code":"\nimport { ref, computed } from 'vue'\nconst count = ref(1)\nconst double = computed(() => count.value * 2)\n","language":"ts"}
+{"code":"\nimport { ref, watch } from 'vue'\nconst v = ref(0)\nwatch(v, (nv, ov) => {})\n","language":"ts"}
+{"code":"\nimport { ref, watchEffect } from 'vue'\nconst v = ref(0)\nwatchEffect(() => { v.value })\n","language":"ts"}
+{"code":"\nimport { onMounted } from 'vue'\nonMounted(() => {})\n","language":"ts"}
+{"code":"\nimport { provide, inject } from 'vue'\nprovide('key', 1)\nconst injected = inject('key', 0)\n","language":"ts"}
+{"code":"\nimport { getCurrentInstance } from 'vue'\nconst inst = getCurrentInstance()\n","language":"ts"}
+{"code":"\nconst a = 1\nconst b = true\n","language":"js"}
+{"code":"\nlet a = 1\n","language":"js"}
+{"code":"\nconst obj = { x: 1, ok: true }\n","language":"js"}
+{"code":"\nconst { x, ok = true } = { x: 1, ok: true }\n","language":"js"}
+{"code":"\nfunction foo(){ return 1 }\n","language":"js"}
+{"code":"\nconst res = await Promise.resolve(1)\n","language":"js"}
+{"code":"\nimport { ref, isRef } from 'vue'\nconst a = ref(1)\nconst ok = isRef(a)\n","language":"ts"}
+{"code":"\nexport const api = 1\n","language":"js"}
+{"code":"\nfor (let i = 0; i < 3; i++) { }\n","language":"js"}
+{"code":"\ntry { throw new Error('x') } catch (e) { } finally { }\n","language":"js"}
+{"code":"\nasync function load(){ return 1 }\n","language":"js"}
+{"code":"\nclass X { a = 1 }\nconst x = new X()\n","language":"js"}
+{"code":"\nexport default { name: 'X' }\n","language":"js"}
+{"code":"\ntype User = { id: number; name: string }\n","language":"ts"}
+{"code":"\ninterface Point { x: number; y: number }\n","language":"ts"}
+{"code":"\nenum Color { Red, Green }\n","language":"ts"}
+{"code":"\nimport type { Component } from 'vue'\nlet c: Component | null = null\n","language":"ts"}
+{"code":"\nexport type Result = { ok: boolean }\n","language":"ts"}
+{"code":"\nconsole.log('hello')\n","language":"js"}
+{"code":"\nimport { onBeforeMount } from 'vue'\nonBeforeMount(() => {})\n","language":"ts"}
+{"code":"\nimport { onUpdated } from 'vue'\nonUpdated(() => {})\n","language":"ts"}
+{"code":"\nimport { onUnmounted } from 'vue'\nonUnmounted(() => {})\n","language":"ts"}
+{"code":"\nimport { onErrorCaptured } from 'vue'\nonErrorCaptured(() => false)\n","language":"ts"}
+{"code":"\nimport { onRenderTracked } from 'vue'\nonRenderTracked(() => {})\n","language":"ts"}
+{"code":"\nimport { onRenderTriggered } from 'vue'\nonRenderTriggered(() => {})\n","language":"ts"}
+{"code":"\nimport { nextTick } from 'vue'\nawait nextTick()\n","language":"ts"}
+{"code":"\nimport { effectScope } from 'vue'\nconst scope = effectScope()\nscope.stop()\n","language":"ts"}
+{"code":"\nimport { getCurrentScope } from 'vue'\nconst scope = getCurrentScope()\n","language":"ts"}
+{"code":"\nimport { onScopeDispose } from 'vue'\nonScopeDispose(() => {})\n","language":"ts"}
+{"code":"\nimport { shallowRef } from 'vue'\nconst a = shallowRef(1)\n","language":"ts"}
+{"code":"\nimport { shallowReactive } from 'vue'\nconst obj = shallowReactive({ a: 1 })\n","language":"ts"}
+{"code":"\nimport { readonly, reactive } from 'vue'\nconst s = readonly(reactive({ a: 1 }))\n","language":"ts"}
+{"code":"\nimport { reactive, toRefs } from 'vue'\nconst s = reactive({ a: 1, b: 2 })\nconst { a, b } = toRefs(s)\n","language":"ts"}
+{"code":"\nimport { reactive, toRef } from 'vue'\nconst s = reactive({ a: 1 })\nconst a = toRef(s, 'a')\n","language":"ts"}
+{"code":"\nimport { ref, unref, isRef } from 'vue'\nconst a = ref(1)\nconst v = unref(a)\nconst ok = isRef(a)\n","language":"ts"}
+{"code":"\nimport { ref, watchPostEffect } from 'vue'\nconst v = ref(0)\nwatchPostEffect(() => { v.value })\n","language":"ts"}
+{"code":"\nimport { ref, watchSyncEffect } from 'vue'\nconst v = ref(0)\nwatchSyncEffect(() => { v.value })\n","language":"ts"}
+{"code":"\nimport { onBeforeUpdate } from 'vue'\nonBeforeUpdate(() => {})\n","language":"ts"}
+{"code":"\nimport { onActivated } from 'vue'\nonActivated(() => {})\n","language":"ts"}
+{"code":"\nimport { onDeactivated } from 'vue'\nonDeactivated(() => {})\n","language":"ts"}
+{"code":"\nimport { customRef } from 'vue'\nconst r = customRef((track, trigger) => ({ get(){ track(); return 1 }, set(v){ trigger() } }))\n","language":"ts"}
+{"code":"\nimport { shallowRef, triggerRef } from 'vue'\nconst r = shallowRef(1)\ntriggerRef(r)\n","language":"ts"}
+{"code":"\nimport { markRaw } from 'vue'\nconst obj = markRaw({ a: 1 })\n","language":"ts"}
+{"code":"\nimport { reactive, readonly, isReactive, isReadonly, isProxy } from 'vue'\nconst a = reactive({})\nconst b = readonly({})\nconst ra = isReactive(a)\nconst ro = isReadonly(b)\nconst px = isProxy(a)\n","language":"ts"}
+{"code":"\nimport { toValue, ref } from 'vue'\nconst a = ref(1)\nconst v = toValue(a)\n","language":"ts"}
+{"code":"\nimport { defineAsyncComponent } from 'vue'\nconst Comp = defineAsyncComponent(() => Promise.resolve({}))\n","language":"ts"}
+{"code":"\nfunction id<T>(x: T): T { return x }\nconst n = id(1)\n","language":"ts"}
+{"code":"\ntype IsString<T> = T extends string ? true : false\nconst r: IsString<'a'> = true\n","language":"ts"}
+{"code":"\ntype A = { a: number }\ntype B = { b: string }\ntype C = A & B\nconst c: C = { a: 1, b: 'x' }\n","language":"ts"}
+{"code":"\nconst conf = { a: 1 } satisfies { a: number }\n","language":"ts"}
+{"code":"\nconst cfg = { a: 1 } as const\n","language":"ts"}
+{"code":"\nconst mod = await import('./nonexistent')\n","language":"ts"}
+{"code":"\nconst p1 = defineProps<{ a: number }>()\nconst p2 = defineProps<{ b: string }>()\n","language":"ts"}
+{"code":"\ndefineOptions({ name: 'X1' })\ndefineOptions({ name: 'X2' })\n","language":"ts"}
+{"code":"\nimport { onServerPrefetch } from 'vue'\nonServerPrefetch(async () => {})\n","language":"ts"}
+{"code":"\nimport { getCurrentInstance } from 'vue'\nconst inst = getCurrentInstance()\ninst?.emit?.('change')\n","language":"ts"}
+{"code":"\nclass Y { #a = 1 }\nconst y = new Y()\n","language":"js"}
+{"code":"\nconst S = Symbol('k')\nconst big = 1n\nconst env = import.meta.env\nconst nodeEnv = process.env.NODE_ENV\n","language":"js"}
+{"code":"\nconst p = defineProps<{ a: number }>({ a: Number })\n","language":"ts"}
+{"code":"\nconst foo = {} as any\nconst { a } = withDefaults(foo, { a: 1 })\n","language":"ts"}
+{"code":"\nconst { a } = withDefaults(defineProps({ a: Number }), { a: 1 })\n","language":"ts"}
+{"code":"\nconst e1 = defineEmits(['a'])\nconst e2 = defineEmits(['b'])\n","language":"ts"}
+{"code":"\nconst emit = defineEmits<{ (e: 'a'): void; a: any }>()\n","language":"ts"}
+{"code":"\nconst a = defineModel<number>('count')\nconst b = defineModel<number>('count')\n","language":"ts"}
+{"code":"\ndefineOptions<{}>({ name: 'X' })\n","language":"ts"}
+{"code":"\ndefineSlots({})\n","language":"ts"}
+{"code":"\nconst model = defineModel<string>()\n","language":"ts"}
+{"code":"\nconst model = defineModel({ type: String })\n","language":"js"}
+{"code":"\nconst count = defineModel<number>('count', { default: 0 })\n","language":"ts"}
+{"code":"\nconst count = defineModel<number>('count', { local: true })\n","language":"ts"}
+{"code":"\nconst visible = defineModel<boolean>('visible', { required: true })\n","language":"ts"}
+{"code":"\nconst value = defineModel<number>('value', { get: (v)=> v, set: (v)=> Math.max(0, v) })\n","language":"ts"}
+{"code":"\nconst title = defineModel<string>()\nconst checked = defineModel<boolean>('checked')\n","language":"ts"}
+{"code":"\nconst config = defineModel<{ a: number }>('config', { default: () => ({ a: 1 }) })\n","language":"ts"}
+{"code":"\ndefineOptions({ name: 'MyComponent', inheritAttrs: false })\n","language":"ts"}
+{"code":"\ndefineOptions({ name: 'Extended', extends: { props: { a: String } } })\n","language":"ts"}
+{"code":"\ndefineOptions({ name: 'WithComp', components: { A: {} } })\n","language":"ts"}
+{"code":"\ndefineOptions({ name: 'WithDir', directives: { focus: {} } })\n","language":"ts"}
+{"code":"\ndefineOptions({ name: 'OptsPropsErr', props: { a: String } })\n","language":"ts"}
+{"code":"export default {\n  name: 'MyComponent',\n  inheritAttrs: false\n}","language":"js"}
+{"code":"\nconst count = ref(0)\n","language":"js"}
+{"code":"\nexport default {\n  name: 'MyComponent',\n  inheritAttrs: false\n}\n","language":"js"}
+{"code":"export default {\n  props: {\n    title: String,\n    count: {\n      type: Number,\n      default: 0\n    }\n  },\n  emits: ['update', 'delete']\n}","language":"js"}
+{"code":"\nconst props = defineProps(['title', 'count'])\nconst emit = defineEmits(['update', 'delete'])\n","language":"js"}
+{"code":"\nexport default {\n  props: {\n    title: String,\n    count: {\n      type: Number,\n      default: 0\n    }\n  },\n  emits: ['update', 'delete']\n}\n","language":"js"}
+{"code":"\nimport { ref } from 'vue'\n\nconst props = defineProps<{\n  user: User\n}>()\n\nconst localCount = ref(0)\n","language":"ts"}
+{"code":"\nimport type { PropType } from 'vue'\n\ninterface User {\n  id: number\n  name: string\n}\n\nexport default {\n  name: 'UserComponent',\n  props: {\n    user: {\n      type: Object as PropType<User>,\n      required: true\n    }\n  }\n}\n","language":"ts"}
+{"code":"export default {\n  name: 'MixedComponent',\n  data() {\n    return {\n      legacyData: 'legacy'\n    }\n  },\n  computed: {\n    legacyComputed() {\n      return this.legacyData + ' computed'\n    }\n  },\n  methods: {\n    legacyMethod() {\n      console.log('legacy method')\n    }\n  }\n}","language":"js"}
+{"code":"\nimport { ref, computed } from 'vue'\n\nconst setupCount = ref(0)\nconst setupComputed = computed(() => setupCount.value * 2)\n\nfunction setupMethod() {\n  console.log('setup method')\n}\n","language":"js"}
+{"code":"\nexport default {\n  name: 'MixedComponent',\n  data() {\n    return {\n      legacyData: 'legacy'\n    }\n  },\n  computed: {\n    legacyComputed() {\n      return this.legacyData + ' computed'\n    }\n  },\n  methods: {\n    legacyMethod() {\n      console.log('legacy method')\n    }\n  }\n}\n","language":"js"}
+{"code":"import { someUtil } from './utils'\n\nexport const sharedValue = 'shared'\n\nexport default {\n  name: 'ImportExportComponent'\n}","language":"js"}
+{"code":"\nimport { ref } from 'vue'\nimport { anotherUtil } from './another-utils'\n\nconst localValue = ref('local')\n\nexport { localValue }\n","language":"js"}
+{"code":"\nimport { someUtil } from './utils'\n\nexport const sharedValue = 'shared'\n\nexport default {\n  name: 'ImportExportComponent'\n}\n","language":"js"}
+{"code":"import { ref, computed, onMounted } from 'vue'\n\nexport default {\n  name: 'CompositionInScript',\n  setup() {\n    const count = ref(0)\n    const doubled = computed(() => count.value * 2)\n    \n    onMounted(() => {\n      console.log('component mounted')\n    })\n    \n    function increment() {\n      count.value++\n    }\n    \n    return {\n      count,\n      doubled,\n      increment\n    }\n  }\n}","language":"js"}
+{"code":"import { reactive, computed, watch } from 'vue'\n\nexport default {\n  name: 'ReactiveInScript',\n  setup() {\n    const state = reactive({\n      name: '',\n      age: 0\n    })\n    \n    const description = computed(() => {\n      return `${state.name} is ${state.age} years old`\n    })\n    \n    watch(() => state.age, (newAge, oldAge) => {\n      console.log(`age changed from ${oldAge} to ${newAge}`)\n    })\n    \n    function updateProfile(name, age) {\n      state.name = name\n      state.age = age\n    }\n    \n    return {\n      state,\n      description,\n      updateProfile\n    }\n  }\n}","language":"js"}
+{"code":"import { ref, onMounted, onUpdated, onUnmounted, onBeforeMount } from 'vue'\n\nexport default {\n  name: 'LifecycleInScript',\n  setup() {\n    const message = ref('')\n    \n    onBeforeMount(() => {\n      message.value = 'before mount'\n    })\n    \n    onMounted(() => {\n      console.log('mounted')\n      message.value = 'mounted'\n    })\n    \n    onUpdated(() => {\n      console.log('updated')\n    })\n    \n    onUnmounted(() => {\n      console.log('unmounted')\n    })\n    \n    return {\n      message\n    }\n  }\n}","language":"js"}
+{"code":"import { ref, watch, watchEffect } from 'vue'\n\nexport default {\n  name: 'WatchInScript',\n  setup() {\n    const count = ref(0)\n    const multiplier = ref(1)\n    const result = ref(0)\n    \n    watch([count, multiplier], ([newCount, newMultiplier]) => {\n      result.value = newCount * newMultiplier\n    })\n    \n    watchEffect(() => {\n      console.log(`Current count: ${count.value}`)\n    })\n    \n    function increment() {\n      count.value++\n    }\n    \n    function updateMultiplier(value) {\n      multiplier.value = value\n    }\n    \n    return {\n      count,\n      multiplier,\n      result,\n      increment,\n      updateMultiplier\n    }\n  }\n}","language":"js"}
+{"code":"import { ref, provide, inject } from 'vue'\n\nexport default {\n  name: 'ProvideInjectInScript',\n  setup() {\n    const theme = ref('light')\n    const user = inject('currentUser', ref({ name: 'Guest' }))\n    \n    provide('theme', theme)\n    provide('appConfig', {\n      version: '1.0.0',\n      apiUrl: 'https://api.example.com'\n    })\n    \n    function toggleTheme() {\n      theme.value = theme.value === 'light' ? 'dark' : 'light'\n    }\n    \n    return {\n      theme,\n      user,\n      toggleTheme\n    }\n  }\n}","language":"js"}
+{"code":"import { ref, unref, isRef, toRef, toRefs } from 'vue'\n\nexport default {\n  name: 'RefsInScript',\n  props: ['initialValue'],\n  setup(props) {\n    const count = ref(0)\n    const maybeRef = ref(10)\n    const rawValue = 20\n    \n    const fromProps = toRef(props, 'initialValue')\n    \n    function checkRef(value) {\n      return isRef(value)\n    }\n    \n    function getValue(value) {\n      return unref(value)\n    }\n    \n    return {\n      count,\n      maybeRef,\n      rawValue,\n      fromProps,\n      checkRef,\n      getValue\n    }\n  }\n}","language":"js"}
+{"code":"import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'\n\nexport default {\n  name: 'AdvancedCompositionInScript',\n  setup() {\n    const count = ref(0)\n    const instance = getCurrentInstance()\n    \n    const doubleCount = computed(() => count.value * 2)\n    \n    const tripleCount = computed({\n      get: () => count.value * 3,\n      set: (val) => {\n        count.value = Math.floor(val / 3)\n      }\n    })\n    \n    async function incrementAndWait() {\n      count.value++\n      await nextTick()\n      console.log('DOM updated')\n    }\n    \n    watch(count, (newVal, oldVal) => {\n      console.log(`Count changed: ${oldVal} -> ${newVal}`)\n    })\n    \n    return {\n      count,\n      doubleCount,\n      tripleCount,\n      incrementAndWait,\n      instance\n    }\n  }\n}","language":"js"}
+{"code":"export default {\n  name: 'FirstDefault'\n}\n\nexport default {\n  name: 'SecondDefault'\n}","language":"js"}
+{"code":"export default {\n  name: 'ComponentWithSetup',\n  setup() {\n    return { message: 'hello' }\n  }\n}\n\nexport default {\n  name: 'AnotherDefault'\n}","language":"js"}
+{"code":"export default {\n  name: 'FirstComponent',\n  data() {\n    return { count: 0 }\n  }\n}\n\nexport default {\n  name: 'SecondComponent',\n  props: ['message']\n}","language":"js"}
+{"code":"const firstConfig = {\n  name: 'FirstConfig',\n  template: '<div>First</div>'\n}\n\nconst secondConfig = {\n  name: 'SecondConfig',\n  template: '<div>Second</div>'\n}\n\nexport default firstConfig\nexport default secondConfig","language":"js"}
+{"code":"export default {\n  name: 'Component1'\n}\n\nconst someCode = 123\n\nexport default {\n  name: 'Component2'\n}","language":"js"}
+{"code":"import { ref } from 'vue'\n\nexport default {\n  name: 'FirstComposition',\n  setup() {\n    const count = ref(0)\n    return { count }\n  }\n}\n\nexport default {\n  name: 'SecondComposition',\n  setup() {\n    const message = ref('hello')\n    return { message }\n  }\n}","language":"js"}
+{"code":"const isDev = process.env.NODE_ENV === 'development'\n\nexport default isDev ? {\n  name: 'DevComponent',\n  template: '<div>Development</div>'\n} : {\n  name: 'ProdComponent',\n  template: '<div>Production</div>'\n}\n\nexport default {\n  name: 'FallbackComponent'\n}","language":"js"}
+{"code":"export default {\n  name: 'SyncComponent'\n}\n\nasync function loadConfig() {\n  return { name: 'AsyncComponent' }\n}\n\nexport default await loadConfig()","language":"js"}
+{"code":"\n// 用户自定义导入\nimport { formatDate } from '@/utils/format'\nimport { UserService } from '@/services/user'\nimport type { UserProfile, UserSettings } from '@/types/user'\nimport { useAuth } from '@/composables/useAuth'\nimport { API_ENDPOINTS } from '@/config/api'\n\n// 使用导入的功能\nconst userService = new UserService()\nconst { user, isLoggedIn } = useAuth()\nconst currentDate = formatDate(new Date())\n\nconst userProfile = ref<UserProfile | null>(null)\nconst settings = reactive<UserSettings>({\n  theme: 'light',\n  language: 'zh-CN'\n})\n\nasync function loadUserData() {\n  if (isLoggedIn.value) {\n    userProfile.value = await userService.getProfile(API_ENDPOINTS.user.profile)\n  }\n}\n\nloadUserData()\n","language":"ts"}
+{"code":"\n// 用户导入 - 混合不同类型\nimport { ref, computed } from 'vue'\nimport { debounce } from 'lodash-es'\nimport { useRouter, useRoute } from 'vue-router'\nimport { useStore } from '@/store'\nimport { validateEmail, validatePhone } from '@/utils/validation'\nimport { ElMessage } from 'element-plus'\nimport type { FormRules, FormInstance } from 'element-plus'\n\nconst router = useRouter()\nconst route = useRoute()\nconst store = useStore()\n\nconst email = ref('')\nconst phone = ref('')\n\nconst isValidEmail = computed(() => validateEmail(email.value))\nconst isValidPhone = computed(() => validatePhone(phone.value))\n\nconst debouncedSearch = debounce((query: string) => {\n  store.dispatch('search', query)\n}, 300)\n\nfunction showMessage(message: string, type: 'success' | 'error' = 'success') {\n  ElMessage({\n    message,\n    type,\n    duration: 3000\n  })\n}\n","language":"ts"}
+{"code":"\n// 用户导入 VueUse 库\nimport { useLocalStorage, useDark, useToggle, useDebounce, useThrottle } from '@vueuse/core'\nimport { useAxios } from '@vueuse/integrations/useAxios'\n\n// 本地存储\nconst userPreferences = useLocalStorage('user-preferences', {\n  theme: 'light',\n  fontSize: 14,\n  sidebarCollapsed: false\n})\n\n// 暗黑模式\nconst isDark = useDark()\nconst toggleDark = useToggle(isDark)\n\n// 防抖和节流\nconst searchQuery = ref('')\nconst debouncedQuery = useDebounce(searchQuery, 500)\nconst throttledQuery = useThrottle(searchQuery, 1000)\n\n// HTTP 请求\nconst { data, error, isLoading } = useAxios('/api/users', {\n  method: 'GET'\n})\n\nwatch(debouncedQuery, (newQuery) => {\n  console.log('搜索:', newQuery)\n})\n","language":"ts"}
+{"code":"\nimport * as vue from 'vue'\nconst count = vue.ref(0)\n","language":"ts"}
+{"code":"\nimport dayjs from 'dayjs'\nconst now = dayjs()\n","language":"ts"}
+{"code":"\nimport 'reflect-metadata'\nconst ok = true\n","language":"ts"}
+{"code":"\nconst props = defineProps<CrossBlockProps>()\nconsole.log(props)\n","language":"ts"}
+{"code":"\nexport interface CrossBlockProps {\n  title: string\n  count?: number\n  onChange: (v: string) => void\n}\n","language":"ts"}
+{"code":"\nimport { ref } from 'vue'\nconst color = ref('red')\n","language":"js"}
+{"code":"({\n  \"./script_css_vars_inject.vue-color\": (color)\n})","language":"ts"}
+{"code":"inc","language":"ts"}
+{"code":"_ctx.text","language":"ts"}
+{"code":"handler","language":"ts"}
+{"code":"({ item, index })=>{}","language":"ts"}
+{"code":"(1)","language":"ts"}
+{"code":"(['a'])","language":"ts"}
+{"code":"([value])","language":"ts"}
+{"code":"(['a', 'b'])","language":"ts"}
+{"code":"({ color: 'red' })","language":"ts"}
+{"code":"('t' + '1')","language":"ts"}
+{"code":"('txt')","language":"ts"}
+{"code":"(row.id)","language":"ts"}
+{"code":"({ item })=>{}","language":"ts"}
+{"code":"_ctx.val","language":"ts"}
+{"code":"_ctx.t","language":"ts"}
+{"code":"go","language":"ts"}
+{"code":"submit","language":"ts"}
+{"code":"(3)","language":"ts"}
+{"code":"\nconst msg = 'hello'\n","language":"js"}
+{"code":"\nlet count = 0\n","language":"js"}
+{"code":"count++","language":"ts"}
+{"code":"(count++)","language":"ts"}
+{"code":"\nimport Foo from './Foo.vue'\n","language":"js"}
+{"code":"\nimport FooBar from './FooBar.vue'\n","language":"js"}
+{"code":"\ndefineProps(['msg'])\n","language":"js"}
+{"code":"\nconst { msg: m } = defineProps(['msg'])\n","language":"js"}
+{"code":"\nimport { util } from './util.js'\n","language":"js"}
+{"code":"(util())","language":"ts"}
+{"code":"\ndefineModel()\n","language":"js"}
+{"code":"export default {\n  props: ['msg']\n}","language":"js"}
+{"code":"export default {\n  data() {\n    return { count: 0 }\n  }\n}","language":"js"}
+{"code":"export default {\n  computed: {\n    doubled() { return 2 }\n  },\n  methods: {\n    go() {}\n  }\n}","language":"js"}
+{"code":"import Foo from './Foo.vue'\nexport default {\n  components: { Foo }\n}","language":"js"}
+{"code":"([a, 'b', { c: ok }])","language":"ts"}
+{"code":"({ active: on })","language":"ts"}
+{"code":"({ color: c, fontSize: n + 'px' })","language":"ts"}
+{"code":"(it.id)","language":"ts"}
+{"code":"({ row })=>{}","language":"ts"}
+{"code":"(row.name)","language":"ts"}
+{"code":"go2","language":"ts"}
+{"code":"({ a, b })=>{}","language":"ts"}
+{"code":"a?.b()","language":"ts"}
+{"code":"(a?.b())","language":"ts"}
+{"code":"go($event, 1)","language":"ts"}
+{"code":"(go($event, 1))","language":"ts"}
+{"code":"(g.id)","language":"ts"}
+{"code":"(g.show)","language":"ts"}
+{"code":"(g.name)","language":"ts"}
+{"code":"(a + b)","language":"ts"}
+{"code":"a + b","language":"ts"}
+{"code":"i","language":"ts"}
+{"code":"\ndefineProps(['foo'])\n","language":"js"}
+{"code":"fn","language":"ts"}
+{"code":"_ctx.x","language":"ts"}
+{"code":"_ctx.a","language":"ts"}
+{"code":"\nimport { ref } from 'vue'\nconst count = ref(0)\n","language":"js"}
+{"code":"\nimport { ref, computed, reactive } from 'vue'\nconst r = ref(0)\nconst c = computed(() => r.value * 2)\nconst s = reactive({ a: 1 })\nconst m = unknownCall()\nlet l = 1\nconst lit = 'hi'\n","language":"js"}
+{"code":"(s.a)","language":"ts"}
+{"code":"\ndefineProps<{ title: string; 'data-x'?: number }>()\nconst local = 1\n","language":"ts"}
+{"code":"\nlet n = 0\n","language":"js"}
+{"code":"n = n + 1","language":"ts"}
+{"code":"(n = n + 1)","language":"ts"}
+{"code":"(n + 1)","language":"ts"}
+{"code":"\nimport { ref } from 'vue'\nconst x = ref(1)\ndefineExpose({ x })\n","language":"js"}
+{"code":"\nconst emit = defineEmits(['go'])\n","language":"js"}
+{"code":"emit('go')","language":"ts"}
+{"code":"(emit('go'))","language":"ts"}
+{"code":"\nimport MyComp from './MyComp.vue'\nimport { ref } from 'vue'\nconst show = ref(true)\n","language":"js"}
+{"code":"\nimport { ref } from 'vue'\nconst n = ref(0)\n","language":"ts"}
+{"code":"n = Number($event)","language":"ts"}
+{"code":"(n = Number($event))","language":"ts"}
+{"code":"\nconst a = 1\nconst b = 'x'\nlet c = 2\n","language":"js"}
+{"code":"\nimport { ref } from 'vue'\nconst list = ref([1, 2])\n","language":"js"}
+{"code":"\nimport { customThing } from './thing'\nconst m = customThing()\n","language":"js"}
+{"code":"m = 2","language":"ts"}
+{"code":"(m = 2)","language":"ts"}
+{"code":"\ndefineProps<P>()\nimport { useStore } from './store'\nconst st = useStore()\n","language":"ts"}
+{"code":"\nexport interface P { a: string }\nexport const k = 5\n","language":"ts"}
+{"code":"(st.something)","language":"ts"}
+{"code":"(a.b)","language":"ts"}
+{"code":"a++;b++","language":"ts"}
+{"code":" a++;b++ ","language":"ts"}
+{"code":"(foo())","language":"ts"}
+{"code":"(key+1)","language":"ts"}
+{"code":"(foo &&\nbar)","language":"ts"}
+{"code":"({ some: condition })","language":"ts"}
+{"code":"({ a })=>{}","language":"ts"}
+{"code":"({ b })=>{}","language":"ts"}
+{"code":"b","language":"ts"}
+{"code":"(\"</div>\")","language":"ts"}
+{"code":"(a<b)","language":"ts"}
+{"code":"(c>d)","language":"ts"}
+{"code":"(foo < bar + foo)","language":"ts"}
+{"code":"(a<b && c>d)","language":"ts"}
+{"code":"(foo + bar)","language":"ts"}
+{"code":"({})","language":"ts"}
+{"code":"foo","language":"ts"}
+{"code":"({ foo })=>{}","language":"ts"}
+{"code":"(o + 'foo')","language":"ts"}
+{"code":"({ foo: true })","language":"ts"}
+{"code":"(0)","language":"ts"}
+{"code":"(foo+1)","language":"ts"}
+{"code":"({ bar: isBar })","language":"ts"}
+{"code":"([{ color: 'red' }])","language":"ts"}
+{"code":"a","language":"ts"}
+{"code":"((() => { switch (foo) { case bar: return `${bar}`; } })())","language":"ts"}
+{"code":"((() => {\n          switch (true) {\n            case true: {\n              const foo = \"bar\";\n              return `${foo}`;\n            }\n          }\n        })())","language":"ts"}
+{"code":"((() => { switch (1) { case 1: const foo = \"bar\"; return `${foo}`; } })())","language":"ts"}
+{"code":"((async () => { x = await bar })())","language":"ts"}
+{"code":"(a |> uppercase)","language":"ts"}
+{"code":"(a?.b?.c)","language":"ts"}
+{"code":"(a ?? b)","language":"ts"}
+{"code":"(13000n)","language":"ts"}
+{"code":"() => {\n        try {\n          throw new Error('sup?')\n        } catch ({ message: { length } }) {\n          console.error(length)\n        }\n        console.log(length)\n      }","language":"ts"}
+{"code":"(() => {\n        try {\n          throw new Error('sup?')\n        } catch ({ message: { length } }) {\n          console.error(length)\n        }\n        console.log(length)\n      })","language":"ts"}
+{"code":"() => {\n         try {} catch (err) { console.error(err) }\n        console.log(err)\n      }","language":"ts"}
+{"code":"(() => {\n         try {} catch (err) { console.error(err) }\n        console.log(err)\n      })","language":"ts"}
+{"code":"() => {\n        for (var i = 0; i < list.length; i++) {\n          log(i)\n        }\n        error(i)\n      }","language":"ts"}
+{"code":" () => {\n        for (var i = 0; i < list.length; i++) {\n          log(i)\n        }\n        error(i)\n      } ","language":"ts"}
+{"code":"() => {\n        for (let i = 0; i < list.length; i++) {\n          log(i)\n        }\n        error(i)\n      }","language":"ts"}
+{"code":" () => {\n        for (let i = 0; i < list.length; i++) {\n          log(i)\n        }\n        error(i)\n      } ","language":"ts"}
+{"code":"() => {\n        for (const x of list) {\n          log(x)\n        }\n        error(x)\n      }","language":"ts"}
+{"code":"(() => {\n        for (const x of list) {\n          log(x)\n        }\n        error(x)\n      })","language":"ts"}
+{"code":"() => {\n        for (const x in list) {\n          log(x)\n        }\n        error(x)\n      }","language":"ts"}
+{"code":"(() => {\n        for (const x in list) {\n          log(x)\n        }\n        error(x)\n      })","language":"ts"}
+{"code":"(new Date().getFullYear())","language":"ts"}
+{"code":"({ foo: 'ok()' })","language":"ts"}
+{"code":"([1, 2.1])","language":"ts"}
+{"code":"({ x, y: [z] } = obj)","language":"ts"}
+{"code":"(x = 1)","language":"ts"}
+{"code":"(undefined /* force override the id */)","language":"ts"}
+{"code":"(a()","language":"ts"}
+{"code":"(foo[bar][baz])","language":"ts"}
+{"code":"(foo.bar.baz)","language":"ts"}
+{"code":"({ foo })","language":"ts"}
+{"code":"({ [foo]: bar })","language":"ts"}
+{"code":"({ foo: foo })","language":"ts"}
+{"code":"({ foo() { baz() }, value: bar })","language":"ts"}
+{"code":"(({ foo = bar }) => foo + bar)","language":"ts"}
+{"code":"({ a: foo => foo, b: foo })","language":"ts"}
+{"code":"(({ foo }) => foo + bar)","language":"ts"}
+{"code":"((foo = baz) => foo + bar)","language":"ts"}
+{"code":"(foo => foo + bar)","language":"ts"}
+{"code":"(function foo() { return bar })","language":"ts"}
+{"code":"(new Error())","language":"ts"}
+{"code":"(Math.max(1, 2))","language":"ts"}
+{"code":"(foo(baz + 1, { key: kuz }))","language":"ts"}
+{"code":"(foo + bar(baz.qux))","language":"ts"}
+{"code":"(foo-bar)","language":"ts"}
+{"code":"(baz + qux)","language":"ts"}
+{"code":"(foo(bar))","language":"ts"}
+{"code":"(item.id)","language":"ts"}
+{"code":"(10)","language":"ts"}
+{"code":"(itemKey(item))","language":"ts"}
+{"code":"({ foo = bar, baz: [qux = quux] })=>{}","language":"ts"}
+{"code":"(foo + bar + baz + qux + quux)","language":"ts"}
+{"code":"(i + j)","language":"ts"}
+{"code":"(i + j + k)","language":"ts"}
+{"code":"(list.concat([foo]))","language":"ts"}
+{"code":"(item.children)","language":"ts"}
+{"code":"(c.id)","language":"ts"}
+{"code":"(state ['my items'])","language":"ts"}
+{"code":"([ id, value ])=>{}","language":"ts"}
+{"code":"({ id, value })=>{}","language":"ts"}
+{"code":"(5)","language":"ts"}
+{"code":"({ click: clickEvent })","language":"ts"}
+{"code":"(a + 1)","language":"ts"}
+{"code":"(getId(data))","language":"ts"}
+{"code":"(getLetter(data))","language":"ts"}
+{"code":"({ x, y })=>{}","language":"ts"}
+{"code":"([x, y === z])","language":"ts"}
+{"code":"([x])","language":"ts"}
+{"code":"_ctx.p","language":"ts"}
+{"code":"(变.量)","language":"ts"}
+{"code":"变.量","language":"ts"}
+{"code":"_ctx.foo","language":"ts"}
+{"code":"_ctx.bar","language":"ts"}
+{"code":"(foo.bar)","language":"ts"}
+{"code":"foo.bar","language":"ts"}
+{"code":"(foo[i])","language":"ts"}
+{"code":"foo[i]","language":"ts"}
+{"code":"_ctx.model","language":"ts"}
+{"code":"(model[index])","language":"ts"}
+{"code":"model[index]","language":"ts"}
+{"code":"(\n model\n.\nfoo \n)","language":"ts"}
+{"code":"\n model\n.\nfoo \n","language":"ts"}
+{"code":"foo++","language":"ts"}
+{"code":"(foo++)","language":"ts"}
+{"code":"async function () { await foo() } ","language":"ts"}
+{"code":"(async function () { await foo() } )","language":"ts"}
+{"code":"async e => await foo(e)","language":"ts"}
+{"code":"(async e => await foo(e))","language":"ts"}
+{"code":"async () => await foo()","language":"ts"}
+{"code":"(async () => await foo())","language":"ts"}
+{"code":"() => foo()","language":"ts"}
+{"code":"(() => foo())","language":"ts"}
+{"code":"foo(项)","language":"ts"}
+{"code":"(foo(项))","language":"ts"}
+{"code":"onMount","language":"ts"}
+{"code":"onBeforeUpdate","language":"ts"}
+{"code":"e => foo(e)","language":"ts"}
+{"code":"(e => foo(e))","language":"ts"}
+{"code":"a['b' + c]","language":"ts"}
+{"code":"(a['b' + c])","language":"ts"}
+{"code":"\n      function($event) {\n        foo($event)\n      }\n    ","language":"ts"}
+{"code":"(\n      function($event) {\n        foo($event)\n      }\n    )","language":"ts"}
+{"code":"\n      $event => {\n        foo($event)\n      }\n    ","language":"ts"}
+{"code":"(\n      $event => {\n        foo($event)\n      }\n    )","language":"ts"}
+{"code":"async $event => await foo($event)","language":"ts"}
+{"code":"(async $event => await foo($event))","language":"ts"}
+{"code":"(e: (number | string)[]) => foo(e)","language":"ts"}
+{"code":"((e: (number | string)[]) => foo(e))","language":"ts"}
+{"code":"(e: any): any => foo(e)","language":"ts"}
+{"code":"((e: any): any => foo(e))","language":"ts"}
+{"code":"$event => foo($event)","language":"ts"}
+{"code":"($event => foo($event))","language":"ts"}
+{"code":"foo($event);bar()","language":"ts"}
+{"code":" foo($event);bar() ","language":"ts"}
+{"code":"foo($event)","language":"ts"}
+{"code":"(foo($event))","language":"ts"}
+{"code":"\nfoo();\nbar()\n","language":"ts"}
+{"code":" \nfoo();\nbar()\n ","language":"ts"}
+{"code":"foo();bar()","language":"ts"}
+{"code":" foo();bar() ","language":"ts"}
+{"code":"i++","language":"ts"}
+{"code":"(i++)","language":"ts"}
+{"code":"(event(foo))","language":"ts"}
+{"code":"onClick","language":"ts"}
+{"code":"({ bar })=>{}","language":"ts"}
+{"code":"({color: 'green'})","language":"ts"}
+{"code":"(\n                `text1`)","language":"ts"}
+{"code":"('<span>show-it </span>')","language":"ts"}
+{"code":"_ctx.test","language":"ts"}
+{"code":"test","language":"ts"}
+{"code":"(rest.bar)","language":"ts"}
+{"code":"(Foo . Bar . Baz)","language":"ts"}
+{"code":"({ ...Foo.Bar.Baz })","language":"ts"}
+{"code":"(Foo.Bar.Baz)","language":"ts"}
+{"code":"$emit('update:a');","language":"ts"}
+{"code":" $emit('update:a'); ","language":"ts"}
+{"code":"(a as Foo)","language":"ts"}
+{"code":"(b<Bar>())","language":"ts"}
+{"code":"({ data }: Qux)=>{}","language":"ts"}
+{"code":"(list as Fred)","language":"ts"}
+{"code":"({ z = x as Qux })=>{}","language":"ts"}
+{"code":"(`${VAR}VAR2${VAR3}`)","language":"ts"}
+{"code":"(z + 'y')","language":"ts"}
+{"code":"([cond ? '' : bar(), 'default'])","language":"ts"}
+{"code":"(foo.slotName)","language":"ts"}
+{"code":"(15)","language":"ts"}
+{"code":"(bar.attrName)","language":"ts"}
+{"code":"({ value })=>{}","language":"ts"}
+{"code":"(`item:${baz.key}`)","language":"ts"}
+{"code":"(new Foo())","language":"ts"}
+{"code":"(new Foo.Bar())","language":"ts"}
+{"code":"({ file: efile })=>{}","language":"ts"}
+{"code":"({ count } = val)","language":"ts"}
+{"code":"(({ count } = val))","language":"ts"}
+{"code":"[maybe] = val","language":"ts"}
+{"code":"([maybe] = val)","language":"ts"}
+{"code":"({ lett } = val)","language":"ts"}
+{"code":"(({ lett } = val))","language":"ts"}
+{"code":"--count","language":"ts"}
+{"code":"(--count)","language":"ts"}
+{"code":"maybe++","language":"ts"}
+{"code":"(maybe++)","language":"ts"}
+{"code":"--maybe","language":"ts"}
+{"code":"(--maybe)","language":"ts"}
+{"code":"lett++","language":"ts"}
+{"code":"(lett++)","language":"ts"}
+{"code":"--lett","language":"ts"}
+{"code":"(--lett)","language":"ts"}
+{"code":"count = 1","language":"ts"}
+{"code":"(count = 1)","language":"ts"}
+{"code":"maybe = count","language":"ts"}
+{"code":"(maybe = count)","language":"ts"}
+{"code":"lett = count","language":"ts"}
+{"code":"(lett = count)","language":"ts"}
+{"code":"v += 1","language":"ts"}
+{"code":"(v += 1)","language":"ts"}
+{"code":"v -= 1","language":"ts"}
+{"code":"(v -= 1)","language":"ts"}
+{"code":"() => {\n              let a = '' + lett\n              v = a\n           }","language":"ts"}
+{"code":"(() => {\n              let a = '' + lett\n              v = a\n           })","language":"ts"}
+{"code":"() => {\n              // nested scopes\n              (()=>{\n                let x = a\n                (()=>{\n                  let z = x\n                  let z2 = z\n                })\n                let lz = z\n              })\n              v = a\n           }","language":"ts"}
+{"code":"(() => {\n              // nested scopes\n              (()=>{\n                let x = a\n                (()=>{\n                  let z = x\n                  let z2 = z\n                })\n                let lz = z\n              })\n              v = a\n           })","language":"ts"}
+{"code":"(\n          count\n          )","language":"ts"}
+{"code":"\n          count\n          ","language":"ts"}
+{"code":"_ctx.count","language":"ts"}
+{"code":"_ctx.maybe","language":"ts"}
+{"code":"_ctx.lett","language":"ts"}
+{"code":"(tree.foo())","language":"ts"}
+{"code":"import { ref as _ref } from 'vue';\n                let background = _ref('red')\n             ","language":"js"}
+{"code":"({\n  \"./compiler-sfc/cssVars_750.vue-background\": (background)\n})","language":"ts"}
+{"code":"let xxx = 1","language":"js"}
+{"code":"({\n  \"./compiler-sfc/cssVars_751.vue-count\\.toString\\(\": (count.toString(),\n  \"./compiler-sfc/cssVars_751.vue-xxx\": (xxx)\n})","language":"ts"}
+{"code":"console.log(1)","language":"js"}
