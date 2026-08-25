@@ -39,8 +39,9 @@ final class KnownIds {
   List<String> ownKeys() => own.keys.toList();
 }
 
-typedef OnIdentifier = void Function(
-    WalkedIdent id, AstNode? parent, bool isReferenced, bool isLocal);
+typedef OnIdentifier = void Function(WalkedIdent id, AstNode? parent,
+    bool isReferenced, bool isLocal,
+    {bool destructureAssignment});
 
 /// tree-sitter type containers whose subtrees are TS type space (skipped).
 bool _isTsTypeSpace(String type) {
@@ -117,14 +118,21 @@ final class ExpressionWalker {
     final type = node.type;
     if (type == 'identifier' || type == 'shorthand_property_identifier') {
       _onIdent(node, parent);
+    } else if (type == 'undefined') {
+      // babel 中 undefined 是 Identifier（true/false/null 则是 Literal，
+      // 不进 walker）；官方为其生成子表达式，使注释等尾随文本进入
+      // compound 而非滞留 SimpleExpression。
+      _onIdent(node, parent);
     } else if (type == 'property_identifier') {
       // 官方 babel 全标识符遍历：成员属性 b（a.b）也生成子表达式以支持
       // sourcemap；但对象字面量/解构模式的静态键按 isStaticPropertyKey 跳过。
       if (!_isStaticPairKey(node, parent)) _onIdent(node, parent);
     } else if (type == 'shorthand_property_identifier_pattern') {
-      // 解构模式简写 { a }：对应 babel 简写属性的 value 节点（key!==value），
-      // 官方同样生成子表达式（非引用标识符路径）。
-      _onIdent(node, parent);
+      // 解构模式简写 { a }：对应 babel 简写属性的 value 节点（key!==value）。
+      // 赋值解构目标（({ a } = v)）按官方 isInDestructureAssignment 视为
+      // 引用并注入 'a: ' 前缀；绑定位置则是局部量。
+      _onIdent(node, parent,
+          destructureAssignment: _inDestructureAssignment());
     } else if (_isFunctionType(type)) {
       _walkFunctionParams(node);
     } else if (type == 'statement_block') {
@@ -171,13 +179,53 @@ final class ExpressionWalker {
     return false;
   }
 
-  void _onIdent(AstNode node, AstNode? parent) {
+  /// 官方 isInDestructureAssignment：从当前 parent 起向上穿过模式节点链
+  /// （object/array/pair/assignment pattern 等），命中 assignment_expression
+  /// 即为赋值解构目标。
+  bool _inDestructureAssignment() {
+    for (var i = parentStack.length - 1; i >= 0; i--) {
+      final p = parentStack[i];
+      if (p == null) break;
+      if (p.type == 'assignment_expression' ||
+          p.type == 'augmented_assignment_expression') {
+        return true;
+      }
+      final t = p.type;
+      final patternish = t.endsWith('_pattern') ||
+          t == 'object_assignment_pattern' ||
+          t == 'pair_pattern';
+      if (!patternish) break;
+    }
+    return false;
+  }
+
+  void _onIdent(AstNode node, AstNode? parent,
+      {bool destructureAssignment = false}) {
     final name = view.textOf(node);
-    final id = WalkedIdent(view.charOf(node.startByte),
-        view.charOf(node.endByte), name);
+    // babel Identifier 的 end 包含后缀 typeAnnotation（(e: any) 的参数区间
+    // 覆盖 'e: any'），重建时借此剥除参数注解；tree-sitter 中注解是紧邻
+    // 兄弟节点，这里对齐区间语义。
+    var endByte = node.endByte;
+    final siblings = parent?.children;
+    if (siblings != null) {
+      for (var i = 0; i < siblings.length; i++) {
+        if (identical(siblings[i], node)) {
+          if (i + 1 < siblings.length &&
+              siblings[i + 1].type == 'type_annotation') {
+            endByte = siblings[i + 1].endByte;
+          }
+          break;
+        }
+      }
+    }
+    final id = WalkedIdent(
+        view.charOf(node.startByte), view.charOf(endByte), name);
+    var isRefed = _isReferencedIdentifier(node, parent);
+    // 赋值解构目标内的标识符按引用处理（官方 ObjectProperty 分支）。
+    if (destructureAssignment && !isRefed) isRefed = true;
     final isLocal = knownIds.contains(name);
-    final isRefed = _isReferencedIdentifier(node, parent);
-    onIdentifier(id, parent, isRefed, isLocal);
+    onIdentifier(id, parent, isRefed, isLocal,
+        destructureAssignment: destructureAssignment);
   }
 
   // --- scope declaration walking ---
@@ -212,7 +260,12 @@ final class ExpressionWalker {
         param.type == 'optional_parameter') {
       final patterns = <AstNode>[];
       for (final c in param.children) {
-        if (_isPattern(c.type)) patterns.add(c);
+        if (_isPattern(c.type)) {
+          patterns.add(c);
+          // 绑定模式仅一个；其后的子节点是默认值表达式（如 (a = b) 的 b），
+          // 属外层引用，不得登记为参数绑定。
+          break;
+        }
       }
       return patterns;
     }
@@ -365,7 +418,8 @@ final class ExpressionWalker {
               if (prop.children.length > 1) extract(prop.children.last);
             } else if (prop.type == 'shorthand_property_identifier_pattern') {
               extract(prop);
-            } else if (prop.type == 'assignment_pattern') {
+            } else if (prop.type == 'assignment_pattern' ||
+                prop.type == 'object_assignment_pattern') {
               extract(prop.children.first);
             }
           }
@@ -378,6 +432,7 @@ final class ExpressionWalker {
             extract(c);
           }
         case 'assignment_pattern':
+        case 'object_assignment_pattern':
           extract(p.children.first);
       }
     }
@@ -405,6 +460,11 @@ final class ExpressionWalker {
             _isInDestructureAssignment(parent);
       case 'array_pattern':
         return _isInDestructureAssignment(parent);
+      // 赋值解构目标里的显式键值 ({ x: y } = v)：y 按引用改写（官方
+      // ObjectProperty 分支 key!==id && isInDestructureAssignment）。
+      case 'pair_pattern':
+        return !_pairKeyIs(parent, id) &&
+            _isInDestructureAssignment(parent);
     }
     return false;
   }
@@ -451,6 +511,7 @@ final class ExpressionWalker {
         return parent.children.length > 1 &&
             identical(parent.children.last, node);
       case 'assignment_pattern':
+      case 'object_assignment_pattern':
         return parent.children.length > 1 &&
             identical(parent.children.last, node);
       case 'labeled_statement':

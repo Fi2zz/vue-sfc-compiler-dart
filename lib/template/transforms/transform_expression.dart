@@ -246,9 +246,12 @@ TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
   final srcView = SrcView(parsed.source);
   final knownIds = KnownIds(context.identifiers);
   final ids = <WalkedIdent>[];
-  void onIdent(WalkedIdent id, AstNode? parent, bool isRefed, bool isLocal) {
+  void onIdent(WalkedIdent id, AstNode? parent, bool isRefed, bool isLocal,
+      {bool destructureAssignment = false}) {
     _onIdentifier(id, parent, isRefed, isLocal, context, ids,
-        srcView.charOf, (s, e) => srcView.slice(srcView.charOf(s), srcView.charOf(e)));
+        srcView.charOf,
+        (s, e) => srcView.slice(srcView.charOf(s), srcView.charOf(e)),
+        destructureAssignment: destructureAssignment);
   }
 
   final walker = ExpressionWalker(srcView, onIdent, knownIds);
@@ -261,11 +264,18 @@ TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
 void _onIdentifier(WalkedIdent id, AstNode? parent, bool isRefed,
     bool isLocal, TransformContext context, List<WalkedIdent> ids,
     int Function(int byteOffset) byteToChar,
-    String Function(int, int) sliceText) {
+    String Function(int, int) sliceText,
+    {bool destructureAssignment = false}) {
   if (id.name.startsWith('_filter_')) return;
   final needPrefix = isRefed && _canPrefix(id.name);
   if (needPrefix && !isLocal) {
-    if (parent != null && parent.type == 'object') {
+    // 对象简写与赋值解构目标：改写 value 后需补回 'key: '（官方
+    // isStaticProperty(parent)&&parent.shorthand 分支）。
+    final shorthandKey = parent != null &&
+        (parent.type == 'object' ||
+            parent.type == 'object_pattern' ||
+            parent.type == 'object_assignment_pattern');
+    if (shorthandKey && (parent.type == 'object' || destructureAssignment)) {
       id.prefix = '${id.name}: ';
     }
     id.rewritten = _rewriteIdentifier(id.name, context,

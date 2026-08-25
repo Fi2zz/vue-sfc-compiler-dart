@@ -141,8 +141,13 @@ final class _BaseParseState {
   final List<ElementNode> stack = [];
   late final Tokenizer tokenizer = Tokenizer(stack, _ParserCallbacks(this));
 
-  String slice(int start, int end) =>
-      input.substring(start.clamp(0, input.length), end.clamp(0, input.length));
+  // JS String.slice 语义：越界钳制、end<start 返回空串（官方依赖此行为，
+  // 如 {{ }} 空插值的空白裁剪）。
+  String slice(int start, int end) {
+    final s = start.clamp(0, input.length);
+    final e = end.clamp(s, input.length);
+    return input.substring(s, e);
+  }
 
   TmplLoc getLoc(int start, [int? end]) {
     return TmplLoc(
