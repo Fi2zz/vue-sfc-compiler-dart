@@ -28,8 +28,27 @@ bool isCallOf(AstNode? node, String name, SrcView view) =>
 
 AstNode? _typeArg(AstNode call) {
   final t = childOfType(call, 'type_arguments');
-  if (t == null || t.children.isEmpty) return null;
-  return t.children.first;
+  if (t == null) return null;
+  for (final c in t.children) {
+    if (c.type == 'comment') continue;
+    return c;
+  }
+  return null;
+}
+
+/// Official hasVueIgnore at the type-arguments level: a comment before the
+/// type node marks its first member ignored (babel leadingComments quirk).
+bool _typeLeadingIgnored(SrcView view, AstNode call, AstNode typeArg) {
+  final t = childOfType(call, 'type_arguments');
+  if (t == null) return false;
+  var found = false;
+  for (final c in t.children) {
+    if (identical(c, typeArg)) break;
+    if (c.type == 'comment' && view.textOf(c).contains('@vue-ignore')) {
+      found = true;
+    }
+  }
+  return found;
 }
 
 /// Port of getObjectOrArrayExpressionKeys: keys of a runtime props/emits
@@ -94,6 +113,7 @@ bool processDefineProps(
       );
     }
     ctx.propsTypeDecl = typeArg;
+    ctx.propsTypeLeadingIgnored = _typeLeadingIgnored(ctx.view, node, typeArg);
   }
   if (!withDefaults && declId != null && declId.type == 'object_pattern') {
     _processPropsDestructure(ctx, declId);
@@ -310,7 +330,11 @@ bool processDefineModel(SetupContext ctx, AstNode node, MiniMagic s) {
   ctx.hasDefineModelCall = true;
   final args = _args(node);
   final arg0 = args.isEmpty ? null : args.first;
-  final hasName = arg0 != null && arg0.type == 'string';
+  // Official also accepts expression-free TemplateLiteral names (#14622).
+  final hasName = arg0 != null &&
+      (arg0.type == 'string' ||
+          (arg0.type == 'template_string' &&
+              !arg0.children.any((c) => c.type == 'template_substitution')));
   final name = hasName ? _stringValue(ctx.view, arg0) : 'modelValue';
   final options = hasName ? (args.length > 1 ? args[1] : null) : arg0;
   if (ctx.modelDecls.containsKey(name)) {

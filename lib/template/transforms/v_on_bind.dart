@@ -58,10 +58,13 @@ Object _resolveEventName(DirectiveNode dir, ElementNode node,
       if (rawName.startsWith('vue:')) {
         rawName = 'vnode-${rawName.substring(4)}';
       }
-      final eventString =
-          node.tagType != etElement || !RegExp(r'[A-Z]').hasMatch(rawName)
-              ? toHandlerKey(camelize(rawName))
-              : 'on:$rawName';
+      // vnode lifecycle listeners always camelize (see #2249); only plain
+      // element events with uppercase keep their case (custom elements).
+      final eventString = node.tagType != etElement ||
+              rawName.startsWith('vnode') ||
+              !RegExp(r'[A-Z]').hasMatch(rawName)
+          ? toHandlerKey(camelize(rawName))
+          : 'on:$rawName';
       return createSimpleExp(eventString, true, arg.loc);
     }
     return createCompoundExp(

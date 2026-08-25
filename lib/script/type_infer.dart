@@ -71,14 +71,18 @@ final class TypeElements {
 }
 
 /// Port of resolveTypeElements for the shapes used in defineProps/defineEmits.
+/// [leadingIgnored] mirrors official hasVueIgnore on the top node: babel
+/// attaches comments before the first member to the parent, so they apply to
+/// that member only.
 TypeElements resolveTypeElements(
   AstNode node,
   SrcView view,
-  Map<String, TypeScopeEntry> scope,
-) {
+  Map<String, TypeScopeEntry> scope, {
+  bool leadingIgnored = false,
+}) {
   final out = TypeElements();
-  void fill(AstNode n, int depth) {
-    if (depth > 5) return;
+  void fill(AstNode n, int depth, {bool ignored = false}) {
+    if (depth > 5 || ignored) return;
     switch (n.type) {
       case 'object_type':
       case 'interface_body':
@@ -89,8 +93,16 @@ TypeElements resolveTypeElements(
         if (inner != null) fill(inner, depth + 1);
         break;
       case 'intersection_type':
+      case 'union_type':
+        var pending =
+            (leadingIgnored && depth == 0) || ignored;
         for (final c in n.children) {
-          fill(c, depth + 1);
+          if (c.type == 'comment') {
+            pending = view.textOf(c).contains('@vue-ignore');
+            continue;
+          }
+          fill(c, depth + 1, ignored: pending);
+          pending = false;
         }
         break;
       case 'type_identifier':
@@ -209,17 +221,32 @@ List<String> inferRuntimeType(
 }
 
 /// Port of flattenTypes: single member passes through; otherwise concat
-/// and dedupe (Set semantics preserve first-occurrence order).
+/// and dedupe (Set semantics preserve first-occurrence order). A member
+/// preceded by an @vue-ignore comment resolves to UNKNOWN (official
+/// inferRuntimeType gate).
 List<String> _flattenTypes(
-  List<AstNode> types,
+  List<AstNode> children,
   SrcView view,
   Map<String, TypeScopeEntry> scope,
 ) {
-  if (types.length == 1) return inferRuntimeType(types[0], view, scope);
+  final members = <(AstNode, bool)>[];
+  var pending = false;
+  for (final c in children) {
+    if (c.type == 'comment') {
+      pending = view.textOf(c).contains('@vue-ignore');
+      continue;
+    }
+    members.add((c, pending));
+    pending = false;
+  }
+  List<String> of(AstNode t, bool ignored) => ignored
+      ? [unknownType]
+      : inferRuntimeType(t, view, scope);
+  if (members.length == 1) return of(members.first.$1, members.first.$2);
   final seen = <String>{};
   final out = <String>[];
-  for (final t in types) {
-    for (final r in inferRuntimeType(t, view, scope)) {
+  for (final (t, ignored) in members) {
+    for (final r in of(t, ignored)) {
       if (seen.add(r)) out.add(r);
     }
   }

@@ -1,461 +1,465 @@
 [
- {
-  "name": "tmpl_text_only",
-  "sfc": "<template>hello</template>"
- },
- {
-  "name": "tmpl_single_element",
-  "sfc": "<template><div>hello</div></template>"
- },
- {
-  "name": "tmpl_single_element_empty",
-  "sfc": "<template><div></div></template>"
- },
- {
-  "name": "tmpl_interp",
-  "sfc": "<template><div>{{ msg }}</div></template>"
- },
- {
-  "name": "tmpl_static_attr",
-  "sfc": "<template><div id=\"app\" class=\"foo\">hello</div></template>"
- },
- {
-  "name": "tmpl_nested",
-  "sfc": "<template><div><span>a</span><span>b</span></div></template>"
- },
- {
-  "name": "tmpl_multi_root",
-  "sfc": "<template><div>a</div><div>b</div></template>"
- },
- {
-  "name": "tmpl_comment",
-  "sfc": "<template><!-- hi --><div>x</div></template>"
- },
- {
-  "name": "tmpl_self_closing",
-  "sfc": "<template><img src=\"x.png\"></template>"
- },
- {
-  "name": "tmpl_whitespace",
-  "sfc": "<template>\n  <div>\n    <p>hello</p>\n  </div>\n</template>"
- },
- {
-  "name": "tmpl_v_bind",
-  "sfc": "<template><div :id=\"foo\" v-bind:class=\"cls\">x</div></template>"
- },
- {
-  "name": "tmpl_v_on",
-  "sfc": "<template><button @click=\"inc\">+</button></template>"
- },
- {
-  "name": "tmpl_v_if",
-  "sfc": "<template><div v-if=\"ok\">yes</div><div v-else>no</div></template>"
- },
- {
-  "name": "tmpl_v_for",
-  "sfc": "<template><ul><li v-for=\"item in items\">{{ item }}</li></ul></template>"
- },
- {
-  "name": "tmpl_v_model",
-  "sfc": "<template><input v-model=\"text\"></template>"
- },
- {
-  "name": "tmpl_v_show",
-  "sfc": "<template><div v-show=\"visible\">x</div></template>"
- },
- {
-  "name": "tmpl_component",
-  "sfc": "<template><MyComp :prop=\"val\" @event=\"handler\"/></template>"
- },
- {
-  "name": "tmpl_unquoted_attr",
-  "sfc": "<template><div id=app>x</div></template>"
- },
- {
-  "name": "tmpl_textarea",
-  "sfc": "<template><textarea>hello</textarea></template>"
- },
- {
-  "name": "tmpl_entity",
-  "sfc": "<template><div>&amp; &lt; &#65;</div></template>"
- },
- {
-  "name": "tmpl_slot_named",
-  "sfc": "<template><Layout><template #header><h1>Title</h1></template><p>body</p></Layout></template>"
- },
- {
-  "name": "tmpl_slot_scoped",
-  "sfc": "<template><List v-slot=\"{ item, index }\"><span>{{ index }} - {{ item }}</span></List></template>"
- },
- {
-  "name": "tmpl_slot_dynamic_name",
-  "sfc": "<template><Layout><template #[name]>dyn</template></Layout></template>"
- },
- {
-  "name": "tmpl_slot_outlet",
-  "sfc": "<template><slot name=\"foo\" :bar=\"baz\">fallback</slot></template>"
- },
- {
-  "name": "tmpl_component_dynamic",
-  "sfc": "<template><component :is=\"currentView\" :foo=\"1\" /></template>"
- },
- {
-  "name": "tmpl_teleport",
-  "sfc": "<template><Teleport to=\"body\"><p>teleported</p></Teleport></template>"
- },
- {
-  "name": "tmpl_keepalive",
-  "sfc": "<template><KeepAlive :include=\"['a']\"><component :is=\"view\" /></KeepAlive></template>"
- },
- {
-  "name": "tmpl_suspense",
-  "sfc": "<template><Suspense><template #default><AsyncComp /></template><template #fallback>loading</template></Suspense></template>"
- },
- {
-  "name": "tmpl_transition",
-  "sfc": "<template><Transition name=\"fade\"><p v-if=\"ok\">hi</p></Transition></template>"
- },
- {
-  "name": "tmpl_v_html",
-  "sfc": "<template><div v-html=\"raw\"></div></template>"
- },
- {
-  "name": "tmpl_v_text",
-  "sfc": "<template><div v-text=\"txt\"></div></template>"
- },
- {
-  "name": "tmpl_v_memo",
-  "sfc": "<template><div v-memo=\"[value]\">{{ value }}</div></template>"
- },
- {
-  "name": "tmpl_v_once",
-  "sfc": "<template><p v-once>{{ msg }}</p></template>"
- },
- {
-  "name": "tmpl_scoped",
-  "sfc": "<template><div><p class=\"a\">scoped</p></div></template><style scoped>.a{color:red}</style>"
- },
- {
-  "name": "tmpl_err_v_if_no_exp",
-  "sfc": "<template><div v-if></div></template>"
- },
- {
-  "name": "tmpl_static_elements",
-  "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template>"
- },
- {
-  "name": "tmpl_static_text",
-  "sfc": "<template><div><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></div></template>"
- },
- {
-  "name": "tmpl_static_partial_chunk",
-  "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p><span>{{ dynamic }}</span></div></template>"
- },
- {
-  "name": "tmpl_static_bind_const",
-  "sfc": "<template><div><p :class=\"['a', 'b']\">1</p><p :style=\"{ color: 'red' }\">2</p><p :title=\"'t' + '1'\">3</p><p :hidden=\"false\">4</p><p v-text=\"'txt'\">5</p></div></template>"
- },
- {
-  "name": "tmpl_static_nested",
-  "sfc": "<template><div><ul class=\"list\"><li class=\"i\">a</li><li class=\"i\">b</li><li class=\"i\">c</li></ul><p class=\"x\">t</p></div></template>"
- },
- {
-  "name": "tmpl_static_table_bail",
-  "sfc": "<template><div><table><tr><td>a</td></tr></table><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template>"
- },
- {
-  "name": "tmpl_static_scoped",
-  "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template><style scoped>.a{color:red}</style>"
- },
- {
-  "name": "tmpl_pre",
-  "sfc": "<template><pre>  keep\n    spaces</pre><p class=\"a\">x</p></template>"
- },
- {
-  "name": "tmpl_for_slot_combo",
-  "sfc": "<template><List v-for=\"row in rows\" :key=\"row.id\" v-slot=\"{ item }\"><span>{{ item }}</span></List></template>"
- },
- {
-  "name": "tmpl_dyn_arg",
-  "sfc": "<template><div :[attr]=\"val\" @[event]=\"handler\"></div></template>"
- },
- {
-  "name": "tmpl_err_dup_attr",
-  "sfc": "<template><div id=\"a\" id=\"b\"></div></template>"
- },
- {
-  "name": "tmpl_err_v_else_no_if",
-  "sfc": "<template><div v-else></div></template>"
- },
- {
-  "name": "tmpl_err_v_on_no_exp",
-  "sfc": "<template><div @click></div></template>"
- },
- {
-  "name": "tmpl_v_model_component",
-  "sfc": "<template><Comp v-model=\"val\" /><Comp v-model:title=\"t\" /></template>"
- },
- {
-  "name": "tmpl_event_modifiers",
-  "sfc": "<template><button @click.stop.prevent=\"go\" @keyup.enter=\"submit\">go</button></template>"
- },
- {
-  "name": "tmpl_v_bind_obj",
-  "sfc": "<template><div v-bind=\"obj\"></div></template>"
- },
- {
-  "name": "tmpl_svg",
-  "sfc": "<template><svg viewBox=\"0 0 10 10\"><circle cx=\"5\" cy=\"5\" r=\"4\" /></svg></template>"
- },
- {
-  "name": "tmpl_template_if",
-  "sfc": "<template><template v-if=\"ok\"><p>a</p><p>b</p></template></template>"
- },
- {
-  "name": "tmpl_template_for",
-  "sfc": "<template><template v-for=\"i in 3\" :key=\"i\"><p>{{ i }}</p></template></template>"
- },
- {
-  "name": "tmpl_kebab_component",
-  "sfc": "<template><my-comp foo=\"1\" /><MyComp /></template>"
- },
- {
-  "name": "tmpl_bind_setup_const",
-  "sfc": "<script setup>\nconst msg = 'hello'\n</script>\n<template><div>{{ msg }}</div></template>"
- },
- {
-  "name": "tmpl_bind_setup_let",
-  "sfc": "<script setup>\nlet count = 0\n</script>\n<template><button @click=\"count++\">{{ count }}</button></template>"
- },
- {
-  "name": "tmpl_bind_component",
-  "sfc": "<script setup>\nimport Foo from './Foo.vue'\n</script>\n<template><Foo bar=\"1\" /></template>"
- },
- {
-  "name": "tmpl_bind_component_kebab",
-  "sfc": "<script setup>\nimport FooBar from './FooBar.vue'\n</script>\n<template><foo-bar /><FooBar /></template>"
- },
- {
-  "name": "tmpl_bind_props",
-  "sfc": "<script setup>\ndefineProps(['msg'])\n</script>\n<template><div>{{ msg }}</div></template>"
- },
- {
-  "name": "tmpl_bind_props_aliased",
-  "sfc": "<script setup>\nconst { msg: m } = defineProps(['msg'])\n</script>\n<template><div>{{ m }}</div></template>"
- },
- {
-  "name": "tmpl_bind_import_maybe_ref",
-  "sfc": "<script setup>\nimport { util } from './util.js'\n</script>\n<template><div>{{ util() }}</div></template>"
- },
- {
-  "name": "tmpl_bind_model",
-  "sfc": "<script setup>\ndefineModel()\n</script>\n<template><div>{{ modelValue }}</div></template>"
- },
- {
-  "name": "tmpl_ws_preserve",
-  "options": {
-   "whitespace": "preserve"
+  {
+    "name": "tmpl_text_only",
+    "sfc": "<template>hello</template>"
   },
-  "sfc": "<template><div>\n  hello\n  <span>  a  b  </span>\n</div></template>"
- },
- {
-  "name": "tmpl_err_v_for_no_exp",
-  "sfc": "<template><div v-for>item</div></template>"
- },
- {
-  "name": "tmpl_err_v_slot_misplaced",
-  "sfc": "<template><my-comp><div v-slot:default>x</div></my-comp></template>"
- },
- {
-  "name": "tmpl_err_v_model_no_exp",
-  "sfc": "<template><input v-model /></template>"
- },
- {
-  "name": "tmpl_err_v_else_if_no_exp",
-  "sfc": "<template><div v-if=\"a\"/><div v-else-if>x</div></template>"
- },
- {
-  "name": "tmpl_dyn_arg_event",
-  "sfc": "<template><button @[event]=\"go\">x</button></template>"
- },
- {
-  "name": "tmpl_dyn_arg_shorthand_bind",
-  "sfc": "<template><div :[key]=\"val\">x</div></template>"
- },
- {
-  "name": "tmpl_err_v_bind_no_exp",
-  "sfc": "<template><div :id>x</div></template>"
- },
- {
-  "name": "tmpl_err_v_slot_outlet_dyn",
-  "sfc": "<template><slot :name=\"n\">x</slot></template>"
- },
- {
-  "name": "tmpl_bind_options_props",
-  "sfc": "<script>\nexport default {\n  props: ['msg']\n}\n</script>\n<template><div>{{ msg }}</div></template>"
- },
- {
-  "name": "tmpl_bind_options_data",
-  "sfc": "<script>\nexport default {\n  data() {\n    return { count: 0 }\n  }\n}\n</script>\n<template><div>{{ count }}</div></template>"
- },
- {
-  "name": "tmpl_bind_options_computed",
-  "sfc": "<script>\nexport default {\n  computed: {\n    doubled() { return 2 }\n  },\n  methods: {\n    go() {}\n  }\n}\n</script>\n<template><div @click=\"go\">{{ doubled }}</div></template>"
- },
- {
-  "name": "tmpl_bind_options_component_unresolved",
-  "sfc": "<script>\nimport Foo from './Foo.vue'\nexport default {\n  components: { Foo }\n}\n</script>\n<template><Foo /></template>"
- },
- {
-  "name": "tmpl_class_array",
-  "sfc": "<template><div :class=\"[a, 'b', { c: ok }]\">x</div></template>"
- },
- {
-  "name": "tmpl_class_object",
-  "sfc": "<template><div class=\"base\" :class=\"{ active: on }\">x</div></template>"
- },
- {
-  "name": "tmpl_style_binding",
-  "sfc": "<template><div :style=\"{ color: c, fontSize: n + 'px' }\">x</div></template>"
- },
- {
-  "name": "tmpl_dyn_arg_modifier",
-  "sfc": "<template><button @[event].stop.prevent=\"go\">x</button></template>"
- },
- {
-  "name": "tmpl_v_for_nested_slot",
-  "sfc": "<template><my-comp v-for=\"it in list\" :key=\"it.id\"><template #default=\"{ row }\"><span>{{ row.name }}</span></template></my-comp></template>"
- },
- {
-  "name": "tmpl_v_model_dyn_arg",
-  "sfc": "<template><my-comp v-model:[prop].trim=\"val\" /></template>"
- },
- {
-  "name": "tmpl_bind_obj_spread",
-  "sfc": "<template><div v-bind=\"obj\" id=\"static\">x</div></template>"
- },
- {
-  "name": "tmpl_event_key_mod",
-  "sfc": "<template><input @keyup.enter.exact=\"go\" @keydown.a.b=\"go2\" /></template>"
- },
- {
-  "name": "tmpl_v_for_destructure",
-  "sfc": "<template><div v-for=\"({ a, b }, i) in list\" :key=\"i\">{{ a }}{{ b }}</div></template>"
- },
- {
-  "name": "tmpl_optional_chain_handler",
-  "sfc": "<template><button @click=\"a?.b()\">x</button></template>"
- },
- {
-  "name": "tmpl_inline_handler_event",
-  "sfc": "<template><button @click=\"go($event, 1)\">x</button></template>"
- },
- {
-  "name": "tmpl_nested_template_if_for",
-  "sfc": "<template><template v-for=\"g in groups\" :key=\"g.id\"><template v-if=\"g.show\"><div>{{ g.name }}</div></template></template></template>"
- },
- {
-  "name": "tmpl_hoist_nested",
-  "sfc": "<template><div><span class=\"a\"><b>static</b></span><p>{{ dyn }}</p></div></template>"
- },
- {
-  "name": "tmpl_err_interp_no_end",
-  "sfc": "<template><div>{{ foo }}</div>\n<div>bar {{ baz</div></template>"
- },
- {
-  "name": "tmpl_err_directive_no_name",
-  "sfc": "<template><div v->x</div></template>"
- },
- {
-  "name": "tmpl_err_dyn_arg_no_end",
-  "sfc": "<template><div :[foo=\"x\"></div></template>"
- },
- {
-  "name": "tmpl_err_x_missing_end_tag",
-  "sfc": "<template><div>x</div>"
- },
- {
-  "name": "tmpl_err_v_if_same_key",
-  "sfc": "<template><div v-if=\"a\" key=\"x\"/><div v-else-if=\"b\" key=\"x\"/></template>"
- },
- {
-  "name": "tmpl_err_v_for_malformed",
-  "sfc": "<template><div v-for=\"item\">x</div></template>"
- },
- {
-  "name": "tmpl_err_v_for_template_key",
-  "sfc": "<template><template v-for=\"i in list\"><span :key=\"i\">{{ i }}</span></template></template>"
- },
- {
-  "name": "tmpl_err_v_slot_dup_names",
-  "sfc": "<template><my-comp><template #a>1</template><template #a>2</template></my-comp></template>"
- },
- {
-  "name": "tmpl_err_v_slot_extraneous_default",
-  "sfc": "<template><my-comp><template #default>d</template><div>e</div></my-comp></template>"
- },
- {
-  "name": "tmpl_err_v_model_malformed",
-  "sfc": "<template><input v-model=\"a + b\"></template>"
- },
- {
-  "name": "tmpl_err_v_model_scope_var",
-  "sfc": "<template><div v-for=\"i in list\"><input v-model=\"i\"></div></template>"
- },
- {
-  "name": "tmpl_err_v_model_props",
-  "sfc": "<script setup>\ndefineProps(['foo'])\n</script>\n<template><input v-model=\"foo\"></template>"
- },
- {
-  "name": "tmpl_err_keepalive_children",
-  "sfc": "<template><keep-alive><div>a</div><div>b</div></keep-alive></template>"
- },
- {
-  "name": "tmpl_err_vnode_hooks",
-  "sfc": "<template><div @vnode-mounted=\"fn\">x</div></template>"
- },
- {
-  "name": "tmpl_err_v_bind_same_name_dyn",
-  "sfc": "<template><div :[arg] /></template>"
- },
- {
-  "name": "tmpl_err_v_html_no_exp",
-  "sfc": "<template><div v-html>raw</div></template>"
- },
- {
-  "name": "tmpl_err_v_html_children",
-  "sfc": "<template><div v-html=\"h\">child</div></template>"
- },
- {
-  "name": "tmpl_err_v_text_no_exp",
-  "sfc": "<template><div v-text>t</div></template>"
- },
- {
-  "name": "tmpl_err_v_text_children",
-  "sfc": "<template><div v-text=\"t\">child</div></template>"
- },
- {
-  "name": "tmpl_err_v_model_invalid_el",
-  "sfc": "<template><div v-model=\"x\"></div></template>"
- },
- {
-  "name": "tmpl_err_v_model_arg_plain",
-  "sfc": "<template><input v-model:title=\"a\"></template>"
- },
- {
-  "name": "tmpl_err_v_model_file",
-  "sfc": "<template><input type=\"file\" v-model=\"a\"></template>"
- },
- {
-  "name": "tmpl_err_v_show_no_exp",
-  "sfc": "<template><div v-show>s</div></template>"
- },
- {
-  "name": "tmpl_err_transition_children",
-  "sfc": "<template><transition><div>a</div><div>b</div></transition></template>"
- },
- {
-  "name": "tmpl_err_side_effect_tag",
-  "sfc": "<template><script>x=1</script><div>d</div></template>"
- }
+  {
+    "name": "tmpl_single_element",
+    "sfc": "<template><div>hello</div></template>"
+  },
+  {
+    "name": "tmpl_single_element_empty",
+    "sfc": "<template><div></div></template>"
+  },
+  {
+    "name": "tmpl_interp",
+    "sfc": "<template><div>{{ msg }}</div></template>"
+  },
+  {
+    "name": "tmpl_static_attr",
+    "sfc": "<template><div id=\"app\" class=\"foo\">hello</div></template>"
+  },
+  {
+    "name": "tmpl_nested",
+    "sfc": "<template><div><span>a</span><span>b</span></div></template>"
+  },
+  {
+    "name": "tmpl_multi_root",
+    "sfc": "<template><div>a</div><div>b</div></template>"
+  },
+  {
+    "name": "tmpl_comment",
+    "sfc": "<template><!-- hi --><div>x</div></template>"
+  },
+  {
+    "name": "tmpl_self_closing",
+    "sfc": "<template><img src=\"x.png\"></template>"
+  },
+  {
+    "name": "tmpl_whitespace",
+    "sfc": "<template>\n  <div>\n    <p>hello</p>\n  </div>\n</template>"
+  },
+  {
+    "name": "tmpl_v_bind",
+    "sfc": "<template><div :id=\"foo\" v-bind:class=\"cls\">x</div></template>"
+  },
+  {
+    "name": "tmpl_v_on",
+    "sfc": "<template><button @click=\"inc\">+</button></template>"
+  },
+  {
+    "name": "tmpl_v_if",
+    "sfc": "<template><div v-if=\"ok\">yes</div><div v-else>no</div></template>"
+  },
+  {
+    "name": "tmpl_v_for",
+    "sfc": "<template><ul><li v-for=\"item in items\">{{ item }}</li></ul></template>"
+  },
+  {
+    "name": "tmpl_v_model",
+    "sfc": "<template><input v-model=\"text\"></template>"
+  },
+  {
+    "name": "tmpl_v_show",
+    "sfc": "<template><div v-show=\"visible\">x</div></template>"
+  },
+  {
+    "name": "tmpl_component",
+    "sfc": "<template><MyComp :prop=\"val\" @event=\"handler\"/></template>"
+  },
+  {
+    "name": "tmpl_unquoted_attr",
+    "sfc": "<template><div id=app>x</div></template>"
+  },
+  {
+    "name": "tmpl_textarea",
+    "sfc": "<template><textarea>hello</textarea></template>"
+  },
+  {
+    "name": "tmpl_entity",
+    "sfc": "<template><div>&amp; &lt; &#65;</div></template>"
+  },
+  {
+    "name": "tmpl_slot_named",
+    "sfc": "<template><Layout><template #header><h1>Title</h1></template><p>body</p></Layout></template>"
+  },
+  {
+    "name": "tmpl_slot_scoped",
+    "sfc": "<template><List v-slot=\"{ item, index }\"><span>{{ index }} - {{ item }}</span></List></template>"
+  },
+  {
+    "name": "tmpl_slot_dynamic_name",
+    "sfc": "<template><Layout><template #[name]>dyn</template></Layout></template>"
+  },
+  {
+    "name": "tmpl_slot_outlet",
+    "sfc": "<template><slot name=\"foo\" :bar=\"baz\">fallback</slot></template>"
+  },
+  {
+    "name": "tmpl_component_dynamic",
+    "sfc": "<template><component :is=\"currentView\" :foo=\"1\" /></template>"
+  },
+  {
+    "name": "tmpl_teleport",
+    "sfc": "<template><Teleport to=\"body\"><p>teleported</p></Teleport></template>"
+  },
+  {
+    "name": "tmpl_keepalive",
+    "sfc": "<template><KeepAlive :include=\"['a']\"><component :is=\"view\" /></KeepAlive></template>"
+  },
+  {
+    "name": "tmpl_suspense",
+    "sfc": "<template><Suspense><template #default><AsyncComp /></template><template #fallback>loading</template></Suspense></template>"
+  },
+  {
+    "name": "tmpl_transition",
+    "sfc": "<template><Transition name=\"fade\"><p v-if=\"ok\">hi</p></Transition></template>"
+  },
+  {
+    "name": "tmpl_v_html",
+    "sfc": "<template><div v-html=\"raw\"></div></template>"
+  },
+  {
+    "name": "tmpl_v_text",
+    "sfc": "<template><div v-text=\"txt\"></div></template>"
+  },
+  {
+    "name": "tmpl_v_memo",
+    "sfc": "<template><div v-memo=\"[value]\">{{ value }}</div></template>"
+  },
+  {
+    "name": "tmpl_v_once",
+    "sfc": "<template><p v-once>{{ msg }}</p></template>"
+  },
+  {
+    "name": "tmpl_scoped",
+    "sfc": "<template><div><p class=\"a\">scoped</p></div></template><style scoped>.a{color:red}</style>"
+  },
+  {
+    "name": "tmpl_err_v_if_no_exp",
+    "sfc": "<template><div v-if></div></template>"
+  },
+  {
+    "name": "tmpl_static_elements",
+    "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template>"
+  },
+  {
+    "name": "tmpl_static_text",
+    "sfc": "<template><div><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></div></template>"
+  },
+  {
+    "name": "tmpl_static_partial_chunk",
+    "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p><span>{{ dynamic }}</span></div></template>"
+  },
+  {
+    "name": "tmpl_static_bind_const",
+    "sfc": "<template><div><p :class=\"['a', 'b']\">1</p><p :style=\"{ color: 'red' }\">2</p><p :title=\"'t' + '1'\">3</p><p :hidden=\"false\">4</p><p v-text=\"'txt'\">5</p></div></template>"
+  },
+  {
+    "name": "tmpl_static_nested",
+    "sfc": "<template><div><ul class=\"list\"><li class=\"i\">a</li><li class=\"i\">b</li><li class=\"i\">c</li></ul><p class=\"x\">t</p></div></template>"
+  },
+  {
+    "name": "tmpl_static_table_bail",
+    "sfc": "<template><div><table><tr><td>a</td></tr></table><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template>"
+  },
+  {
+    "name": "tmpl_static_scoped",
+    "sfc": "<template><div><p class=\"a\">1</p><p class=\"b\">2</p><p class=\"c\">3</p><p class=\"d\">4</p><p class=\"e\">5</p></div></template><style scoped>.a{color:red}</style>"
+  },
+  {
+    "name": "tmpl_pre",
+    "sfc": "<template><pre>  keep\n    spaces</pre><p class=\"a\">x</p></template>"
+  },
+  {
+    "name": "tmpl_for_slot_combo",
+    "sfc": "<template><List v-for=\"row in rows\" :key=\"row.id\" v-slot=\"{ item }\"><span>{{ item }}</span></List></template>"
+  },
+  {
+    "name": "tmpl_dyn_arg",
+    "sfc": "<template><div :[attr]=\"val\" @[event]=\"handler\"></div></template>"
+  },
+  {
+    "name": "tmpl_err_dup_attr",
+    "sfc": "<template><div id=\"a\" id=\"b\"></div></template>"
+  },
+  {
+    "name": "tmpl_err_v_else_no_if",
+    "sfc": "<template><div v-else></div></template>"
+  },
+  {
+    "name": "tmpl_err_v_on_no_exp",
+    "sfc": "<template><div @click></div></template>"
+  },
+  {
+    "name": "tmpl_v_model_component",
+    "sfc": "<template><Comp v-model=\"val\" /><Comp v-model:title=\"t\" /></template>"
+  },
+  {
+    "name": "tmpl_event_modifiers",
+    "sfc": "<template><button @click.stop.prevent=\"go\" @keyup.enter=\"submit\">go</button></template>"
+  },
+  {
+    "name": "tmpl_v_bind_obj",
+    "sfc": "<template><div v-bind=\"obj\"></div></template>"
+  },
+  {
+    "name": "tmpl_svg",
+    "sfc": "<template><svg viewBox=\"0 0 10 10\"><circle cx=\"5\" cy=\"5\" r=\"4\" /></svg></template>"
+  },
+  {
+    "name": "tmpl_template_if",
+    "sfc": "<template><template v-if=\"ok\"><p>a</p><p>b</p></template></template>"
+  },
+  {
+    "name": "tmpl_template_for",
+    "sfc": "<template><template v-for=\"i in 3\" :key=\"i\"><p>{{ i }}</p></template></template>"
+  },
+  {
+    "name": "tmpl_kebab_component",
+    "sfc": "<template><my-comp foo=\"1\" /><MyComp /></template>"
+  },
+  {
+    "name": "tmpl_bind_setup_const",
+    "sfc": "<script setup>\nconst msg = 'hello'\n</script>\n<template><div>{{ msg }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_setup_let",
+    "sfc": "<script setup>\nlet count = 0\n</script>\n<template><button @click=\"count++\">{{ count }}</button></template>"
+  },
+  {
+    "name": "tmpl_bind_component",
+    "sfc": "<script setup>\nimport Foo from './Foo.vue'\n</script>\n<template><Foo bar=\"1\" /></template>"
+  },
+  {
+    "name": "tmpl_bind_component_kebab",
+    "sfc": "<script setup>\nimport FooBar from './FooBar.vue'\n</script>\n<template><foo-bar /><FooBar /></template>"
+  },
+  {
+    "name": "tmpl_bind_props",
+    "sfc": "<script setup>\ndefineProps(['msg'])\n</script>\n<template><div>{{ msg }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_props_aliased",
+    "sfc": "<script setup>\nconst { msg: m } = defineProps(['msg'])\n</script>\n<template><div>{{ m }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_import_maybe_ref",
+    "sfc": "<script setup>\nimport { util } from './util.js'\n</script>\n<template><div>{{ util() }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_model",
+    "sfc": "<script setup>\ndefineModel()\n</script>\n<template><div>{{ modelValue }}</div></template>"
+  },
+  {
+    "name": "tmpl_ws_preserve",
+    "options": {
+      "whitespace": "preserve"
+    },
+    "sfc": "<template><div>\n  hello\n  <span>  a  b  </span>\n</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_for_no_exp",
+    "sfc": "<template><div v-for>item</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_slot_misplaced",
+    "sfc": "<template><my-comp><div v-slot:default>x</div></my-comp></template>"
+  },
+  {
+    "name": "tmpl_err_v_model_no_exp",
+    "sfc": "<template><input v-model /></template>"
+  },
+  {
+    "name": "tmpl_err_v_else_if_no_exp",
+    "sfc": "<template><div v-if=\"a\"/><div v-else-if>x</div></template>"
+  },
+  {
+    "name": "tmpl_dyn_arg_event",
+    "sfc": "<template><button @[event]=\"go\">x</button></template>"
+  },
+  {
+    "name": "tmpl_dyn_arg_shorthand_bind",
+    "sfc": "<template><div :[key]=\"val\">x</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_bind_no_exp",
+    "sfc": "<template><div :id>x</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_slot_outlet_dyn",
+    "sfc": "<template><slot :name=\"n\">x</slot></template>"
+  },
+  {
+    "name": "tmpl_bind_options_props",
+    "sfc": "<script>\nexport default {\n  props: ['msg']\n}\n</script>\n<template><div>{{ msg }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_options_data",
+    "sfc": "<script>\nexport default {\n  data() {\n    return { count: 0 }\n  }\n}\n</script>\n<template><div>{{ count }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_options_computed",
+    "sfc": "<script>\nexport default {\n  computed: {\n    doubled() { return 2 }\n  },\n  methods: {\n    go() {}\n  }\n}\n</script>\n<template><div @click=\"go\">{{ doubled }}</div></template>"
+  },
+  {
+    "name": "tmpl_bind_options_component_unresolved",
+    "sfc": "<script>\nimport Foo from './Foo.vue'\nexport default {\n  components: { Foo }\n}\n</script>\n<template><Foo /></template>"
+  },
+  {
+    "name": "tmpl_class_array",
+    "sfc": "<template><div :class=\"[a, 'b', { c: ok }]\">x</div></template>"
+  },
+  {
+    "name": "tmpl_class_object",
+    "sfc": "<template><div class=\"base\" :class=\"{ active: on }\">x</div></template>"
+  },
+  {
+    "name": "tmpl_style_binding",
+    "sfc": "<template><div :style=\"{ color: c, fontSize: n + 'px' }\">x</div></template>"
+  },
+  {
+    "name": "tmpl_dyn_arg_modifier",
+    "sfc": "<template><button @[event].stop.prevent=\"go\">x</button></template>"
+  },
+  {
+    "name": "tmpl_v_for_nested_slot",
+    "sfc": "<template><my-comp v-for=\"it in list\" :key=\"it.id\"><template #default=\"{ row }\"><span>{{ row.name }}</span></template></my-comp></template>"
+  },
+  {
+    "name": "tmpl_v_model_dyn_arg",
+    "sfc": "<template><my-comp v-model:[prop].trim=\"val\" /></template>"
+  },
+  {
+    "name": "tmpl_bind_obj_spread",
+    "sfc": "<template><div v-bind=\"obj\" id=\"static\">x</div></template>"
+  },
+  {
+    "name": "tmpl_event_key_mod",
+    "sfc": "<template><input @keyup.enter.exact=\"go\" @keydown.a.b=\"go2\" /></template>"
+  },
+  {
+    "name": "tmpl_v_for_destructure",
+    "sfc": "<template><div v-for=\"({ a, b }, i) in list\" :key=\"i\">{{ a }}{{ b }}</div></template>"
+  },
+  {
+    "name": "tmpl_optional_chain_handler",
+    "sfc": "<template><button @click=\"a?.b()\">x</button></template>"
+  },
+  {
+    "name": "tmpl_inline_handler_event",
+    "sfc": "<template><button @click=\"go($event, 1)\">x</button></template>"
+  },
+  {
+    "name": "tmpl_nested_template_if_for",
+    "sfc": "<template><template v-for=\"g in groups\" :key=\"g.id\"><template v-if=\"g.show\"><div>{{ g.name }}</div></template></template></template>"
+  },
+  {
+    "name": "tmpl_hoist_nested",
+    "sfc": "<template><div><span class=\"a\"><b>static</b></span><p>{{ dyn }}</p></div></template>"
+  },
+  {
+    "name": "tmpl_err_interp_no_end",
+    "sfc": "<template><div>{{ foo }}</div>\n<div>bar {{ baz</div></template>"
+  },
+  {
+    "name": "tmpl_err_directive_no_name",
+    "sfc": "<template><div v->x</div></template>"
+  },
+  {
+    "name": "tmpl_err_dyn_arg_no_end",
+    "sfc": "<template><div :[foo=\"x\"></div></template>"
+  },
+  {
+    "name": "tmpl_err_x_missing_end_tag",
+    "sfc": "<template><div>x</div>"
+  },
+  {
+    "name": "tmpl_err_v_if_same_key",
+    "sfc": "<template><div v-if=\"a\" key=\"x\"/><div v-else-if=\"b\" key=\"x\"/></template>"
+  },
+  {
+    "name": "tmpl_err_v_for_malformed",
+    "sfc": "<template><div v-for=\"item\">x</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_for_template_key",
+    "sfc": "<template><template v-for=\"i in list\"><span :key=\"i\">{{ i }}</span></template></template>"
+  },
+  {
+    "name": "tmpl_err_v_slot_dup_names",
+    "sfc": "<template><my-comp><template #a>1</template><template #a>2</template></my-comp></template>"
+  },
+  {
+    "name": "tmpl_err_v_slot_extraneous_default",
+    "sfc": "<template><my-comp><template #default>d</template><div>e</div></my-comp></template>"
+  },
+  {
+    "name": "tmpl_err_v_model_malformed",
+    "sfc": "<template><input v-model=\"a + b\"></template>"
+  },
+  {
+    "name": "tmpl_err_v_model_scope_var",
+    "sfc": "<template><div v-for=\"i in list\"><input v-model=\"i\"></div></template>"
+  },
+  {
+    "name": "tmpl_err_v_model_props",
+    "sfc": "<script setup>\ndefineProps(['foo'])\n</script>\n<template><input v-model=\"foo\"></template>"
+  },
+  {
+    "name": "tmpl_err_keepalive_children",
+    "sfc": "<template><keep-alive><div>a</div><div>b</div></keep-alive></template>"
+  },
+  {
+    "name": "tmpl_err_vnode_hooks",
+    "sfc": "<template><div @vnode-mounted=\"fn\">x</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_bind_same_name_dyn",
+    "sfc": "<template><div :[arg] /></template>"
+  },
+  {
+    "name": "tmpl_err_v_html_no_exp",
+    "sfc": "<template><div v-html>raw</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_html_children",
+    "sfc": "<template><div v-html=\"h\">child</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_text_no_exp",
+    "sfc": "<template><div v-text>t</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_text_children",
+    "sfc": "<template><div v-text=\"t\">child</div></template>"
+  },
+  {
+    "name": "tmpl_err_v_model_invalid_el",
+    "sfc": "<template><div v-model=\"x\"></div></template>"
+  },
+  {
+    "name": "tmpl_err_v_model_arg_plain",
+    "sfc": "<template><input v-model:title=\"a\"></template>"
+  },
+  {
+    "name": "tmpl_err_v_model_file",
+    "sfc": "<template><input type=\"file\" v-model=\"a\"></template>"
+  },
+  {
+    "name": "tmpl_err_v_show_no_exp",
+    "sfc": "<template><div v-show>s</div></template>"
+  },
+  {
+    "name": "tmpl_err_transition_children",
+    "sfc": "<template><transition><div>a</div><div>b</div></transition></template>"
+  },
+  {
+    "name": "tmpl_err_side_effect_tag",
+    "sfc": "<template><script>x=1</script><div>d</div></template>"
+  },
+  {
+    "name": "v_on_vue_prefix",
+    "sfc": "<template><div v-for=\"i in list\" :key=\"i\" @vue:before-mount=\"fn()\" @vue:update=\"onUpd\">{{ i }}</div></template>"
+  }
 ]

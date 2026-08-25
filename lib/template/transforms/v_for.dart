@@ -24,6 +24,11 @@ final transformFor =
     }
     final keyProperty =
         keyProp != null && keyExp != null ? createObjectProp('key', keyExp) : null;
+    if (memo != null && keyProperty != null && isDirKey) {
+      // Official vForMemoKeyedNodes: the :key expression was processed here,
+      // so transformExpression must skip it (avoids double processing).
+      context.vForMemoKeyedNodes.add(node);
+    }
     _processTemplateMemoAndKey(node, memo, keyProp, keyProperty, context);
     final src = forNode.source;
     final isStableFragment =
@@ -187,7 +192,7 @@ void _pushMemoLoop(JSCallExpression renderExp, ForNode forNode,
   loop.body = JSBlockStatement([
     createCompoundExp(['const _memo = (', memo.exp, ')']),
     createCompoundExp([
-      'if (_cached',
+      'if (_cached && _cached.el',
       if (keyExp != null) ...[' && _cached.key === ', keyExp],
       ' && ${context.helperString(hIsMemoSame)}(_cached, _memo)) return _cached'
     ]),

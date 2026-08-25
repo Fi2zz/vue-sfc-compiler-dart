@@ -19,19 +19,24 @@ Object? transformExpression(TmplNode node, TransformContext context) {
     for (var i = 0; i < node.props.length; i++) {
       final dir = node.props[i];
       if (dir is! DirectiveNode || dir.name == 'for') continue;
-      _processDirectiveExp(dir, memo, context);
+      _processDirectiveExp(dir, memo, context, node);
     }
   }
   return null;
 }
 
-void _processDirectiveExp(
-    DirectiveNode dir, DirectiveNode? memo, TransformContext context) {
+void _processDirectiveExp(DirectiveNode dir, DirectiveNode? memo,
+    TransformContext context, TmplNode node) {
   final exp = dir.exp;
   final arg = dir.arg;
+  // key has been processed in transformFor (vMemo + vFor combination only).
+  final memoKeyProcessed = memo != null &&
+      context.vForMemoKeyedNodes.contains(node) &&
+      arg is SimpleExpression &&
+      arg.content == 'key';
   if (exp is SimpleExpression &&
       !(dir.name == 'on' && arg != null) &&
-      !(memo != null && arg is SimpleExpression && arg.content == 'key')) {
+      !memoKeyProcessed) {
     dir.exp = processExpression(exp, context, asParams: dir.name == 'slot');
   }
   if (arg is SimpleExpression && !arg.static_) {

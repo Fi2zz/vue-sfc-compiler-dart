@@ -80,6 +80,10 @@ final class SetupContext {
   AstNode? propsCall; // defineProps or withDefaults call node
   AstNode? propsRuntimeDecl;
   AstNode? propsTypeDecl;
+
+  /// Official hasVueIgnore on defineProps' type argument: the first member
+  /// of a leading intersection/union is skipped during resolution.
+  bool propsTypeLeadingIgnored = false;
   AstNode? propsRuntimeDefaults;
   bool propsAssigned = false; // propsDecl != null in official terms
   AstNode? propsDestructureDecl;

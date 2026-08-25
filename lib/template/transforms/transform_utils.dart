@@ -19,6 +19,11 @@ const _propsHelperSet = {hNormalizeProps, hGuardReactiveProps};
 }
 
 void injectProp(Object? node, JSProperty prop, TransformContext context) {
+  // Official injectSlotKey (#15051): branch keys on renderSlot calls move
+  // to the 6th argument instead of leaking into slot props.
+  if (node is JSCallExpression && _injectSlotKey(node, prop)) {
+    return;
+  }
   Object? propsWithInjection;
   Object? props = node is VNodeCall
       ? node.props
@@ -65,6 +70,41 @@ void injectProp(Object? node, JSProperty prop, TransformContext context) {
     }
   }
   _assignProps(node, propsWithInjection, parentCall);
+}
+
+/// Official injectSlotKey: a `key` property injected into a renderSlot call
+/// pads the call to 6 arguments (`{}, undefined, undefined, key`) instead of
+/// merging into the props object. Returns false for non-key properties so
+/// injectProp falls through to normal prop injection.
+bool _injectSlotKey(JSCallExpression node, JSProperty prop) {
+  if (prop.key is! SimpleExpression ||
+      (prop.key as SimpleExpression).content != 'key') {
+    return false;
+  }
+  // A user-provided key keeps priority: skip branch key injection.
+  final props = node.arguments.length > 2 ? node.arguments[2] : null;
+  if (props != null && props is! String) {
+    final unnormalized = _getUnnormalizedProps(props, <JSCallExpression>[]).$1;
+    if (unnormalized is JSObjectExpression && hasProp(prop, unnormalized)) {
+      return true;
+    }
+  }
+  void pad(int index, String raw) {
+    while (node.arguments.length <= index) {
+      node.arguments.add(null);
+    }
+    final current = node.arguments[index];
+    if (current == null || current == '') node.arguments[index] = raw;
+  }
+
+  pad(2, '{}');
+  pad(3, 'undefined');
+  pad(4, 'undefined');
+  while (node.arguments.length <= 5) {
+    node.arguments.add(null);
+  }
+  node.arguments[5] = prop.value;
+  return true;
 }
 
 void _assignProps(

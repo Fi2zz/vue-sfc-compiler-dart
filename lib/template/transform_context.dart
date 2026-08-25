@@ -68,6 +68,10 @@ final class TransformContext implements HelperHost {
   final List<JSCacheExpression?> cached = [];
   final Map<TmplNode, int> constantCache = {};
   int temps = 0;
+
+  /// Official vForMemoKeyedNodes: v-for elements whose directive :key was
+  /// already processed inside transformFor (v-memo combination).
+  final Set<TmplNode> vForMemoKeyedNodes = {};
   final Map<String, int> identifiers = {};
   final Scopes scopes = Scopes();
   TmplNode? parent;
