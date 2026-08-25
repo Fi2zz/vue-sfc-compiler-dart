@@ -155,6 +155,28 @@ CodegenResult generate(RootNode ast, CodegenOptions options) {
 
 void _genRenderFunction(
     RootNode ast, CodegenContext context, CodegenOptions options) {
+  context.push(_renderSignature(options));
+  context.indent();
+  // 官方 useWithBlock：mode !== 'module' 且 prefixIdentifiers:false 时
+  // 渲染体包在 with (_ctx) 中，helper 从 _Vue 解构。
+  final withCtx = !options.prefixIdentifiers && options.mode != 'module';
+  if (withCtx) _openWithCtx(ast, context);
+  _genAssetsAndTemps(ast, context);
+  if (!options.ssr) context.push('return ');
+  if (ast.codegenNode != null) {
+    genNode(ast.codegenNode, context);
+  } else {
+    context.push('null');
+  }
+  if (withCtx) {
+    context.deindent();
+    context.push('}');
+  }
+  context.deindent();
+  context.push('}');
+}
+
+String _renderSignature(CodegenOptions options) {
   final functionName = options.ssr ? 'ssrRender' : 'render';
   final args = options.ssr
       ? ['_ctx', '_push', '_parent', '_attrs']
@@ -165,21 +187,18 @@ void _genRenderFunction(
   final signature = options.isTS
       ? args.map((arg) => '$arg: any').join(',')
       : args.join(', ');
-  if (options.inline) {
-    context.push('($signature) => {');
-  } else {
-    context.push('function $functionName($signature) {');
-  }
+  return options.inline
+      ? '($signature) => {'
+      : 'function $functionName($signature) {';
+}
+
+void _openWithCtx(RootNode ast, CodegenContext context) {
+  context.push('with (_ctx) {');
   context.indent();
-  _genAssetsAndTemps(ast, context);
-  if (!options.ssr) context.push('return ');
-  if (ast.codegenNode != null) {
-    genNode(ast.codegenNode, context);
-  } else {
-    context.push('null');
-  }
-  context.deindent();
-  context.push('}');
+  if (ast.helpers.isEmpty) return;
+  final destructure = ast.helpers.map((s) => '$s: _$s').join(', ');
+  context.push('const { $destructure } = _Vue\n', newlineIndex: -1);
+  context.newline();
 }
 
 void _genAssetsAndTemps(RootNode ast, CodegenContext context) {
@@ -252,14 +271,34 @@ void _genFunctionPreamble(RootNode ast, CodegenContext context) {
   if (helpers.isNotEmpty) {
     if (context.options.prefixIdentifiers) {
       context.push(
-          'const { ${helpers.map((s) => '$s: _$s').join(', ')} } = $vueBinding\n');
+          'const { ${helpers.map((s) => '$s: _$s').join(', ')} } = $vueBinding\n',
+          newlineIndex: -1);
     } else {
-      context.push('const _Vue = $vueBinding\n');
+      context.push('const _Vue = $vueBinding\n', newlineIndex: -1);
+      if (ast.hoists.isNotEmpty) {
+        _genStaticHelperDestructure(ast, helpers, context);
+      }
     }
   }
   _genHoists(ast.hoists, context);
   context.newline();
   context.push('return ');
+}
+
+/// 官方 genFunctionPreamble 非 prefix 分支：有 hoist 时把静态创建类 helper
+/// 从 _Vue 解构（hoist 在 with (_ctx) 之外生成，需独立可见）。
+void _genStaticHelperDestructure(
+    RootNode ast, List<String> helpers, CodegenContext context) {
+  const statics = [
+    hCreateVNode,
+    hCreateElementVNode,
+    hCreateComment,
+    hCreateText,
+    hCreateStatic,
+  ];
+  final used =
+      statics.where(helpers.contains).map((s) => '$s: _$s').join(', ');
+  context.push('const { $used } = _Vue\n', newlineIndex: -1);
 }
 
 extension on CodegenOptions {

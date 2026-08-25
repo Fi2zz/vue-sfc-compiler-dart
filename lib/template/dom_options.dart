@@ -72,6 +72,7 @@ TmplParserOptions domParserOptions({
   bool comments = true,
   bool prefixIdentifiers = false,
   String whitespace = 'condense',
+  bool Function(String tag)? isCustomElement,
   void Function(TmplParseError e)? onError,
 }) {
   return TmplParserOptions(
@@ -83,6 +84,7 @@ TmplParserOptions domParserOptions({
     isNativeTag: domNativeTag,
     isPreTag: (tag) => tag == 'pre',
     isIgnoreNewlineTag: (tag) => tag == 'pre' || tag == 'textarea',
+    isCustomElement: isCustomElement ?? ((tag) => false),
     isBuiltInComponent: (tag) => domBuiltInComponent(tag),
     getNamespace: domGetNamespace,
     onError: onError ?? ((e) {}),
