@@ -1,6 +1,4 @@
 // Dev probe: compile one template source with sourceMap and dump segments.
-import 'dart:convert';
-import 'dart:io';
 import '../lib/template/compile_template.dart';
 import '../lib/template/source_map.dart';
 
