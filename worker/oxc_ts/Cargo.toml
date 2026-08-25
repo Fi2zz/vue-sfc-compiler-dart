@@ -1,0 +1,22 @@
+[package]
+name = "oxc_ts"
+version = "0.1.0"
+edition = "2021"
+description = "Thin oxc parser wrapper exposing a C ABI for Dart FFI"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+oxc_allocator = "=0.147.0"
+oxc_ast = { version = "=0.147.0", features = ["serialize"] }
+oxc_diagnostics = "=0.147.0"
+oxc_estree = { version = "=0.147.0", features = ["serialize"] }
+oxc_parser = "=0.147.0"
+oxc_span = "=0.147.0"
+serde_json = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

@@ -155,3 +155,6 @@ token.js
 .DS_Store
 .vscodeprobe*
 .dbg/
+
+# Rust build artifacts
+worker/oxc_ts/target/
