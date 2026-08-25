@@ -1,6 +1,8 @@
 // Verbatim port of @vue/compiler-core Tokenizer state machine.
 // State numbers and char codes match the official implementation.
 
+import 'entity_decode_data.dart';
+import 'entity_decoder.dart';
 import 'tmpl_ast.dart';
 
 // Parse modes.
@@ -68,6 +70,8 @@ final class Tokenizer {
   int index = 0;
   int entityStart = 0;
   int baseState = 1;
+  late final EntityDecoder entityDecoder =
+      EntityDecoder(kHtmlDecodeTree, emitCodePoint);
   bool inRCDATA = false;
   bool inXML = false;
   bool inVPre = false;
@@ -591,12 +595,16 @@ final class Tokenizer {
     baseState = state;
     state = 33;
     entityStart = index;
+    // 官方：文本/RCDATA 用 Legacy（无分号 legacy 实体可用），其余一律
+    // Attribute 模式。
+    entityDecoder.startEntity(
+        baseState == 1 || baseState == 32
+            ? DecodingMode.legacy
+            : DecodingMode.attribute);
   }
 
   void stateInEntity() {
-    final length = decodeEntityAt(buffer, entityStart,
-        attribute: baseState != 1 && baseState != 32,
-        onEmit: emitCodePoint);
+    final length = entityDecoder.write(buffer, index);
     if (length >= 0) {
       state = baseState;
       if (length == 0) index = entityStart;
@@ -714,118 +722,3 @@ final class Tokenizer {
     }
   }
 }
-
-/// Minimal entity decoder (subset of html-decode-tree): numeric entities plus
-/// common named entities. Returns consumed length, 0 when the sequence is not
-/// a decodable entity, -1 when the buffer ended mid-entity (full-buffer input
-/// makes that equivalent to 0, handled by caller semantics).
-int decodeEntityAt(
-  String buffer,
-  int entityStart, {
-  required bool attribute,
-  required void Function(int cp, int consumed) onEmit,
-}) {
-  // buffer[entityStart] == '&'
-  var i = entityStart + 1;
-  if (i >= buffer.length) return -1;
-  if (buffer.codeUnitAt(i) == 35) {
-    return _decodeNumeric(buffer, i, onEmit);
-  }
-  return _decodeNamed(buffer, i, attribute, onEmit);
-}
-
-int _decodeNumeric(
-    String buffer, int i, void Function(int cp, int consumed) onEmit) {
-  var j = i + 1;
-  var hex = false;
-  if (j < buffer.length &&
-      (buffer.codeUnitAt(j) == 120 || buffer.codeUnitAt(j) == 88)) {
-    hex = true;
-    j++;
-  }
-  final digitStart = j;
-  while (j < buffer.length) {
-    final c = buffer.codeUnitAt(j);
-    final digit = hex
-        ? (c >= 48 && c <= 57 || c >= 65 && c <= 70 || c >= 97 && c <= 102)
-        : c >= 48 && c <= 57;
-    if (!digit) break;
-    j++;
-  }
-  if (j == digitStart) return 0;
-  final semi = j < buffer.length && buffer.codeUnitAt(j) == 59;
-  final text = buffer.substring(digitStart, j);
-  final cp = int.tryParse(text, radix: hex ? 16 : 10);
-  if (cp == null) return 0;
-  final total = (j - (i - 1)) + (semi ? 1 : 0);
-  onEmit(_replaceCodePoint(cp), total);
-  return total;
-}
-
-int _decodeNamed(String buffer, int i, bool attribute,
-    void Function(int cp, int consumed) onEmit) {
-  final start = i;
-  while (i < buffer.length) {
-    final c = buffer.codeUnitAt(i);
-    final alnum = c >= 48 && c <= 57 || c >= 65 && c <= 90 || c >= 97 && c <= 122;
-    if (!alnum) break;
-    i++;
-  }
-  final semi = i < buffer.length && buffer.codeUnitAt(i) == 59;
-  if (!semi) {
-    // Legacy mode (text only): some named entities work without semicolon.
-    if (attribute) return 0;
-    final name = buffer.substring(start, i);
-    final cp = legacyNamedEntities[name];
-    if (cp == null) return 0;
-    onEmit(cp, i - start + 1);
-    return i - start + 1;
-  }
-  final name = buffer.substring(start, i);
-  final cp = namedEntities[name];
-  if (cp == null) return 0;
-  onEmit(cp, i - start + 2);
-  return i - start + 2;
-}
-
-// Numeric character reference replacements per HTML spec (subset: C1 controls).
-int _replaceCodePoint(int cp) {
-  const replacements = {
-    0x80: 0x20AC, 0x82: 0x201A, 0x83: 0x0192, 0x84: 0x201E, 0x85: 0x2026,
-    0x86: 0x2020, 0x87: 0x2021, 0x88: 0x02C6, 0x89: 0x2030, 0x8A: 0x0160,
-    0x8B: 0x2039, 0x8C: 0x0152, 0x8E: 0x017D, 0x91: 0x2018, 0x92: 0x2019,
-    0x93: 0x201C, 0x94: 0x201D, 0x95: 0x2022, 0x96: 0x2013, 0x97: 0x2014,
-    0x98: 0x02DC, 0x99: 0x2122, 0x9A: 0x0161, 0x9B: 0x203A, 0x9C: 0x0153,
-    0x9E: 0x017E, 0x9F: 0x0178,
-  };
-  if (cp == 0 || cp > 0x10FFFF) return 0xFFFD;
-  return replacements[cp] ?? cp;
-}
-
-/// Named entities requiring a semicolon (common subset).
-const namedEntities = {
-  'amp': 38, 'lt': 60, 'gt': 62, 'quot': 34, 'apos': 39, 'nbsp': 160,
-  'copy': 169, 'reg': 174, 'trade': 8482, 'hellip': 8230, 'mdash': 8212,
-  'ndash': 8211, 'times': 215, 'divide': 247, 'laquo': 171, 'raquo': 187,
-  'middot': 183, 'bull': 8226, 'deg': 176, 'plusmn': 177, 'para': 182,
-  'sect': 167, 'micro': 181, 'acute': 180, 'cedil': 184, 'iexcl': 161,
-  'iquest': 191, 'cent': 162, 'pound': 163, 'yen': 165, 'euro': 8364,
-  'brvbar': 166, 'uml': 168, 'ordf': 170, 'ordm': 186, 'shy': 173,
-  'macr': 175, 'sup1': 185, 'sup2': 178, 'sup3': 179, 'frac14': 188,
-  'frac12': 189, 'frac34': 190, 'lsquo': 8216, 'rsquo': 8217,
-  'ldquo': 8220, 'rdquo': 8221, 'dagger': 8224, 'Dagger': 8225,
-  'permil': 8240, 'prime': 8242, 'Prime': 8243, 'lsaquo': 8249,
-  'rsaquo': 8250, 'oline': 8254, 'frasl': 8260, 'spades': 9824,
-  'clubs': 9827, 'hearts': 9829, 'diams': 9830, 'aacute': 225,
-  'eacute': 233, 'iacute': 237, 'oacute': 243, 'uacute': 250,
-  'agrave': 224, 'egrave': 232, 'igrave': 236, 'ograve': 242,
-  'ugrave': 249, 'ccedil': 231, 'ntilde': 241, 'auml': 228, 'ouml': 246,
-  'uuml': 252, 'Auml': 196, 'Ouml': 214, 'Uuml': 220, 'szlig': 223,
-};
-
-/// Legacy named entities that decode without a semicolon in text.
-const legacyNamedEntities = {
-  'amp': 38, 'lt': 60, 'gt': 62, 'quot': 34, 'nbsp': 160, 'copy': 169,
-  'reg': 174, 'AMP': 38, 'LT': 60, 'GT': 62, 'QUOT': 34, 'COPY': 169,
-  'REG': 174,
-};
