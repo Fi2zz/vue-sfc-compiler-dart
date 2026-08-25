@@ -109,7 +109,6 @@ dart analyze                         # 须零 error/warning
 ## 相关文档
 
 - `HANDOFF.md`：总体路线、工作方法、代码规范与已知坑
-- `COMPILER_DOM.md`：compiler-dom 兼容层的落地记录与后续方向
 - `OXC_REFERENCE.md`：TS 解析后端的 FFI 规格、构建与版本 bump 流程
 - `FFI_MIGRATION.md`：解析后端切换的契约面与回归套件
 - `lib/ts_syntax/NODE_SHAPES.md`：节点形状清单
