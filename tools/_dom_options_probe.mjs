@@ -10,6 +10,8 @@ const templates = [
   "<!-- hi --><div>y</div>",
   '<div   class="a"   >  text  </div>',
   "<div>{{ count + 1 }}</div>",
+  "<div>[[ a ]]</div>",
+  "[[ msg",
 ];
 const combos = [
   ["module", { mode: "module" }],
@@ -20,6 +22,9 @@ const combos = [
   ["ists", { isTS: true }],
   ["custel", { isCustomElement: (t) => t === "input" }],
   ["err49", { cacheHandlers: true }],
+  ["scopeid", { mode: "module", scopeId: "data-v-test" }],
+  ["err50", { scopeId: "data-v-test" }],
+  ["delim", { mode: "module", delimiters: ["[[", "]]"] }],
 ];
 
 for (const [label, options] of combos) {

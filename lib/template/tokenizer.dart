@@ -77,13 +77,18 @@ final class Tokenizer {
   bool inVPre = false;
   final List<int> newlines = [];
   int mode = modeBase;
-  List<int> delimiterOpen = toCharCodes('{{');
-  List<int> delimiterClose = toCharCodes('}}');
+  final List<int> delimiterOpen;
+  final List<int> delimiterClose;
   int delimiterIndex = -1;
   List<int>? currentSequence;
   int sequenceIndex = 0;
 
-  Tokenizer(this.stack, this.cbs);
+  /// Interpolation delimiters (official parserOptions.delimiters pair).
+  final (String, String) delimiters;
+
+  Tokenizer(this.stack, this.cbs, {this.delimiters = ('{{', '}}')})
+      : delimiterOpen = toCharCodes(delimiters.$1),
+        delimiterClose = toCharCodes(delimiters.$2);
 
   bool get inSFCRoot => mode == modeSfc && stack.isEmpty;
 
@@ -97,8 +102,6 @@ final class Tokenizer {
     inRCDATA = false;
     currentSequence = null;
     newlines.clear();
-    delimiterOpen = toCharCodes('{{');
-    delimiterClose = toCharCodes('}}');
   }
 
   TmplPosition getPos(int index) {

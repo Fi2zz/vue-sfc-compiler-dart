@@ -3,8 +3,7 @@
 // 与 compile_template.dart（SFC doCompileTemplate 口径）的区别：
 // 默认 mode:function、prefixIdentifiers:false、hoistStatic/cacheHandlers:false，
 // 无 scopeId/slotted/hmr/asset-url 变换；错误按官方 defaultOnError 直接抛出。
-// 未移植选项：ssr/inSSR/ssrCssVars、delimiters、自定义 nodeTransforms/
-// directiveTransforms 注入、scopeId（error 50 路径）。
+// 未移植选项：ssr/inSSR/ssrCssVars。
 import 'template/codegen.dart';
 import 'template/compile_template.dart';
 import 'template/dom_options.dart';
@@ -38,9 +37,25 @@ final class DomCompileOptions {
   bool comments = true;
   bool isTS = false;
   bool sourceMap = false;
+
+  /// Scoped-CSS id (`data-v-xxx`). Module mode only — otherwise error 50
+  /// (official X_SCOPE_ID_NOT_SUPPORTED); consumed by stringifyStatic
+  /// hoists and slot_outlet's isNonScopedSlot logic.
+  String? scopeId;
   bool Function(String tag)? isCustomElement;
   void Function(TmplCompileError e)? onError;
   void Function(TmplCompileError e)? onWarn;
+
+  /// Interpolation delimiters (official `[open, close]` pair, default
+  /// `{{ }}`); consumed by the tokenizer's interpolation state machine.
+  (String, String)? delimiters;
+
+  /// User transforms, merged after the DOM preset (official baseCompile
+  /// order: core preset → ignoreSideEffectTags + DOM transforms → user).
+  List<NodeTransform>? nodeTransforms;
+
+  /// User directives, overriding the DOM table entry per name.
+  Map<String, DirectiveTransform>? directiveTransforms;
 }
 
 /// @vue/compiler-dom compile(template, options)。
@@ -53,22 +68,33 @@ TmplCompileResult compile(String template, [DomCompileOptions? options]) {
   if (!prefix && opt.cacheHandlers) {
     _raise(opt, TmplCompileError(49, tmplErrorMessage(49)), errors);
   }
+  if (opt.scopeId != null && opt.mode != 'module') {
+    _raise(opt, TmplCompileError(50, tmplErrorMessage(50)), errors);
+  }
   final ast = baseParse(template, _domParseOptions(opt, prefix, errors));
   transform(ast, _domTransformOptions(opt, prefix, errors, warnings));
   final gen = generate(ast, _domCodegenOptions(opt, prefix));
-  return TmplCompileResult(gen.code, ast, errors, warnings,
-      preamble: gen.preamble, map: gen.map);
+  return TmplCompileResult(
+    gen.code,
+    ast,
+    errors,
+    warnings,
+    preamble: gen.preamble,
+    map: gen.map,
+  );
 }
 
 /// @vue/compiler-dom parse(template, options)。
 RootNode parse(String template, [DomCompileOptions? options]) {
   final opt = options ?? DomCompileOptions();
-  return baseParse(
-      template, _domParseOptions(opt, opt.prefixIdentifiers, []));
+  return baseParse(template, _domParseOptions(opt, opt.prefixIdentifiers, []));
 }
 
-void _raise(DomCompileOptions opt, TmplCompileError e,
-    List<TmplCompileError> errors) {
+void _raise(
+  DomCompileOptions opt,
+  TmplCompileError e,
+  List<TmplCompileError> errors,
+) {
   final handler = opt.onError;
   if (handler == null) throw e;
   errors.add(e);
@@ -76,20 +102,30 @@ void _raise(DomCompileOptions opt, TmplCompileError e,
 }
 
 TmplParserOptions _domParseOptions(
-    DomCompileOptions opt, bool prefix, List<TmplCompileError> errors) {
+  DomCompileOptions opt,
+  bool prefix,
+  List<TmplCompileError> errors,
+) {
   return domParserOptions(
     prefixIdentifiers: prefix,
     whitespace: opt.whitespace,
     comments: opt.comments,
     isCustomElement: opt.isCustomElement,
-    onError: (e) => _raise(opt,
-        TmplCompileError(e.code, e.message ?? tmplErrorMessage(e.code), e.loc),
-        errors),
+    delimiters: opt.delimiters,
+    onError: (e) => _raise(
+      opt,
+      TmplCompileError(e.code, e.message ?? tmplErrorMessage(e.code), e.loc),
+      errors,
+    ),
   );
 }
 
-TransformOptions _domTransformOptions(DomCompileOptions opt, bool prefix,
-    List<TmplCompileError> errors, List<TmplCompileError> warnings) {
+TransformOptions _domTransformOptions(
+  DomCompileOptions opt,
+  bool prefix,
+  List<TmplCompileError> errors,
+  List<TmplCompileError> warnings,
+) {
   void onError(TmplCompileError e) => _raise(opt, e, errors);
   void onWarn(TmplCompileError e) => _warn(opt, e, warnings);
   return TransformOptions()
@@ -98,8 +134,12 @@ TransformOptions _domTransformOptions(DomCompileOptions opt, bool prefix,
     ..hoistStatic = opt.hoistStatic
     ..cacheHandlers = opt.cacheHandlers
     ..isTS = opt.isTS
-    ..nodeTransforms = _domNodeTransforms(prefix)
-    ..directiveTransforms = _domDirectiveTransforms()
+    ..scopeId = opt.scopeId
+    ..nodeTransforms = [..._domNodeTransforms(prefix), ...?opt.nodeTransforms]
+    ..directiveTransforms = {
+      ..._domDirectiveTransforms(),
+      ...?opt.directiveTransforms,
+    }
     ..transformHoist = stringifyStatic
     ..isBuiltInComponent = _domBuiltInComponent
     ..isCustomElement = opt.isCustomElement
@@ -107,8 +147,11 @@ TransformOptions _domTransformOptions(DomCompileOptions opt, bool prefix,
     ..onWarn = onWarn;
 }
 
-void _warn(DomCompileOptions opt, TmplCompileError e,
-    List<TmplCompileError> warnings) {
+void _warn(
+  DomCompileOptions opt,
+  TmplCompileError e,
+  List<TmplCompileError> warnings,
+) {
   warnings.add(e);
   opt.onWarn?.call(e);
 }
@@ -116,21 +159,21 @@ void _warn(DomCompileOptions opt, TmplCompileError e,
 /// getBaseTransformPreset(prefixIdentifiers) + ignoreSideEffectTags +
 /// DOMNodeTransforms（compile_template.dart 的 SFC 版另含 asset-url）。
 List<NodeTransform> _domNodeTransforms(bool prefix) => [
-      transformVBindShorthand,
-      transformOnce,
-      transformIf,
-      transformMemo,
-      transformFor,
-      if (prefix) ...[trackVForSlotScopes, transformExpression],
-      transformSlotOutlet,
-      transformElement,
-      trackSlotScopes,
-      transformText,
-      ignoreSideEffectTags,
-      transformStyle,
-      transformTransition,
-      validateHtmlNesting,
-    ];
+  transformVBindShorthand,
+  transformOnce,
+  transformIf,
+  transformMemo,
+  transformFor,
+  if (prefix) ...[trackVForSlotScopes, transformExpression],
+  transformSlotOutlet,
+  transformElement,
+  trackSlotScopes,
+  transformText,
+  ignoreSideEffectTags,
+  transformStyle,
+  transformTransition,
+  validateHtmlNesting,
+];
 
 /// DOMDirectiveTransforms（core on/bind/model 之上按 DOM 覆盖）。
 Map<String, DirectiveTransform> _domDirectiveTransforms() {
@@ -163,5 +206,6 @@ CodegenOptions _domCodegenOptions(DomCompileOptions opt, bool prefix) {
     ..prefixIdentifiers = prefix
     ..filename = opt.filename
     ..isTS = opt.isTS
-    ..sourceMap = opt.sourceMap;
+    ..sourceMap = opt.sourceMap
+    ..scopeId = opt.scopeId;
 }

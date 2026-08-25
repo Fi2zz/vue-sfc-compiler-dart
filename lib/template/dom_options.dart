@@ -74,6 +74,7 @@ TmplParserOptions domParserOptions({
   String whitespace = 'condense',
   bool Function(String tag)? isCustomElement,
   void Function(TmplParseError e)? onError,
+  (String, String)? delimiters,
 }) {
   return TmplParserOptions(
     parseMode: parseMode,
@@ -88,5 +89,6 @@ TmplParserOptions domParserOptions({
     isBuiltInComponent: (tag) => domBuiltInComponent(tag),
     getNamespace: domGetNamespace,
     onError: onError ?? ((e) {}),
+    delimiters: delimiters,
   );
 }

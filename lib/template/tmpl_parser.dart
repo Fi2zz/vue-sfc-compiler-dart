@@ -24,6 +24,9 @@ final class TmplParserOptions {
   final int Function(String tag, ElementNode? parent, int prevNs) getNamespace;
   final void Function(TmplParseError e) onError;
 
+  /// Interpolation delimiters (official parserOptions.delimiters).
+  final (String, String)? delimiters;
+
   const TmplParserOptions({
     this.parseMode = modeBase,
     this.comments = true,
@@ -37,6 +40,7 @@ final class TmplParserOptions {
     this.isBuiltInComponent,
     this.getNamespace = _nsZero,
     this.onError = _noopError,
+    this.delimiters,
   });
 
   static bool _no(String tag) => false;
@@ -139,7 +143,9 @@ final class _BaseParseState {
   bool inVPre = false;
   ElementNode? vPreBoundary;
   final List<ElementNode> stack = [];
-  late final Tokenizer tokenizer = Tokenizer(stack, _ParserCallbacks(this));
+  late final Tokenizer tokenizer = Tokenizer(
+      stack, _ParserCallbacks(this),
+      delimiters: options.delimiters ?? ('{{', '}}'));
 
   // JS String.slice 语义：越界钳制、end<start 返回空串（官方依赖此行为，
   // 如 {{ }} 空插值的空白裁剪）。

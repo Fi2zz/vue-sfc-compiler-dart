@@ -11,6 +11,8 @@ const templates = [
   '<!-- hi --><div>y</div>',
   '<div   class="a"   >  text  </div>',
   '<div>{{ count + 1 }}</div>',
+  '<div>[[ a ]]</div>',
+  '[[ msg',
 ];
 
 void main() {
@@ -25,6 +27,13 @@ void main() {
     'ists': () => DomCompileOptions()..isTS = true,
     'custel': () => DomCompileOptions()..isCustomElement = (t) => t == 'input',
     'err49': () => DomCompileOptions()..cacheHandlers = true,
+    'scopeid': () => DomCompileOptions()
+      ..mode = 'module'
+      ..scopeId = 'data-v-test',
+    'err50': () => DomCompileOptions()..scopeId = 'data-v-test',
+    'delim': () => DomCompileOptions()
+      ..mode = 'module'
+      ..delimiters = ('[[', ']]'),
   };
   for (final entry in combos.entries) {
     for (final t in templates) {
@@ -39,4 +48,5 @@ void main() {
   }
 }
 
-String _jsonStr(String s) => '"${s.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"';
+String _jsonStr(String s) =>
+    '"${s.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"';

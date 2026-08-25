@@ -18,7 +18,7 @@
 - 编译期宏全家桶：`defineProps`、`withDefaults`、`defineEmits`、`defineExpose`、`defineSlots`、`defineOptions`、`defineModel`
 - `<script setup>` 完整编译：TS 类型 → 运行时声明推导、解构 props、top-level await、inline 模式表达式改写
 - 模板编译：指令全家桶、stringifyStatic、bindingMetadata 联动、options API bindings、source map
-- compiler-dom 兼容入口：`lib/compiler_dom.dart` 的 `compile()` / `parse()`（含 function 模式 + `with (_ctx)` 运行时编译路径，官方测试集 53/53 字节一致）
+- compiler-dom 兼容入口：`lib/compiler_dom.dart` 的 `compile()` / `parse()`（含 function 模式 + `with (_ctx)` 运行时编译路径，官方测试集 53/53 字节一致；支持自定义 `nodeTransforms` / `directiveTransforms` 注入、module 模式 `scopeId`、自定义插值 `delimiters`）
 - scoped CSS：`:deep()` / `:slotted()` / `:global()`、`v-bind()` CSS 变量、keyframes 改名、isProd hash 命名
 - 错误用法识别，抛出与 `@vue/compiler-sfc` 一致的错误信息与 code frame
 
