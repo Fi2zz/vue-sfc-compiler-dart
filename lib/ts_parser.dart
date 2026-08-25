@@ -68,6 +68,7 @@ class TSParser {
     bool namedOnly = true,
     int maxDepth = 0,
   }) {
+    recordCorpusEntry(code, language);
     final lang = TSFFI.load(language);
     // Create parser
     final parser = _ffi.tsParserNew();
