@@ -1,8 +1,7 @@
 // English comments per ~/REPO rule.
 // High-level Dart wrapper for parsing TypeScript/TSX.
-// Backend: oxc (see OXC_REFERENCE.md) since Phase 4; the tree-sitter
-// bindings in ts_ffi.dart remain on disk for reference but are no longer
-// used by this wrapper.
+// Backend: oxc cdylib via FFI since Phase 4 (see OXC_REFERENCE.md); the
+// mapper reproduces the tree-sitter CST shapes the consumers depend on.
 
 import 'dart:convert';
 import 'dart:io';

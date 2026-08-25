@@ -136,13 +136,13 @@ final root = OxcMapper(code, language: 'ts')     // ESTree JSON → tree-sitter 
 # 语料（452 条真实输入：四样例管线 + batch 786 去重）
 TS_AST_CORPUS=/tmp/c.jsonl dart run ./vue_dart.dart   # 等管线，recorder 落 jsonl
 
-dart tools/ast_diff.dart            # 全量双解析 diff：当前 449/452 EXACT（理论上限）
-dart tools/ast_diff.dart --census   # 附带 tree-sitter 节点 census
-echo 'const a = 1' | dart tools/ast_probe.dart ts     # 单点两棵树并排 + 首个分歧
+dart tools/ast_diff.dart            # 回放语料对比 golden 基线：应 452/452 EXACT
+dart tools/ast_diff.dart --record   # mapper/oxc 变更后重录基线（须审查 diff 再合入）
+echo 'const a = 1' | dart tools/ast_probe.dart ts     # 单点打印映射后的 AstNode 树
 dart test test/oxc_ffi_test.dart    # 绑定单测（6 例）
 ```
 
-`ast_diff` 同时是 mapper 的进度表与回归门：**449/452 是切换（Phase 4）的硬门槛**。
+`ast_diff` 是 mapper 的回归门：golden 基线 `tools/ast_golden.jsonl` 随仓库提交，钉死每条语料映射后的完整树（type/span/children 顺序）；**452/452 EXACT 才能合入**。3 条 panic 语料按 program>ERROR 树入基线，同样受保护。
 
 ## oxc 版本 bump 流程（必须遵守）
 
@@ -150,7 +150,7 @@ oxc AST 在版本间有破坏性变更先例。任何 `Cargo.toml` 版本改动�
 
 1. `cargo build --release` 重编并替换 `lib/native/liboxc_ts.*`；
 2. `dart test test/oxc_ffi_test.dart` 全绿；
-3. `dart tools/ast_diff.dart` 必须维持 449/452——掉了就先修 mapper 再合入；
+3. `dart tools/ast_diff.dart` 必须 452/452——有差异说明 oxc AST 形状变了：修好 mapper 后 `--record` 重录基线并逐条审查差异再合入；
 4. 四个 verifier（v1 157 / v2 114 / v3 75 / v4 12）与 batch 786 不跌。
 
 ## 已知坑（实测记录）

@@ -1,6 +1,5 @@
 // English comments per ~/REPO rule.
 // dart:ffi bindings for the oxc parser cdylib (liboxc_ts).
-// Purely additive: the tree-sitter bindings in ts_ffi.dart stay untouched.
 
 import 'dart:convert';
 import 'dart:ffi';
@@ -34,10 +33,9 @@ class OxcFFI {
           _oxc_parse_native,
           Pointer<Utf8> Function(Pointer<Utf8>, int, int)
         >('oxc_parse');
-    _free = _lib
-        .lookupFunction<_oxc_free_native, void Function(Pointer<Utf8>)>(
-          'oxc_free',
-        );
+    _free = _lib.lookupFunction<_oxc_free_native, void Function(Pointer<Utf8>)>(
+      'oxc_free',
+    );
   }
 
   /// Language tags mirror the worker's FFI contract.
@@ -92,9 +90,7 @@ class OxcFFI {
   static OxcFFI _loadUncached() {
     final lib = _openFirst(_candidates());
     if (lib == null) {
-      throw StateError(
-        'liboxc_ts not found. Build with: make build-worker',
-      );
+      throw StateError('liboxc_ts not found. Build with: make build-worker');
     }
     return OxcFFI._(lib);
   }

@@ -2,7 +2,7 @@
 // oxc ESTree JSON -> tree-sitter-shaped AstNode mapper.
 // Entry point and shared span/position machinery; the node-family mappings
 // live in mapper_expr.dart / mapper_stmt.dart / mapper_type.dart as
-// extensions on OxcMapper. Purely additive: ts_ffi.dart stays untouched.
+// extensions on OxcMapper.
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -62,7 +62,11 @@ class OxcMapper {
     for (final c in comments) {
       final j = _m(c);
       final node = buildNode(
-          'comment', j['start'] as int, j['end'] as int, const []);
+        'comment',
+        j['start'] as int,
+        j['end'] as int,
+        const [],
+      );
       _insertComment(root, node);
     }
   }
@@ -70,7 +74,8 @@ class OxcMapper {
   /// Descend into the deepest containing child, then insert in order.
   void _insertComment(AstNode node, AstNode comment) {
     for (final child in node.children) {
-      final contains = child.startByte <= comment.startByte &&
+      final contains =
+          child.startByte <= comment.startByte &&
           comment.endByte <= child.endByte;
       if (contains) {
         _insertComment(child, comment);
@@ -89,7 +94,8 @@ class OxcMapper {
 
   /// Build an AstNode computing row/column points from the line index.
   AstNode buildNode(String type, int start, int end, List<AstNode?> kids) {
-    final children = [for (final c in kids) ?c];    final sp = pointAt(start);
+    final children = [for (final c in kids) ?c];
+    final sp = pointAt(start);
     final ep = pointAt(end);
     return AstNode(
       type: type,
