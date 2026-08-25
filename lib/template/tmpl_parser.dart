@@ -105,8 +105,7 @@ final class _ParserCallbacks implements TokenizerCallbacks {
   @override
   void oncomment(int start, int end) {
     if (s.options.comments) {
-      s.addNode(CommentNode(
-          s.slice(start, end), s.getLoc(start - 4, end + 3)));
+      s.addNode(CommentNode(s.slice(start, end), s.getLoc(start - 4, end + 3)));
     }
   }
 
@@ -115,7 +114,9 @@ final class _ParserCallbacks implements TokenizerCallbacks {
 
   @override
   void oncdata(int start, int end) {
-    final parentNs = s.stack.isEmpty ? s.options.getNamespace('', null, nsHtml) : s.stack[0].ns;
+    final parentNs = s.stack.isEmpty
+        ? s.options.getNamespace('', null, nsHtml)
+        : s.stack[0].ns;
     if (parentNs != nsHtml) {
       s.onText(s.slice(start, end), start, end);
     } else {
@@ -144,8 +145,10 @@ final class _BaseParseState {
   ElementNode? vPreBoundary;
   final List<ElementNode> stack = [];
   late final Tokenizer tokenizer = Tokenizer(
-      stack, _ParserCallbacks(this),
-      delimiters: options.delimiters ?? ('{{', '}}'));
+    stack,
+    _ParserCallbacks(this),
+    delimiters: options.delimiters ?? ('{{', '}}'),
+  );
 
   // JS String.slice 语义：越界钳制、end<start 返回空串（官方依赖此行为，
   // 如 {{ }} 空插值的空白裁剪）。
@@ -179,10 +182,22 @@ final class _BaseParseState {
     options.onError(TmplParseError(code, getLoc(index, index), message));
   }
 
-  SimpleExpression createExp(String content, bool static_, TmplLoc loc,
-      [int constType = ctNotConstant, int parseMode = 0]) {
+  /// Mirrors official createSimpleExpression: static expressions default to
+  /// CAN_STRINGIFY regardless of any explicitly passed constType.
+  SimpleExpression createExp(
+    String content,
+    bool static_,
+    TmplLoc loc, [
+    int constType = ctNotConstant,
+    int parseMode = 0,
+  ]) {
     // prefixIdentifiers expression AST parsing is handled at transform time.
-    return SimpleExpression(content, static_, loc, constType);
+    return SimpleExpression(
+      content,
+      static_,
+      loc,
+      static_ ? ctCanStringify : constType,
+    );
   }
 
   void onText(String content, int start, int end) {
@@ -208,18 +223,19 @@ final class _BaseParseState {
     }
     final exp = slice(innerStart, innerEnd);
     // Entity decoding inside interpolation is skipped (rare; decodeHTML).
-    addNode(InterpolationNode(
-      createExp(exp, false, getLoc(innerStart, innerEnd)),
-      getLoc(start, end),
-    ));
+    addNode(
+      InterpolationNode(
+        createExp(exp, false, getLoc(innerStart, innerEnd)),
+        getLoc(start, end),
+      ),
+    );
   }
 
   void onOpenTagName(int start, int end) {
     final name = slice(start, end);
     openTag = ElementNode(
       name,
-      options.getNamespace(
-          name, stack.isEmpty ? null : stack[0], nsHtml),
+      options.getNamespace(name, stack.isEmpty ? null : stack[0], nsHtml),
       etElement,
       [],
       [],
@@ -273,8 +289,12 @@ final class _BaseParseState {
   }
 
   void onAttribName(int start, int end) {
-    prop = AttributeNode(slice(start, end), getLoc(start, end), null,
-        getLoc(start));
+    prop = AttributeNode(
+      slice(start, end),
+      getLoc(start, end),
+      null,
+      getLoc(start),
+    );
   }
 
   void onDirName(int start, int end) {
@@ -282,10 +302,10 @@ final class _BaseParseState {
     final name = raw == '.' || raw == ':'
         ? 'bind'
         : raw == '@'
-            ? 'on'
-            : raw == '#'
-                ? 'slot'
-                : raw.substring(2);
+        ? 'on'
+        : raw == '#'
+        ? 'slot'
+        : raw.substring(2);
     if (!inVPre && name.isEmpty) emitError(26, start);
     if (inVPre || name.isEmpty) {
       prop = AttributeNode(raw, getLoc(start, end), null, getLoc(start));
@@ -293,7 +313,10 @@ final class _BaseParseState {
     }
     final dir = DirectiveNode(name, raw, getLoc(start));
     if (raw == '.') {
-      dir.modifiers.add(SimpleExpression('prop', true, getLoc(start, start + 1)));
+      // Official creates the .prop-shorthand modifier via
+      // createSimpleExpression('prop') with ALL defaults: non-static,
+      // NOT_CONSTANT, locStub. Quirk kept for byte parity.
+      dir.modifiers.add(createExp('prop', false, locStub()));
     }
     prop = dir;
     if (name == 'pre') _enterVPre();
@@ -344,8 +367,7 @@ final class _BaseParseState {
         setLocEnd(arg.loc, end);
       }
     } else {
-      p.modifiers
-          .add(SimpleExpression(mod, true, getLoc(start, end)));
+      p.modifiers.add(createExp(mod, true, getLoc(start, end)));
     }
   }
 
@@ -366,8 +388,10 @@ final class _BaseParseState {
     final name = slice(start, end);
     final p = prop!;
     if (p is DirectiveNode) p.rawName = name;
-    final dup = openTag!.props.any((q) =>
-        (q is DirectiveNode ? q.rawName : (q as AttributeNode).name) == name);
+    final dup = openTag!.props.any(
+      (q) =>
+          (q is DirectiveNode ? q.rawName : (q as AttributeNode).name) == name,
+    );
     if (dup) emitError(2, start);
   }
 
@@ -397,16 +421,18 @@ final class _BaseParseState {
       return;
     }
     final dir = p as DirectiveNode;
-    dir.exp = createExp(attrValue, false,
-        getLoc(attrStartIndex, attrEndIndex));
+    dir.exp = createExp(attrValue, false, getLoc(attrStartIndex, attrEndIndex));
     if (dir.name == 'for') {
-      dir.forParseResult =
-          _parseForExpression(dir.exp! as SimpleExpression, this);
+      dir.forParseResult = _parseForExpression(
+        dir.exp! as SimpleExpression,
+        this,
+      );
     }
   }
 
   void _maybeSfcTemplateLang(AttributeNode p) {
-    final sfcTemplateLang = tokenizer.inSFCRoot &&
+    final sfcTemplateLang =
+        tokenizer.inSFCRoot &&
         openTag!.tag == 'template' &&
         p.name == 'lang' &&
         attrValue.isNotEmpty &&
@@ -427,7 +453,10 @@ final class _BaseParseState {
         case 4:
           emitError(25, tokenizer.sectionStart);
         case 28:
-          emitError(identical(tokenizer.currentSequence, seqCdataEnd) ? 6 : 7, end);
+          emitError(
+            identical(tokenizer.currentSequence, seqCdataEnd) ? 6 : 7,
+            end,
+          );
         case 6:
         case 7:
         case 9:
@@ -465,8 +494,10 @@ final class _BaseParseState {
     if (el.ns == nsHtml && options.isIgnoreNewlineTag(el.tag)) {
       final first = el.children.isEmpty ? null : el.children[0];
       if (first != null && first.type == ntText) {
-        (first as TextNode).content =
-            first.content.replaceFirst(RegExp(r'^\r?\n'), '');
+        (first as TextNode).content = first.content.replaceFirst(
+          RegExp(r'^\r?\n'),
+          '',
+        );
       }
     }
     if (el.ns == nsHtml && options.isPreTag(el.tag)) inPre--;
@@ -502,7 +533,8 @@ final class _BaseParseState {
   bool _componentTag(ElementNode el) {
     if (options.isCustomElement(el.tag)) return false;
     final tag = el.tag;
-    final upper = tag.isNotEmpty && tag.codeUnitAt(0) > 64 && tag.codeUnitAt(0) < 91;
+    final upper =
+        tag.isNotEmpty && tag.codeUnitAt(0) > 64 && tag.codeUnitAt(0) < 91;
     if (tag == 'component' ||
         upper ||
         isCoreComponent(tag) ||
@@ -586,9 +618,10 @@ AttributeNode dirToAttr(DirectiveNode dir) {
   );
   // nameLoc end position refinement is unused by codegen; offsets matter.
   attr.nameLoc.end = TmplPosition(
-      dir.loc.start.offset + dir.rawName.length,
-      dir.loc.start.line,
-      dir.loc.start.column + dir.rawName.length);
+    dir.loc.start.offset + dir.rawName.length,
+    dir.loc.start.line,
+    dir.loc.start.column + dir.rawName.length,
+  );
   attr.nameLoc.source = dir.rawName;
   final exp = dir.exp;
   if (exp is SimpleExpression) {
@@ -598,7 +631,10 @@ AttributeNode dirToAttr(DirectiveNode dir) {
 }
 
 List<TmplNode> condenseWhitespace(
-    List<TmplNode> nodes, String whitespace, int inPre) {
+  List<TmplNode> nodes,
+  String whitespace,
+  int inPre,
+) {
   final condensing = whitespace != 'preserve';
   final removed = List<bool>.filled(nodes.length, false);
   var removedWhitespace = false;
@@ -613,7 +649,8 @@ List<TmplNode> condenseWhitespace(
     if (_allWhitespace(text.content)) {
       final prev = i > 0 ? nodes[i - 1].type : -1;
       final next = i + 1 < nodes.length ? nodes[i + 1].type : -1;
-      final removable = prev == -1 ||
+      final removable =
+          prev == -1 ||
           next == -1 ||
           condensing &&
               (prev == ntComment && (next == ntComment || next == ntElement) ||
@@ -682,12 +719,18 @@ ForParseResult? _parseForExpression(SimpleExpression input, _BaseParseState s) {
   final rhs = inMatch.group(2)!;
   SimpleExpression alias(String content, int offset, [bool asParam = false]) {
     final start = loc.start.offset + offset;
-    return s.createExp(content, false, s.getLoc(start, start + content.length),
-        ctNotConstant, asParam ? 1 : 0);
+    return s.createExp(
+      content,
+      false,
+      s.getLoc(start, start + content.length),
+      ctNotConstant,
+      asParam ? 1 : 0,
+    );
   }
 
-  final result =
-      ForParseResult(alias(rhs.trim(), exp.indexOf(rhs, lhs.length)));
+  final result = ForParseResult(
+    alias(rhs.trim(), exp.indexOf(rhs, lhs.length)),
+  );
   var valueContent = lhs.trim().replaceAll(_stripParensRE, '').trim();
   final trimmedOffset = lhs.indexOf(valueContent);
   final iteratorMatch = _forIteratorRE.firstMatch(valueContent);
@@ -696,8 +739,7 @@ ForParseResult? _parseForExpression(SimpleExpression input, _BaseParseState s) {
     final keyContent = iteratorMatch.group(1)!.trim();
     var keyOffset = -1;
     if (keyContent.isNotEmpty) {
-      keyOffset =
-          exp.indexOf(keyContent, trimmedOffset + valueContent.length);
+      keyOffset = exp.indexOf(keyContent, trimmedOffset + valueContent.length);
       result.key = alias(keyContent, keyOffset, true);
     }
     final indexGroup = iteratorMatch.group(2);
@@ -707,7 +749,11 @@ ForParseResult? _parseForExpression(SimpleExpression input, _BaseParseState s) {
         final from = result.key != null
             ? keyOffset + keyContent.length
             : trimmedOffset + valueContent.length;
-        result.index = alias(indexContent, exp.indexOf(indexContent, from), true);
+        result.index = alias(
+          indexContent,
+          exp.indexOf(indexContent, from),
+          true,
+        );
       }
     }
   }
@@ -723,9 +769,18 @@ RootNode baseParse(String input, TmplParserOptions options) {
     ..input = input
     ..options = options;
   s.tokenizer.mode = options.parseMode;
-  final root = RootNode([], TmplLoc(TmplPosition(0, 1, 1), TmplPosition(0, 1, 1), ''));
+  final root = RootNode(
+    [],
+    TmplLoc(TmplPosition(0, 1, 1), TmplPosition(0, 1, 1), ''),
+    input,
+  );
   s.root = root;
   s.tokenizer.parse(input);
   root.loc = s.getLoc(0, input.length);
-  root.children = condenseWhitespace(root.children, options.whitespace, s.inPre);  return root;
+  root.children = condenseWhitespace(
+    root.children,
+    options.whitespace,
+    s.inPre,
+  );
+  return root;
 }

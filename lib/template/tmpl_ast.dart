@@ -74,6 +74,9 @@ final class RootNode extends TmplNode {
   List<TmplNode> children;
   @override
   TmplLoc loc;
+
+  /// Original input text (official createRoot(children, source)).
+  String source;
   // Codegen state assigned by transform().
   Set<String> helpers = {};
   List<String> components = [];
@@ -84,7 +87,7 @@ final class RootNode extends TmplNode {
   int temps = 0;
   Object? codegenNode;
   bool transformed = false;
-  RootNode(this.children, this.loc);
+  RootNode(this.children, this.loc, [this.source = '']);
 }
 
 final class SimpleExpression extends TmplNode {
@@ -95,12 +98,17 @@ final class SimpleExpression extends TmplNode {
   int constType;
   @override
   TmplLoc loc;
-  Object? ast; // babel AST placeholder (null = simple ident, false = parse fail)
+  Object?
+  ast; // babel AST placeholder (null = simple ident, false = parse fail)
   Object? hoisted; // hoisted codegen node (set by context.hoist)
   List<String>? identifiers; // scope identifiers (set by processExpression)
   bool isHandlerKey = false; // set for event-handler prop keys
-  SimpleExpression(this.content, this.static_, this.loc,
-      [this.constType = ctNotConstant]);
+  SimpleExpression(
+    this.content,
+    this.static_,
+    this.loc, [
+    this.constType = ctNotConstant,
+  ]);
 }
 
 final class TextNode extends TmplNode {
@@ -162,9 +170,14 @@ final class DirectiveNode extends TmplNode {
   ForParseResult? forParseResult;
   @override
   TmplLoc loc;
-  DirectiveNode(this.name, this.rawName, this.loc,
-      {this.exp, this.arg, List<SimpleExpression>? modifiers})
-      : modifiers = modifiers ?? [];
+  DirectiveNode(
+    this.name,
+    this.rawName,
+    this.loc, {
+    this.exp,
+    this.arg,
+    List<SimpleExpression>? modifiers,
+  }) : modifiers = modifiers ?? [];
 }
 
 final class ElementNode extends TmplNode {
@@ -181,9 +194,15 @@ final class ElementNode extends TmplNode {
   TmplLoc? innerLoc; // set at SFC root
   Object? codegenNode;
   Object? ssrCodegenNode;
-  ElementNode(this.tag, this.ns, this.tagType, this.props, this.children,
-      this.loc,
-      {this.isSelfClosing = false});
+  ElementNode(
+    this.tag,
+    this.ns,
+    this.tagType,
+    this.props,
+    this.children,
+    this.loc, {
+    this.isSelfClosing = false,
+  });
 }
 
 // Structural / codegen-capable nodes (created by transforms, still live in
@@ -221,8 +240,13 @@ final class IfBranchNode extends TmplNode {
   @override
   TmplLoc loc;
   Object? codegenNode;
-  IfBranchNode(this.children, this.loc,
-      {this.condition, this.userKey, this.isTemplateIf = false});
+  IfBranchNode(
+    this.children,
+    this.loc, {
+    this.condition,
+    this.userKey,
+    this.isTemplateIf = false,
+  });
 }
 
 final class ForNode extends TmplNode {
@@ -237,8 +261,15 @@ final class ForNode extends TmplNode {
   @override
   TmplLoc loc;
   Object? codegenNode;
-  ForNode(this.source, this.parseResult, this.children, this.loc,
-      {this.valueAlias, this.keyAlias, this.objectIndexAlias});
+  ForNode(
+    this.source,
+    this.parseResult,
+    this.children,
+    this.loc, {
+    this.valueAlias,
+    this.keyAlias,
+    this.objectIndexAlias,
+  });
 }
 
 final class TextCallNode extends TmplNode {
@@ -251,4 +282,5 @@ final class TextCallNode extends TmplNode {
   TextCallNode(this.content, this.loc);
 }
 
-TmplLoc locStub() => TmplLoc(TmplPosition(-1, -1, -1), TmplPosition(-1, -1, -1), '');
+// Official locStub: {start:{0,1,1}, end:{0,1,1}, source:''}.
+TmplLoc locStub() => TmplLoc(TmplPosition(0, 1, 1), TmplPosition(0, 1, 1), '');
