@@ -147,40 +147,46 @@ AOT 二进制在 `bench/build/{seg,tmpl}_probe`。
 **官方同模板子段对照**（`tools/_tmpl_probe.mjs` + `tools/_tmpl_split_probe.dart`，
 后者 1:1 复刻 compileTemplateSource 私有选项装配，AOT 交错 3 轮取中位，µs/次）：
 
-| 配置 | baseParse | transform(含表达式缓存) | codegen | 模板全段 |
+| 配置 | baseParse | transform(含表达式解析) | codegen | 模板全段 |
 |---|---|---|---|---|
-| 官方 (V8) | 359 | 1163 | 753 | 2253 |
+| 官方 (V8, prefixIdentifiers=true) | 1308 | 1626 | 790 | 3747 |
 | Dart-AOT concat | ~500 | **4764** | **938** | ~6100 |
 | Dart-AOT bin | ~400 | **5786** | **780** | ~7000 |
 
-（Dart-JIT 拆分探针数据不可用：减法式计时在 JIT 下出现负值，
+（官方口径已修正：compileTemplate 实际使用 prefixIdentifiers=true——
+实测该标志使官方 baseParse 从 ~300 涨到 ~1300（交错 A/B 验证，
+`tools/_parse_ab.mjs`），transform 含逐表达式 Babel 解析。
+此前 prefixIdentifiers=false 探针（359/1163/753/2253）低估了官方成本，作废。
+Dart-JIT 拆分探针数据不可用：减法式计时在 JIT 下出现负值，
 分层优化/GC 干扰所致；JIT 档位级数据以 bench 300 轮为准。）
 
 补充结论：
-1. **codegen 两侧基本持平（938 vs 753，~1.2x）**——此前"transform+codegen
-   3.0x"的真实构成是 **transform 4.1x（4764 vs 1163）拖后腿，codegen 不慢**。
-   优化目标从整个模板段收窄到 transform 一段。
-2. Dart transform 段含 `_fillExprCache` 表达式解析（concat ~1ms 经 FFI），
-   官方非 inline 模式不解析表达式（prefixIdentifiers=false）——Dart 做更多
-   工作仍更慢；非 inline 模式表达式解析是否必要是第一个可复查的优化点。
-3. bin 的代价精确落在 transform 段（+~1000µs：OXB2 惰性视图在节点属性
+1. **baseParse Dart 反而快 2.6x（~500 vs 1308）**——tokenizer/parser 层
+   移植不仅无差距，还领先；codegen 基本持平（938 vs 790，~1.2x）。
+2. **差距精确锁定 transform：Dart-AOT 4764 vs 官方 1626 = 2.9x**。
+   优化目标从整个模板段收窄到 transform 一段；模板全段差距 1.63x
+   （6100 vs 3747），端到端 large 档差距（0.76x 慢 32%）另有 script 段
+   （FFI+JSON ~2ms vs 官方 Babel）的贡献。
+3. **表达式解析是 parity 必需，不是可省项**（修正此前错误判断）：
+   官方 transformExpression 同样逐表达式 Babel 解析；Dart 的
+   `_fillExprCache` concat 批处理（~1ms）已是该子任务的优化形态。
+4. bin 的代价精确落在 transform 段（+~1000µs：OXB2 惰性视图在节点属性
    访问时解码，transform 是访问最密集的阶段），codegen 反而略降；
    与 bench 档位级差距同源；baseParse 不受影响。
-4. baseParse 两侧同量级（Dart ~400–600 vs 官方 359，选项不同——Dart 用
-   domParserOptions 全量 DOM 谓词，官方探针用 parserOptions），非瓶颈。
 
 
 结论：
-1. **large 档落后的账全在 transform 一段**（4.1x 慢于官方；codegen 持平、
-   baseParse 同量级、script 段 FFI 仅占 21%）。AOT 把模板段压 26%，已榨干
+1. **large 档落后的账主要在 transform 一段**（2.9x 慢于官方；codegen 持平、
+   baseParse 反快 2.6x、script 段 FFI ~2ms）。AOT 把模板段压 26%，已榨干
    "编译器优化"层收益；剩余差距是 transform 的结构性成本（对象分配模式 +
    V8 分代 GC 对编译器类负载的天然优势）。
-2. 追赶是大工程（分配削减 / 单 buffer codegen / `_weaveComments` 类平方级
-   路径排查），且须保住 `tools/diff_transport.dart` 452 条对拍门禁；
+2. 追赶是大工程（分配削减 / `_weaveComments` 类平方级路径排查），
+   且须保住 `tools/diff_transport.dart` 452 条对拍门禁；
    34KB SFC 非主场景，投入产出比低，维持"未排期"。动手前先用
    Dart DevTools allocation profiler 拿真实分配画像。
-3. 表达式链路（`_fillExprCache` concat 解析）位于 template 段内部而非独立
-   阶段，~1ms 量级；即使归零也填不平 3.0x 的 transform+codegen 差距。
+3. 表达式链路（`_fillExprCache` concat 解析）位于 transform 段内部，
+   ~1ms 量级，且为 parity 必需（官方 transformExpression 同样逐表达式
+   Babel 解析）；即使归零也填不平 2.9x 的 transform 差距。
 
 **投产评估三问的最终答案**：单核吞吐 typical ~16 万 files/s（AOT）、
 FFI 占 TS 链路约八成（优化空间在 Rust 序列化侧）、并发 4 isolate 饱和 ~2.4x。
@@ -194,12 +200,12 @@ FFI 占 TS 链路约八成（优化空间在 Rust 序列化侧）、并发 4 iso
    无泄漏信号"矛盾。方法：large 档连跑 3000 轮记录 RSS 曲线——plateau 为
    GC 行为（可接受），线性涨为泄漏（阻塞常驻服务部署）。
 
-**P1 — transform 优化的前置侦查**（目标段已收窄：transform 4.1x vs 官方，
-codegen 持平、baseParse 同量级）
+**P1 — transform 优化的前置侦查**（目标段已收窄：transform 2.9x vs 官方，
+codegen 持平、baseParse 反快 2.6x）
 
-2. **复查非 inline 模式表达式解析的必要性**。官方 prefixIdentifiers=false 时
-   不解析表达式，Dart 侧 `_fillExprCache` 在非 inline 仍 concat 解析全部
-   表达式（large_50 ~1ms）。若对输出无影响则跳过，transform 段立省 ~20%。
+2. ~~复查非 inline 模式表达式解析的必要性~~ **已结案（不成立）**：
+   compileTemplate 实际用 prefixIdentifiers=true，官方 transformExpression
+   同样逐表达式 Babel 解析；`_fillExprCache` 为 parity 必需，不可跳过。
 3. **Dart DevTools allocation profiler 拿 transform 段真实分配画像**后再动手；
    禁止凭猜优化。重点看：节点对象分配、字符串中间产物、`_weaveComments`
    类平方级路径（文档坑位清单第 4 条已点名）。
@@ -212,6 +218,57 @@ codegen 持平、baseParse 同量级）
    需排除热漂移后再判断是否有真实回归。
 6. 回归锚点档位固定为 typical / ts_heavy（漂移 ±7% 内）；tiny 档（<500µs）
    与 JIT 探针级减法计时均不可用于回归判断（本轮实测噪声证据）。
+
+## 四期：transform 冗余解析修复 + 待办清单结案（2026-08-26）
+
+**根因**（代码审查定位，探针实测佐证）：large_50 每次编译在批缓存之外还有
+**250 次独立 FFI 表达式解析**（v-model ×100、v-on ×100、v-for source ×50，
+单次 ~7.9µs ≈ 2.0ms，占纯 Dart transform 的 54%）：
+1. `isMemberExpressionOf`/`isFnExpression`（transform_expression.dart）对同一
+   表达式全新解析，不查 `exprCache`——官方这两个谓词是零解析的 AST 类型检查
+   （baseParse 已把 AST 挂在 `exp.ast`），Dart 侧 `node.ast` 字段从未写入。
+2. v-for 整支 exp（`x in list`）被收集进批处理但无消费者（白占 24% 名额），
+   而真正被消费的 `forParseResult.source` 未收集（每次编译 50 次独立解析）。
+
+**修复**（输出零变化，全部过门禁）：
+- 两个谓词先查 `exprCache['(source)']`（树含 ERROR 或未命中回退独立解析）；
+- 批收集跳过 v-for 整支 exp、改收 `forParseResult.source`（key 对齐消费方）；
+- 顺带修 `v_once_memo.dart` 模块级 `_seenOnce/_seenMemo` 跨编译泄漏
+  （官方用 WeakSet；改为 `transform()` 入口清空）；
+- P1 分配批次：循环内 RegExp 构造提升顶层 / code-unit 区间判断、
+  `locStub()` 收敛共享实例（已确认无 mutate 点）、`textOf` 去重。
+
+**门禁**：452 条对拍 0 mismatch；批量回归 783/786（3 个 DIFF 经 stash 前后
+对照确认为既有遗留，基线 772 已过时）；dart test 13/13；样例 v1–v4 全 EXACT。
+
+**效果**（AOT，large_50 / large 档，多次取中位）：
+
+| 指标 | 修复前 | 修复后 | 变化 |
+|---|---|---|---|
+| transform 段 | 4764µs | **~2250µs** | **-53%** |
+| 模板全段 | ~6100µs | ~3500µs | -43% |
+| bench large P50 | ~9800µs | **7294µs** | -26% |
+| tmpl_heavy P50 | 914µs | 742µs | -19% |
+
+**large 档首次追平并反超官方**（7294 vs 7529µs）——唯一落后项摘帽。
+transform 对官方差距从 2.9x 收敛到 ~1.4x（2250 vs 1626），剩余为
+fill 批解析 ~1ms（parity 必需）+ 分配模式差异。
+
+**三期判断修正**：三期"transform 差距是结构性成本、追赶是大工程、未排期"
+的结论是**错误的**——真实主因是移植遗漏造成的重复工作（250 次冗余解析），
+一次小改动即收复大部分差距。教训：先查"是否多做了工作"，再谈"结构性成本"。
+
+**待办清单结案**：
+1. P0 RSS：**非泄漏，是 GC 行为**——3000 轮轨迹前 ~1500 轮爬升至 ~2.7GB
+   后，后 1500 轮在 1.8–2.7GB 区间震荡、包络不上行（探针
+   `tools/_rss_probe.dart`）。注意点为峰值堆驻留偏高，非阻塞项。
+   另修的 v-once/v-memo 泄漏见上。
+2. P1.2 已结案（parity 必需）；P1.3 审查完成并落地修复（本节）。
+3. P2.5 large 复核：修复前 9775µs（仍高于二期 8708，min 7655 指向热漂移），
+   修复后 7294µs 已远低于二期记录，回归疑虑消除。
+4. 剩余可选优化（未排期，需 profiler 验证）：`SrcView._buildMap` 纯 ASCII
+   快路径（估 0.2–0.5ms）、表达式重建分配簇复用、`hoist_static` 每容器
+   无条件分配 toCache list。
 
 ## 一、基准问题（按优先级）
 
