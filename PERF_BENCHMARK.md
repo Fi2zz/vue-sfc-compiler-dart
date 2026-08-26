@@ -1,7 +1,30 @@
-# PERF_BENCHMARK — 性能基准方案（2026-08-25 定稿，未实施）
+# PERF_BENCHMARK — 性能基准方案（2026-08-25 定稿；2026-08-26 首期已实施）
 
 > 目的：为投产评估提供数据支撑。回答三个问题——单核吞吐多少、FFI 占比多少、并发能否线性扩展。
 > 与 HANDOFF.md（路线）、OXC_REFERENCE.md（TS 解析后端）互补。
+>
+> 运行方式：`dart run bench/gen_large.dart && dart run bench/bench.dart --runs=300 --warmup=30 --out=bench/results/<name>.json`
+
+## 首期结果（2026-08-26，macBook arm64 / Dart 3.12.2 JIT / 10 核，runs=300）
+
+**全管线吞吐**（预热后 P50）：
+
+| 档位 | 文件数 | 单轮 P50 | 吞吐 |
+|---|---|---|---|
+| tiny | 5 | 0.25ms | ~19,800 files/s |
+| typical（真实 SFC top20） | 20 | 0.36ms | ~55,700 files/s |
+| ts_heavy | 5 | 0.45ms | ~11,100 files/s |
+| tmpl_heavy | 5 | 1.19ms | ~4,200 files/s |
+| large（10x/50x 合成，34KB） | 2 | 9.67ms | ~207 files/s |
+| error（快速失败路径） | 5 | 0.03ms | ~166,700 files/s |
+
+**TS 解链路分段**（ts_heavy 5 个 script，每轮）：FFI(含 JSON 传输) **81µs** ≈ 81%，mapper **5µs** ≈ 5%，全链 100µs。→ TS 解析成本由 Rust+JSON 序列化主导，Dart mapper 可忽略；优化方向在 worker 的序列化格式而非 mapper。
+
+**isolate 并发**（typical 语料，300 轮）：1x=41ms 基准 → 2x=1.78、4x=**2.41**、8x=**2.41**。4 隔离后饱和（P/E 核混合 + GC 争用），服务端并行编译有效但非线性。
+
+**内存**：各档 RSS 增量 0.3–10MB/300 轮，无泄漏信号。
+
+结论：JIT 预热后典型 SFC 单核 >5 万 files/s，对构建工具场景余量充足；瓶颈排序 FFI/JSON > codegen > mapper。
 
 ## 一、基准问题（按优先级）
 
