@@ -99,6 +99,120 @@ bin=13.4ms(16 倍)，系修复键表 bug 后未重测的无依据数字，2026-0
 4. 遗留差距：large 档 vs 官方仍慢 ~33%（9.99 vs 7.50），瓶颈在模板管线
    结构性成本（非表达式链路），未排期。
 
+## 三期复跑：三模式对照 + bin 传输复测（2026-08-26，runs=300）
+
+同机串行重跑 JIT / AOT / 官方三份 + `TS_EXPR_BATCH=bin` 两份（JIT/AOT），
+结果存 `bench/results/2026-08-26-macbook-{jit,aot,official-node,jit-bin,aot-bin}.json`。
+
+**全管线 P50（µs/轮，各档从快到慢）**：
+
+| 档位 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| tiny | AOT-bin 61 | AOT 103* | 官方 159 | JIT-bin 270* | JIT 451* |
+| typical | AOT-bin 123 | AOT 124 | 官方 260 | JIT 361 | JIT-bin 362 |
+| ts_heavy | AOT 234 | AOT-bin 243 | 官方 333 | JIT 482 | JIT-bin 484 |
+| tmpl_heavy | AOT 914 | 官方 941 | AOT-bin 1182 | JIT 1252 | JIT-bin 1642 |
+| large(34KB) | 官方 7529 | AOT 9913 | JIT 10509 | AOT-bin 11623 | JIT-bin 12468 |
+| error | AOT/AOT-bin 23 | JIT 29 | JIT-bin 30 | 官方 95 | — |
+
+\* tiny 档同机两次跑出 61–451µs 分布，<500µs 量级在本机不可用于回归判断；
+回归锚点用 typical / ts_heavy（各模式漂移 ±7% 内）。
+
+**bin vs concat**：bin 仅影响 ≥8 表达式档位（阈值保护生效），tmpl_heavy 慢 29–31%、
+large 慢 17–19%，其余档位持平。二期"concat 默认、bin 对照保留"结论复测成立。
+本轮为串行非交错采样，但差距远大于热漂移幅度，方向可靠。
+
+**漂移项（vs 二期记录）**：AOT large 9913 vs 8708（+14%）、JIT large +10%——
+建议冷却后单跑 large 复核；typical/ts_heavy/tmpl_heavy 无实质回归。
+
+**RSS 异常（待排查）**：large 档 300 轮 RSS 增量 ~1.1GB（JIT/AOT 同量级），
+tmpl_heavy ~90–130MB，与首期"0.3–10MB/300 轮无泄漏信号"矛盾。
+需连跑 3000 轮看 RSS 是否 plateau：plateau 为 GC 行为，线性涨为泄漏。
+**常驻服务部署前必须查清。**
+
+### large 档分段画像（large_50，探针直测，µs/次）
+
+探针：`tools/_seg_probe.dart`（管线分段）、`tools/_tmpl_probe.dart`（模板子段），
+AOT 二进制在 `bench/build/{seg,tmpl}_probe`。
+
+| 阶段 | JIT | AOT |
+|---|---|---|
+| SFC parse | 386 | 513 |
+| script（FFI+JSON） | 2102 | 1997 |
+| **template 全段** | **8157 (71%)** | **6072 (64%)** |
+| style | 852 | 876 |
+| 其中 baseParse | 880 | 359 |
+| 其中 **transform+codegen** | **7512 (90% of tmpl)** | **5727 (94% of tmpl)** |
+
+**官方同模板子段对照**（`tools/_tmpl_probe.mjs` + `tools/_tmpl_split_probe.dart`，
+后者 1:1 复刻 compileTemplateSource 私有选项装配，AOT 交错 3 轮取中位，µs/次）：
+
+| 配置 | baseParse | transform(含表达式缓存) | codegen | 模板全段 |
+|---|---|---|---|---|
+| 官方 (V8) | 359 | 1163 | 753 | 2253 |
+| Dart-AOT concat | ~500 | **4764** | **938** | ~6100 |
+| Dart-AOT bin | ~400 | **5786** | **780** | ~7000 |
+
+（Dart-JIT 拆分探针数据不可用：减法式计时在 JIT 下出现负值，
+分层优化/GC 干扰所致；JIT 档位级数据以 bench 300 轮为准。）
+
+补充结论：
+1. **codegen 两侧基本持平（938 vs 753，~1.2x）**——此前"transform+codegen
+   3.0x"的真实构成是 **transform 4.1x（4764 vs 1163）拖后腿，codegen 不慢**。
+   优化目标从整个模板段收窄到 transform 一段。
+2. Dart transform 段含 `_fillExprCache` 表达式解析（concat ~1ms 经 FFI），
+   官方非 inline 模式不解析表达式（prefixIdentifiers=false）——Dart 做更多
+   工作仍更慢；非 inline 模式表达式解析是否必要是第一个可复查的优化点。
+3. bin 的代价精确落在 transform 段（+~1000µs：OXB2 惰性视图在节点属性
+   访问时解码，transform 是访问最密集的阶段），codegen 反而略降；
+   与 bench 档位级差距同源；baseParse 不受影响。
+4. baseParse 两侧同量级（Dart ~400–600 vs 官方 359，选项不同——Dart 用
+   domParserOptions 全量 DOM 谓词，官方探针用 parserOptions），非瓶颈。
+
+
+结论：
+1. **large 档落后的账全在 transform 一段**（4.1x 慢于官方；codegen 持平、
+   baseParse 同量级、script 段 FFI 仅占 21%）。AOT 把模板段压 26%，已榨干
+   "编译器优化"层收益；剩余差距是 transform 的结构性成本（对象分配模式 +
+   V8 分代 GC 对编译器类负载的天然优势）。
+2. 追赶是大工程（分配削减 / 单 buffer codegen / `_weaveComments` 类平方级
+   路径排查），且须保住 `tools/diff_transport.dart` 452 条对拍门禁；
+   34KB SFC 非主场景，投入产出比低，维持"未排期"。动手前先用
+   Dart DevTools allocation profiler 拿真实分配画像。
+3. 表达式链路（`_fillExprCache` concat 解析）位于 template 段内部而非独立
+   阶段，~1ms 量级；即使归零也填不平 3.0x 的 transform+codegen 差距。
+
+**投产评估三问的最终答案**：单核吞吐 typical ~16 万 files/s（AOT）、
+FFI 占 TS 链路约八成（优化空间在 Rust 序列化侧）、并发 4 isolate 饱和 ~2.4x。
+**可投产；跟进项：① 查清 large 档 RSS 行为；② 模板管线大文件优化排期。**
+
+### 待办清单（按优先级）
+
+**P0 — 投产前必须完成**
+
+1. **查清 large 档 RSS 行为**。300 轮 RSS 增量 ~1.1GB 与首期"0.3–10MB/300 轮
+   无泄漏信号"矛盾。方法：large 档连跑 3000 轮记录 RSS 曲线——plateau 为
+   GC 行为（可接受），线性涨为泄漏（阻塞常驻服务部署）。
+
+**P1 — transform 优化的前置侦查**（目标段已收窄：transform 4.1x vs 官方，
+codegen 持平、baseParse 同量级）
+
+2. **复查非 inline 模式表达式解析的必要性**。官方 prefixIdentifiers=false 时
+   不解析表达式，Dart 侧 `_fillExprCache` 在非 inline 仍 concat 解析全部
+   表达式（large_50 ~1ms）。若对输出无影响则跳过，transform 段立省 ~20%。
+3. **Dart DevTools allocation profiler 拿 transform 段真实分配画像**后再动手；
+   禁止凭猜优化。重点看：节点对象分配、字符串中间产物、`_weaveComments`
+   类平方级路径（文档坑位清单第 4 条已点名）。
+4. 任何 transform 改动必须过 `tools/diff_transport.dart` 452 条对拍门禁 +
+   全量样例回归；性能结论必须用交错采样（二期方法论教训）。
+
+**P2 — 数据质量**
+
+5. **冷却后单跑 large 档复核**：本轮 AOT large 9913µs 比二期记录（8708）高 14%，
+   需排除热漂移后再判断是否有真实回归。
+6. 回归锚点档位固定为 typical / ts_heavy（漂移 ±7% 内）；tiny 档（<500µs）
+   与 JIT 探针级减法计时均不可用于回归判断（本轮实测噪声证据）。
+
 ## 一、基准问题（按优先级）
 
 1. **全管线吞吐**：典型 SFC 每秒可编译多少（files/s），P50/P90 延迟多少。
