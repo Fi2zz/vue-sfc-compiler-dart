@@ -26,6 +26,23 @@
 
 结论：JIT 预热后典型 SFC 单核 >5 万 files/s，对构建工具场景余量充足；瓶颈排序 FFI/JSON > codegen > mapper。
 
+## 首期结果补充：AOT 对比（2026-08-26，同机 `dart compile exe`，参数一致 runs=300）
+
+| 档位 | JIT P50 | AOT P50 | 加速 |
+|---|---|---|---|
+| tiny | 252µs | **59µs** | **4.27x** |
+| typical | 359µs | **127µs** | 2.83x（≈**157k files/s**） |
+| ts_heavy | 449µs | 213µs | 2.11x |
+| tmpl_heavy | 1192µs | 853µs | 1.40x |
+| large(34KB) | 9669µs | 8936µs | 1.08x |
+| error | 30µs | 22µs | 1.36x |
+
+- 小文件受益最大（JIT 编译开销占比高）；越大越接近 FFI/IO 下限（large 仅 1.08x）
+- TS 链路分段：FFI 81→72µs、mapper 5→4、全链 100→88µs——Rust 段与 AOT 无关，Dart 侧 jsonDecode 略降。**AOT 下 FFI 占比升至 ~82%，JSON 跨界传输是 TS 重负载场景的第一瓶颈**
+- 并发：AOT 扩展性更好——8 isolate 达 **2.77x**（JIT 2.41x，无 JIT 编译器线程争抢）
+
+投产含义：服务端常驻进程应使用 AOT（`dart compile exe`）部署；TS 重负载若需再提速，优先改 worker 序列化格式（二进制/零拷贝），其次才是 Dart 侧。
+
 ## 一、基准问题（按优先级）
 
 1. **全管线吞吐**：典型 SFC 每秒可编译多少（files/s），P50/P90 延迟多少。

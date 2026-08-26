@@ -1,0 +1,120 @@
+{
+  "env": {
+    "dart": "3.12.2 (stable) (Tue Jun 9 01:11:39 2026 -0700) on \"macos_arm64\"",
+    "os": "Version 26.5.2 (Build 25F84)",
+    "cores": 10,
+    "mode": "aot",
+    "timestamp": "2026-08-26T09:07:30.337511"
+  },
+  "tiers": {
+    "tiny": {
+      "files": 5,
+      "bytes": 342,
+      "iter_us": {
+        "p50": 59,
+        "p90": 69,
+        "mean": 62,
+        "min": 56
+      },
+      "files_per_s_p50": "84745.8",
+      "rss_delta_bytes": 540672
+    },
+    "typical": {
+      "files": 20,
+      "bytes": 2844,
+      "iter_us": {
+        "p50": 127,
+        "p90": 156,
+        "mean": 132,
+        "min": 109
+      },
+      "files_per_s_p50": "157480.3",
+      "rss_delta_bytes": 16384
+    },
+    "ts_heavy": {
+      "files": 5,
+      "bytes": 1084,
+      "iter_us": {
+        "p50": 213,
+        "p90": 255,
+        "mean": 222,
+        "min": 200
+      },
+      "files_per_s_p50": "23474.2",
+      "rss_delta_bytes": 32768
+    },
+    "tmpl_heavy": {
+      "files": 5,
+      "bytes": 4595,
+      "iter_us": {
+        "p50": 853,
+        "p90": 895,
+        "mean": 859,
+        "min": 787
+      },
+      "files_per_s_p50": "5861.7",
+      "rss_delta_bytes": 1851392
+    },
+    "large": {
+      "files": 2,
+      "bytes": 41750,
+      "iter_us": {
+        "p50": 8936,
+        "p90": 9320,
+        "mean": 9087,
+        "min": 8451
+      },
+      "files_per_s_p50": "223.8",
+      "rss_delta_bytes": 67780608
+    },
+    "error": {
+      "files": 5,
+      "bytes": 177,
+      "iter_us": {
+        "p50": 22,
+        "p90": 23,
+        "mean": 22,
+        "min": 22
+      },
+      "files_per_s_p50": "227272.7",
+      "rss_delta_bytes": 0
+    }
+  },
+  "segments": {
+    "scripts": 5,
+    "ffi_us": {
+      "p50": 72,
+      "mean": 74
+    },
+    "mapper_us": {
+      "p50": 4,
+      "mean": 4
+    },
+    "chain_us": {
+      "p50": 88,
+      "mean": 91
+    }
+  },
+  "concurrency": {
+    "1": {
+      "isolates": 1,
+      "total_ms": 36
+    },
+    "2": {
+      "isolates": 2,
+      "total_ms": 20
+    },
+    "4": {
+      "isolates": 4,
+      "total_ms": 14
+    },
+    "8": {
+      "isolates": 8,
+      "total_ms": 13
+    },
+    "1_speedup": "1.00",
+    "2_speedup": "1.80",
+    "4_speedup": "2.57",
+    "8_speedup": "2.77"
+  }
+}
