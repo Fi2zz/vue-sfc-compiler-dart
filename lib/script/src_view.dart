@@ -2,7 +2,7 @@
 // (UTF-16 code unit) offsets, plus small AstNode navigation helpers.
 import 'dart:convert';
 
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 final class SrcView {
   final String content;

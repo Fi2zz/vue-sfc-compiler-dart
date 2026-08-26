@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:vue_sfc_parser/sfc_descriptor.dart';
-import 'package:vue_sfc_parser/script/script_compile.dart';
-import 'package:vue_sfc_parser/ts_parser.dart';
-import 'package:vue_sfc_parser/sfc_error.dart';
+import 'sfc_descriptor.dart';
+import 'script/script_compile.dart';
+import 'ts_parser.dart';
+import 'sfc_error.dart';
 
 String compileScript(SfcDescriptor descriptor) {
   // If <script setup> exists, compile it into runtime code

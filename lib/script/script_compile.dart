@@ -1,7 +1,7 @@
 // Orchestrator porting the official compileScript main flow onto
 // tree-sitter ASTs + MiniMagic splices over the full SFC source.
-import 'package:vue_sfc_parser/sfc_descriptor.dart';
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../sfc_descriptor.dart';
+import '../ts_parser.dart';
 
 import 'await_transform.dart';
 import 'binding_metadata.dart';

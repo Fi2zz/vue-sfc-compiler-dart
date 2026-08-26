@@ -7,7 +7,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 part 'mapper_expr.dart';
 part 'mapper_stmt.dart';

@@ -1,6 +1,6 @@
-import 'package:vue_sfc_parser/sfc_descriptor.dart';
+import 'sfc_descriptor.dart';
 
-// import 'package:vue_sfc_parser/result.dart';
+// import 'result.dart';
 import 'ts_ast.dart';
 import 'ts_parser.dart';
 

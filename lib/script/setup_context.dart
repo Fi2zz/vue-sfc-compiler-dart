@@ -1,6 +1,6 @@
 // Compilation context for <script setup>, mirroring the official
 // ScriptCompileContext state that affects codegen output.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 import 'script_error.dart';
 import 'src_view.dart';

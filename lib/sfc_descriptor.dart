@@ -1,4 +1,4 @@
-import 'package:vue_sfc_parser/block.dart';
+import 'block.dart';
 
 /// SFC描述符
 class SfcDescriptor {

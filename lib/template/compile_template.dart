@@ -1,12 +1,15 @@
 // Port of @vue/compiler-sfc compileTemplate/doCompileTemplate wired through
 // compiler-dom compile() + compiler-core baseCompile() option assembly.
 import 'codegen.dart';
+import 'dart:io';
 import 'dom_options.dart';
 import 'js_nodes.dart';
 import 'tmpl_ast.dart';
 import 'tmpl_parser.dart';
 import 'transform.dart';
 import 'transform_context.dart';
+import '../ts_parser.dart';
+import 'transforms/expression_cache.dart';
 import 'transforms/asset_url.dart';
 import 'transforms/dom_transforms.dart';
 import 'transforms/slot_outlet.dart';
@@ -29,8 +32,14 @@ final class TmplCompileResult {
   final List<TmplCompileError> warnings;
   final String preamble;
   final Map<String, Object?>? map;
-  TmplCompileResult(this.code, this.ast, this.errors, this.warnings,
-      {this.preamble = '', this.map});
+  TmplCompileResult(
+    this.code,
+    this.ast,
+    this.errors,
+    this.warnings, {
+    this.preamble = '',
+    this.map,
+  });
 }
 
 /// Mirrors doCompileTemplate({source, filename, id, scoped, slotted}) with
@@ -54,27 +63,80 @@ TmplCompileResult compileTemplateSource(
   final warnings = <TmplCompileError>[];
   final shortId = id.replaceFirst(RegExp('^data-v-'), '');
   final scopeId = scoped ? 'data-v-$shortId' : null;
-  final ast = baseParse(source,
-      _parseOptions(filename, scopeId, slotted, errors, warnings, whitespace));
-  transform(ast, _transformOptions(filename, scopeId, slotted,
-      errors, warnings, bindingMetadata ?? const {},
-      inline: inline, isTS: isTS));
-  final gen = generate(ast, _codegenOptions(filename, scopeId, bindingMetadata,
-      inline: inline, isTS: isTS, sourceMap: sourceMap));
-  return TmplCompileResult(gen.code, ast, errors, warnings,
-      preamble: gen.preamble, map: gen.map);
+  final ast = baseParse(
+    source,
+    _parseOptions(filename, scopeId, slotted, errors, warnings, whitespace),
+  );
+  final opts = _transformOptions(
+    filename,
+    scopeId,
+    slotted,
+    errors,
+    warnings,
+    bindingMetadata ?? const {},
+    inline: inline,
+    isTS: isTS,
+  );
+  _fillExprCache(ast, opts);
+  transform(ast, opts);
+  final gen = generate(
+    ast,
+    _codegenOptions(
+      filename,
+      scopeId,
+      bindingMetadata,
+      inline: inline,
+      isTS: isTS,
+      sourceMap: sourceMap,
+    ),
+  );
+  return TmplCompileResult(
+    gen.code,
+    ast,
+    errors,
+    warnings,
+    preamble: gen.preamble,
+    map: gen.map,
+  );
 }
 
-TmplParserOptions _parseOptions(String filename, String? scopeId,
-    bool? slotted, List<TmplCompileError> errors,
-    List<TmplCompileError> warnings,
-    [String whitespace = 'condense']) {
+/// Batch-expression toggle for benchmarking/tuning (PERF_BENCHMARK.md):
+/// TS_EXPR_BATCH=ffi|concat|off. Off by default. 'ffi' only engages when
+/// enough expressions are collected to amortize the round-trip (measured
+/// crossover ≈ 8); 'concat' measured net-negative on large tiers (rebase
+/// allocation cost exceeds transport savings) and is kept for reference.
+final String exprBatchMode = Platform.environment['TS_EXPR_BATCH'] ?? 'off';
+
+const int _exprBatchMinSources = 8;
+
+void _fillExprCache(TmplNode ast, TransformOptions opts) {
+  final mode = exprBatchMode;
+  if (mode == 'off') return;
+  final sources = collectExpressionSources(ast);
+  if (sources.length < _exprBatchMinSources) return;
+  final cache = <String, AstNode>{};
+  if (mode == 'ffi') {
+    fillExpressionCacheFfi(cache, sources);
+  } else if (mode == 'concat') {
+    fillExpressionCacheConcat(cache, sources);
+  }
+  if (cache.isNotEmpty) opts.exprCache = cache;
+}
+
+TmplParserOptions _parseOptions(
+  String filename,
+  String? scopeId,
+  bool? slotted,
+  List<TmplCompileError> errors,
+  List<TmplCompileError> warnings, [
+  String whitespace = 'condense',
+]) {
   return domParserOptions(
     prefixIdentifiers: true,
     whitespace: whitespace,
-    onError: (e) =>
-        errors.add(TmplCompileError(
-            e.code, e.message ?? tmplErrorMessage(e.code), e.loc)),
+    onError: (e) => errors.add(
+      TmplCompileError(e.code, e.message ?? tmplErrorMessage(e.code), e.loc),
+    ),
   );
 }
 
@@ -87,10 +149,16 @@ List<TmplCompileError> collectTemplateParseErrors(String content) {
   return errors;
 }
 
-TransformOptions _transformOptions(String filename, String? scopeId,
-    bool? slotted, List<TmplCompileError> errors,
-    List<TmplCompileError> warnings, Map<String, String> bindingMetadata,
-    {bool inline = false, bool isTS = false}) {
+TransformOptions _transformOptions(
+  String filename,
+  String? scopeId,
+  bool? slotted,
+  List<TmplCompileError> errors,
+  List<TmplCompileError> warnings,
+  Map<String, String> bindingMetadata, {
+  bool inline = false,
+  bool isTS = false,
+}) {
   return TransformOptions()
     ..filename = filename
     ..prefixIdentifiers = true
@@ -112,27 +180,27 @@ TransformOptions _transformOptions(String filename, String? scopeId,
 }
 
 List<NodeTransform> _nodeTransforms() => [
-      // getBaseTransformPreset(prefixIdentifiers: true)
-      transformVBindShorthand,
-      transformOnce,
-      transformIf,
-      transformMemo,
-      transformFor,
-      trackVForSlotScopes,
-      transformExpression,
-      transformSlotOutlet,
-      transformElement,
-      trackSlotScopes,
-      transformText,
-      // compiler-dom compile(): ignoreSideEffectTags + DOMNodeTransforms,
-      // then doCompileTemplate's asset-url transforms.
-      ignoreSideEffectTags,
-      transformStyle,
-      transformTransition,
-      validateHtmlNesting,
-      transformAssetUrl,
-      transformSrcset,
-    ];
+  // getBaseTransformPreset(prefixIdentifiers: true)
+  transformVBindShorthand,
+  transformOnce,
+  transformIf,
+  transformMemo,
+  transformFor,
+  trackVForSlotScopes,
+  transformExpression,
+  transformSlotOutlet,
+  transformElement,
+  trackSlotScopes,
+  transformText,
+  // compiler-dom compile(): ignoreSideEffectTags + DOMNodeTransforms,
+  // then doCompileTemplate's asset-url transforms.
+  ignoreSideEffectTags,
+  transformStyle,
+  transformTransition,
+  validateHtmlNesting,
+  transformAssetUrl,
+  transformSrcset,
+];
 
 Map<String, DirectiveTransform> _directiveTransforms() {
   // core preset, then DOM set overrides on/model (shared.extend order)
@@ -160,9 +228,14 @@ String? _domBuiltInComponent(String tag) {
   return null;
 }
 
-CodegenOptions _codegenOptions(String filename, String? scopeId,
-    Map<String, String>? bindingMetadata,
-    {bool inline = false, bool isTS = false, bool sourceMap = false}) {
+CodegenOptions _codegenOptions(
+  String filename,
+  String? scopeId,
+  Map<String, String>? bindingMetadata, {
+  bool inline = false,
+  bool isTS = false,
+  bool sourceMap = false,
+}) {
   return CodegenOptions()
     ..sourceMap = sourceMap
     ..mode = 'module'

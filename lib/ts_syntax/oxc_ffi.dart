@@ -8,6 +8,8 @@ import 'package:ffi/ffi.dart';
 
 typedef _oxc_parse_native =
     Pointer<Utf8> Function(Pointer<Utf8>, Uint32, Uint32);
+typedef _oxc_batch_native =
+    Pointer<Utf8> Function(Pointer<Pointer<Utf8>>, Uint32, Uint32);
 typedef _oxc_free_native = Void Function(Pointer<Utf8>);
 
 /// Raised when the worker reports a syntax error in the input.
@@ -25,6 +27,7 @@ class OxcParseException implements Exception {
 class OxcFFI {
   final DynamicLibrary _lib;
   late final Pointer<Utf8> Function(Pointer<Utf8>, int, int) _parse;
+  late final Pointer<Utf8> Function(Pointer<Pointer<Utf8>>, int, int) _batch;
   late final void Function(Pointer<Utf8>) _free;
 
   OxcFFI._(this._lib) {
@@ -33,6 +36,11 @@ class OxcFFI {
           _oxc_parse_native,
           Pointer<Utf8> Function(Pointer<Utf8>, int, int)
         >('oxc_parse');
+    _batch = _lib
+        .lookupFunction<
+          _oxc_batch_native,
+          Pointer<Utf8> Function(Pointer<Pointer<Utf8>>, int, int)
+        >('oxc_parse_batch');
     _free = _lib.lookupFunction<_oxc_free_native, void Function(Pointer<Utf8>)>(
       'oxc_free',
     );
@@ -65,6 +73,45 @@ class OxcFFI {
       return _decode(out);
     } finally {
       _free(out);
+    }
+  }
+
+  /// Parse [sources] in one round-trip; returns one payload map per entry,
+  /// each shaped exactly like [parseJson] output (per-item error isolation
+  /// is preserved by the worker).
+  List<Map<String, dynamic>> parseJsonBatch(
+    List<String> sources,
+    String language,
+  ) {
+    if (sources.isEmpty) return const [];
+    final count = sources.length;
+    final stride = sizeOf<Pointer<Utf8>>();
+    final array = malloc.allocate<Pointer<Utf8>>(stride * count);
+    final natives = <Pointer<Utf8>>[];
+    try {
+      for (var i = 0; i < count; i++) {
+        final p = sources[i].toNativeUtf8();
+        natives.add(p);
+        array[i] = p;
+      }
+      final out = _batch(array, count, langTag(language));
+      if (out == nullptr) {
+        throw StateError('oxc_parse_batch returned null');
+      }
+      final List<dynamic> items;
+      try {
+        items =
+            (jsonDecode(out.toDartString()) as Map<String, dynamic>)['items']
+                as List<dynamic>;
+      } finally {
+        _free(out);
+      }
+      return [for (final item in items) item as Map<String, dynamic>];
+    } finally {
+      for (final p in natives) {
+        malloc.free(p);
+      }
+      malloc.free(array);
     }
   }
 

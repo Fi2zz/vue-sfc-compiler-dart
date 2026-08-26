@@ -2,14 +2,14 @@
 /// 提供基本的SFC解析功能
 library;
 
-import 'package:vue_sfc_parser/sfc_compile_script.dart';
-import 'package:vue_sfc_parser/sfc_compiler.dart';
-import 'package:vue_sfc_parser/sfc_descriptor.dart';
-import 'package:vue_sfc_parser/sfc_error.dart';
-import 'package:vue_sfc_parser/sfc_parser.dart';
-import 'package:vue_sfc_parser/script/options_bindings.dart';
-import 'package:vue_sfc_parser/script/script_compile.dart';
-import 'package:vue_sfc_parser/template/compile_template.dart';
+import 'sfc_compile_script.dart';
+import 'sfc_compiler.dart';
+import 'sfc_descriptor.dart';
+import 'sfc_error.dart';
+import 'sfc_parser.dart';
+import 'script/options_bindings.dart';
+import 'script/script_compile.dart';
+import 'template/compile_template.dart';
 // export './sfc_compiler.dart' show CompileResult;
 
 /// parseCollecting 的返回：descriptor + 官方风格的错误消息列表。

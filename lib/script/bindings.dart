@@ -1,6 +1,6 @@
 // Port of walkDeclaration / walkPattern binding registration (official
 // compiler-sfc rules incl. literal-const / setup-ref / setup-reactive-const).
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 import 'macro_process.dart';
 import 'setup_context.dart';

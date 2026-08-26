@@ -1,7 +1,7 @@
 // Port of transformDestructuredProps: rewrite references to destructured
 // props (`const { msg } = defineProps(...)`) to `__props.msg` access,
 // with scope-aware shadowing.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 import 'bindings.dart';
 import 'mini_magic.dart';

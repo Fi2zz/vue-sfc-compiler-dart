@@ -2,7 +2,7 @@
 // bindings for a normal-only <script> (no <script setup>). The resulting
 // map carries __isScriptSetup = 'false' when a default-exported options
 // object exists, which disables setup-reference resolution in the template.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 import 'src_view.dart';
 

@@ -1,6 +1,6 @@
 // Port of the official top-level await transform (processAwait + the
 // scope-tracking statement walk in compileScript).
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 import 'mini_magic.dart';
 import 'node_utils.dart';

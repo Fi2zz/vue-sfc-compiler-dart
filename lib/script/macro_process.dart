@@ -1,6 +1,6 @@
 // Port of official processDefine* macro handlers. Applies edits to the
 // MiniMagic splice buffer and records state on SetupContext.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 import 'mini_magic.dart';
 import 'runtime_decls.dart';

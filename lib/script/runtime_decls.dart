@@ -1,5 +1,5 @@
 // Port of genRuntimeProps / genRuntimeEmits / genModelProps output formats.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 import 'node_utils.dart';
 import 'setup_context.dart';

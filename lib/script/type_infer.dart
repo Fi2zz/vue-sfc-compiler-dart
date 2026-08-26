@@ -1,6 +1,6 @@
 // Port of official resolveType subset: inferRuntimeType + resolveTypeElements
 // over tree-sitter AST nodes.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 import 'src_view.dart';
 

@@ -1,4 +1,4 @@
-import 'package:vue_sfc_parser/script/script_error.dart';
+import 'script/script_error.dart';
 
 class SfcError implements Exception {
   final String? message;

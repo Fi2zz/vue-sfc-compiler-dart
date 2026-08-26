@@ -1,5 +1,5 @@
 // Port of compiler-core transformExpression + processExpression.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../../ts_parser.dart';
 
 import '../../script/src_view.dart';
 import '../js_nodes.dart';
@@ -223,6 +223,10 @@ _ParsedExp? _parseExpression(SimpleExpression node, TransformContext context,
   final source = asRawStatements
       ? ' $rawExp '
       : '($rawExp)${asParams ? '=>{}' : ''}';
+  // Batch pre-pass hit: identical tree to an individual parse (the wrapped
+  // source fully determines it), so consumers see no difference.
+  final cached = context.exprCache?[source];
+  if (cached != null) return _ParsedExp(cached, source);
   try {
     final parser = TSParser();
     final root = parser.parse(code: source, language: 'ts');

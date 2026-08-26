@@ -1,6 +1,8 @@
 // Port of compiler-core createTransformContext + transform().
+
 import 'js_nodes.dart';
 import 'tmpl_ast.dart';
+import '../ts_parser.dart';
 
 /// Result of a directive transform (official DirectiveTransformResult).
 final class DirTransformResult {
@@ -44,6 +46,10 @@ final class TransformOptions {
   Map<String, String> bindingMetadata = const {};
   bool inline = false;
   bool isTS = false;
+
+  /// Pre-parsed expression roots keyed by wrapped source (batch mode);
+  /// null/absent keys fall back to per-expression parsing.
+  Map<String, AstNode>? exprCache;
   void Function(TmplCompileError e)? onError;
   void Function(TmplCompileError e)? onWarn;
   String? selfName;
@@ -97,6 +103,7 @@ final class TransformContext implements HelperHost {
   bool get slotted => options.slotted;
   String? get scopeId => options.scopeId;
   Map<String, String> get bindingMetadata => options.bindingMetadata;
+  Map<String, AstNode>? get exprCache => options.exprCache;
   List<NodeTransform> get nodeTransforms => options.nodeTransforms;
   Map<String, DirectiveTransform> get directiveTransforms =>
       options.directiveTransforms;

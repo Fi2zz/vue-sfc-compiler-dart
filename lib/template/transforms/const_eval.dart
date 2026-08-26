@@ -3,7 +3,7 @@
 // AST walk implementing JS literal/operator semantics.
 import 'dart:math' as math;
 
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../../ts_parser.dart';
 
 import '../../script/src_view.dart';
 import '../stringify_utils.dart';

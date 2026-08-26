@@ -1,5 +1,5 @@
 // Shared tree-sitter node predicates mirroring @vue/compiler-dom helpers.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../ts_parser.dart';
 
 const functionTypes = {
   'function_expression',

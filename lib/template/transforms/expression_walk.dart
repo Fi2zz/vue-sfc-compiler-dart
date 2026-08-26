@@ -1,7 +1,7 @@
 // Port of compiler-core babelUtils.ts walkIdentifiers + scope tracking onto
 // the tree-sitter TS AST (AstNode). Offsets are converted to UTF-16 char
 // offsets relative to the raw expression by the caller via SrcView.
-import 'package:vue_sfc_parser/ts_parser.dart';
+import '../../ts_parser.dart';
 
 import '../../script/src_view.dart';
 

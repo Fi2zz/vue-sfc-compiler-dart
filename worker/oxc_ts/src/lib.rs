@@ -3,7 +3,7 @@
 //! The returned JSON string is owned by the caller and must be released
 //! with `oxc_free`. Panics never cross the FFI boundary.
 
-use std::ffi::{c_char, c_uint, CString};
+use std::ffi::{c_char, c_uint, CStr, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
 use std::slice;
@@ -134,6 +134,36 @@ pub extern "C" fn oxc_parse(code: *const u8, len: c_uint, lang: c_uint) -> *mut 
         }
     }))
     .unwrap_or_else(|_| plain_error_json("oxc panicked during parse"));
+    into_raw(json)
+}
+
+/// Parse `count` NUL-terminated sources at `code` (array of char*) in one
+/// call, returning `{"ok":true,"items":[<oxc_parse payload>, ...]}`. Each
+/// item is isolated: a panic in one entry yields that entry's error shape,
+/// never failing the whole batch.
+#[no_mangle]
+pub extern "C" fn oxc_parse_batch(
+    code: *const *const c_char,
+    count: u32,
+    lang: u32,
+) -> *mut c_char {
+    let json = catch_unwind(AssertUnwindSafe(|| unsafe {
+        let slice = slice::from_raw_parts(code, count as usize);
+        let mut items = Vec::with_capacity(count as usize);
+        for &p in slice {
+            if p.is_null() {
+                items.push(plain_error_json("null entry"));
+                continue;
+            }
+            let cstr = CStr::from_ptr(p);
+            match str::from_utf8(cstr.to_bytes()) {
+                Ok(s) => items.push(parse_to_json(s, lang)),
+                Err(_) => items.push(plain_error_json("input is not valid UTF-8")),
+            }
+        }
+        format!("{{\"ok\":true,\"items\":[{}]}}", items.join(","))
+    }))
+    .unwrap_or_else(|_| plain_error_json("oxc panicked during batch parse"));
     into_raw(json)
 }
 
