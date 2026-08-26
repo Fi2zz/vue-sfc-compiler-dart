@@ -4,68 +4,68 @@
     "os": "Version 26.5.2 (Build 25F84)",
     "cores": 10,
     "mode": "jit",
-    "timestamp": "2026-08-26T08:58:09.768526"
+    "timestamp": "2026-08-26T09:21:49.549489"
   },
   "tiers": {
     "tiny": {
       "files": 5,
       "bytes": 342,
       "iter_us": {
-        "p50": 252,
-        "p90": 382,
-        "mean": 279,
-        "min": 193
+        "p50": 267,
+        "p90": 396,
+        "mean": 292,
+        "min": 199
       },
-      "files_per_s_p50": "19841.3",
-      "rss_delta_bytes": 12746752
+      "files_per_s_p50": "18726.6",
+      "rss_delta_bytes": 98304
     },
     "typical": {
       "files": 20,
       "bytes": 2844,
       "iter_us": {
-        "p50": 359,
-        "p90": 476,
-        "mean": 373,
-        "min": 257
+        "p50": 364,
+        "p90": 502,
+        "mean": 387,
+        "min": 254
       },
-      "files_per_s_p50": "55710.3",
-      "rss_delta_bytes": 147456
+      "files_per_s_p50": "54945.1",
+      "rss_delta_bytes": 131072
     },
     "ts_heavy": {
       "files": 5,
       "bytes": 1084,
       "iter_us": {
-        "p50": 449,
-        "p90": 598,
-        "mean": 473,
-        "min": 331
+        "p50": 459,
+        "p90": 616,
+        "mean": 487,
+        "min": 333
       },
-      "files_per_s_p50": "11135.9",
+      "files_per_s_p50": "10893.2",
       "rss_delta_bytes": 147456
     },
     "tmpl_heavy": {
       "files": 5,
       "bytes": 4595,
       "iter_us": {
-        "p50": 1192,
-        "p90": 1471,
-        "mean": 1217,
-        "min": 970
+        "p50": 1215,
+        "p90": 1529,
+        "mean": 1251,
+        "min": 998
       },
-      "files_per_s_p50": "4194.6",
-      "rss_delta_bytes": 4177920
+      "files_per_s_p50": "4115.2",
+      "rss_delta_bytes": 4194304
     },
     "large": {
       "files": 2,
       "bytes": 41750,
       "iter_us": {
-        "p50": 9669,
-        "p90": 10070,
-        "mean": 9804,
-        "min": 9219
+        "p50": 9589,
+        "p90": 9950,
+        "mean": 9711,
+        "min": 9140
       },
-      "files_per_s_p50": "206.8",
-      "rss_delta_bytes": 53723136
+      "files_per_s_p50": "208.6",
+      "rss_delta_bytes": 66207744
     },
     "error": {
       "files": 5,
@@ -73,26 +73,26 @@
       "iter_us": {
         "p50": 30,
         "p90": 32,
-        "mean": 31,
-        "min": 27
+        "mean": 32,
+        "min": 29
       },
       "files_per_s_p50": "166666.7",
-      "rss_delta_bytes": -3342336
+      "rss_delta_bytes": -3358720
     }
   },
   "segments": {
     "scripts": 5,
     "ffi_us": {
-      "p50": 81,
-      "mean": 82
+      "p50": 83,
+      "mean": 84
     },
     "mapper_us": {
       "p50": 5,
       "mean": 5
     },
     "chain_us": {
-      "p50": 100,
-      "mean": 102
+      "p50": 102,
+      "mean": 105
     }
   },
   "concurrency": {
@@ -106,7 +106,7 @@
     },
     "4": {
       "isolates": 4,
-      "total_ms": 17
+      "total_ms": 18
     },
     "8": {
       "isolates": 8,
@@ -114,7 +114,7 @@
     },
     "1_speedup": "1.00",
     "2_speedup": "1.78",
-    "4_speedup": "2.41",
+    "4_speedup": "2.28",
     "8_speedup": "2.41"
   }
 }

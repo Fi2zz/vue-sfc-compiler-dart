@@ -45,20 +45,23 @@
 
 ## 首期结果补充：官方 @vue/compiler-sfc 3.5.41 同机对照（2026-08-26，node v23.5.0/V8，runs=300）
 
-`bench/bench_official.mjs` 与 Dart runner 同语料同方法（共享 `bench/corpus_shared.json`）：
+`bench/bench_official.mjs` 与 Dart runner 同语料同方法（共享 `bench/corpus_shared.json`）。三方最新一轮（pointAt 优化后）：
 
-| 档位 | 官方 P50 | Dart-AOT P50 | Dart 相对速度 |
-|---|---|---|---|
-| tiny | 183µs | 59µs | **3.11x 快** |
-| typical | 271µs | 127µs | **2.13x 快** |
-| ts_heavy | 343µs | 213µs | 1.61x 快 |
-| tmpl_heavy | 955µs | 853µs | 1.12x 快 |
-| large(34KB) | 7800µs | 8936µs | **0.87x——Dart 慢 13%** |
-| error | 98µs | 22µs | 4.45x 快 |
+| 档位 | 官方 P50 | Dart-JIT P50 | Dart-AOT P50 | AOT vs 官方 | P90 口径 |
+|---|---|---|---|---|---|
+| tiny | 183µs | 267µs | **75µs** | **2.45x 快** | 3.36x |
+| typical | 271µs | 364µs | **120µs** | **2.26x 快**（166k vs 74k files/s） | 2.14x |
+| ts_heavy | 343µs | 459µs | **220µs** | 1.56x 快 | 2.04x |
+| tmpl_heavy | 955µs | 1215µs | **892µs** | 1.07x 快 | 1.48x |
+| large(34KB) | 7800µs | 9589µs | 8708µs | 0.90x——慢 10% | 0.93x |
+| error | 98µs | 30µs | **23µs** | **4.26x 快** | 4.75x |
+
+**进程冷启动对照**（CLI 单文件场景，tiny runs=1 含进程启动）：
+`dart compile exe` 二进制 **~11ms**；node + require compiler-sfc **~638ms（58 倍差距，由模块加载主导）**。按文件派生子进程的构建集成场景下 AOT 优势压倒性。
 
 结论与行动项：
-1. 中小 SFC（构建工具主场景）Dart-AOT 领先官方 2–4 倍。
-2. **大文件是唯一落后项**——分段画像（large_50：tmpl=6.8ms 61% / script=2.0ms / ts链=1.1ms / parse+style=1.2ms）显示大头在**模板管线**而非 mapper。已落地 `pointAt` 二分（mapper 段 -44%，端到端 -2.6%，golden 452/452 不变），差距从 13% 收窄到 11%。**剩余差距要靠模板侧优化**（codegen 字符串拼接/空白处理），是独立的大工程，未排期。
+1. 中小 SFC（构建工具主场景）Dart-AOT 领先官方 2–4 倍，P90 口径优势更大。
+2. **大文件是唯一落后项**——分段画像（large_50：tmpl=6.8ms 61% / script=2.0ms / ts链=1.1ms / parse+style=1.2ms）显示大头在**模板管线**而非 mapper。已落地 `pointAt` 二分（mapper 段 -44%，端到端 -2.6%），差距从 13% 收窄到 11%。**剩余差距要靠模板侧优化**（codegen 字符串拼接/空白处理），是独立的大工程，未排期。
 3. 官方对照跑法已固化进 bench 工具链，后续每次优化重跑三份 JSON 即可回归对比。
 
 ## 一、基准问题（按优先级）
