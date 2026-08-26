@@ -296,15 +296,31 @@ fill 批解析 ~1ms（parity 必需）+ 分配模式差异。
 Dart 侧易拿收益已尽。剩余大头是 FFI+JSON 传输（占 large ~40%、
 ts_heavy 链路 ~80%）。下一步唯一有意义的工程：
 
-**Rust 侧序列化精简（worker/oxc_ts）**
-1. 盘点 `oxc_parse` JSON 输出的实际消费字段（mapper 侧字段使用审计），
-   裁掉未消费字段（comments/range/冗余 span 等），预估削 FFI 段 30–50%，
-   large 端到端再 -10~15%；
-2. 评估紧凑格式（字段名缩短/数组化节点）——二期已论证 Dart 侧二进制
-   解码不可行，优化必须在 Rust 输出侧做；
-3. 契约变更必须同步：`tools/diff_transport.dart` 452 条见证重生成 +
-   EstNode/BinEstNode 实现类适配（mapper 与传输已解耦，只动实现类）；
-4. 验收口径：ts_heavy / large 档交错 A/B，P50 改善 <5% 则放弃该方向。
+**Rust 侧序列化精简（worker/oxc_ts）——已实施并按验收线关闭（2026-08-26）**
+
+字段消费审计（mapper 三文件实测）：A 组死字段（decorators/sourceType/
+diagnostics 复数/hashbang/directive 等）占负载 **15.2%**，集中在最高频
+Identifier 节点（单个 Identifier 51% 是死字段）；crate（oxc_estree
+0.147）原生开关收益为 0，正路为自定义 Serializer 黑名单。
+
+实施结果（后按约定 revert）：
+- TrimSerializer ~200 行 Rust，黑名单 24 字段（名字冲突项
+  expression/generator/id/value/property 不可按名裁剪，保留）；
+- 负载 -14.1%（601,378 → 516,661 字节 / 452 条语料）；
+- 门禁全绿：452 对拍 0 mismatch、ast_diff 452/452、批量 783/786、
+  dart test 13/13、样例 v1–v4 全 EXACT、cargo test 2/2；
+- 微基准（23KB TS parseJson 链路）**-10%**，机制有效；
+- **端到端未达验收线**：ts_heavy -3.7%、large -0.4%（噪声）——
+  ts_heavy 单条 payload 仅 1–3KB，FFI 调用固定开销主导；
+  large 由模板段主导。按验收约定（<5% 放弃）revert，工作区已还原。
+
+教训：A/B 必须换 dylib 而非 bench 二进制（dylib 运行时加载，
+换 bench 二进制的对比无效）。
+
+**至此 FFI+JSON 方向的端到端潜力封顶（~4%），全部传输层优化关闭。**
+剩余理论空间（均需大工程，不建议）：作用域感知二维黑名单（按节点类型
++字段名，可再收 B 组 ~12% 负载但端到端仍 <5%）、Rust 直出紧凑二进制
+（二期已证 Dart 侧解码必败，需零拷贝内存映射设计才有意义）。
 
 明确不做：typical 档再优化（已 2 倍领先，无投产增量信息）；
 表达式重建分配簇复用（行为风险，已评估放弃）。
