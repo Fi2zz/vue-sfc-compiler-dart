@@ -155,7 +155,7 @@ final class ExpressionWalker {
     if (_isScopeNode(node) && !identical(node, rootExp)) {
       final ids = _scopeStack.isNotEmpty
           ? _scopeStack.removeLast()
-          : <String>[];
+          : const <String>[];
       for (final id in ids) {
         knownIds.unmark(id);
       }

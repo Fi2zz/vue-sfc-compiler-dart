@@ -35,7 +35,8 @@ void _walk(
   bool inFor,
 ) {
   final children = _children(node);
-  final toCache = <TmplNode>[];
+  // Lazily allocated: most containers have no hoistable children.
+  List<TmplNode>? toCache;
   for (var i = 0; i < children.length; i++) {
     final child = children[i];
     if (child is ElementNode && child.tagType == etElement) {
@@ -43,7 +44,7 @@ void _walk(
       if (constantType > 0) {
         if (constantType >= ctCanHoist) {
           (child.codegenNode as VNodeCall).patchFlag = -1;
-          toCache.add(child);
+          (toCache ??= []).add(child);
           continue;
         }
       } else {
@@ -69,25 +70,26 @@ void _walk(
         if (cn is JSCallExpression && cn.arguments.isNotEmpty) {
           cn.arguments.add('-1 /* ${patchFlagNames[-1]} */');
         }
-        toCache.add(child);
+        (toCache ??= []).add(child);
         continue;
       }
     }
     _walkChild(child, node, context, inFor);
   }
+  final caching = toCache ?? const <TmplNode>[];
   var cachedAsArray = _tryCacheAsArray(
     node,
     parent,
     children,
-    toCache,
+    caching,
     context,
   );
   if (!cachedAsArray) {
-    for (final child in toCache) {
+    for (final child in caching) {
       _setCodegenNode(child, context.cache(_codegenNodeOf(child)));
     }
   }
-  if (toCache.isNotEmpty && context.transformHoist != null) {
+  if (caching.isNotEmpty && context.transformHoist != null) {
     context.transformHoist!(children, context, node);
   }
 }

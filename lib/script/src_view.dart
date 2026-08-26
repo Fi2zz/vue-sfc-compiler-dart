@@ -6,11 +6,21 @@ import '../ts_parser.dart';
 
 final class SrcView {
   final String content;
-  late final List<int> _byteToChar = _buildMap(content);
+  // Pure-ASCII fast path: byte offset == char offset, so the map is null and
+  // charOf clamps against content.length (identical results to a built map).
+  late final List<int>? _byteToChar = _buildMap(content);
 
   SrcView(this.content);
 
-  static List<int> _buildMap(String s) {
+  static List<int>? _buildMap(String s) {
+    var asciiOnly = true;
+    for (var i = 0; i < s.length; i++) {
+      if (s.codeUnitAt(i) > 0x7F) {
+        asciiOnly = false;
+        break;
+      }
+    }
+    if (asciiOnly) return null;
     final bytes = utf8.encode(s);
     final map = List<int>.filled(bytes.length + 1, 0);
     var charIndex = 0;
@@ -32,8 +42,10 @@ final class SrcView {
 
   /// Convert a tree-sitter byte offset into a Dart string offset.
   int charOf(int byteOffset) {
-    final clamped = byteOffset.clamp(0, _byteToChar.length - 1);
-    return _byteToChar[clamped];
+    final map = _byteToChar;
+    if (map == null) return byteOffset.clamp(0, content.length);
+    final clamped = byteOffset.clamp(0, map.length - 1);
+    return map[clamped];
   }
 
   /// Slice [content] by tree-sitter byte offsets.
