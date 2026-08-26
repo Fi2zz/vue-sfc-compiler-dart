@@ -290,6 +290,25 @@ fill 批解析 ~1ms（parity 必需）+ 分配模式差异。
    此后 Dart 侧模板链路已进入递减区；再压需动 Rust 序列化格式
    （script 段 ~2ms + fill ~1ms，占 large 的 ~40%），未排期。
 
+### 下一步工作（2026-08-26 定，未排期）
+
+性能现状：六档 Dart-AOT 全线领先官方（typical 2.08x / large 1.04x），
+Dart 侧易拿收益已尽。剩余大头是 FFI+JSON 传输（占 large ~40%、
+ts_heavy 链路 ~80%）。下一步唯一有意义的工程：
+
+**Rust 侧序列化精简（worker/oxc_ts）**
+1. 盘点 `oxc_parse` JSON 输出的实际消费字段（mapper 侧字段使用审计），
+   裁掉未消费字段（comments/range/冗余 span 等），预估削 FFI 段 30–50%，
+   large 端到端再 -10~15%；
+2. 评估紧凑格式（字段名缩短/数组化节点）——二期已论证 Dart 侧二进制
+   解码不可行，优化必须在 Rust 输出侧做；
+3. 契约变更必须同步：`tools/diff_transport.dart` 452 条见证重生成 +
+   EstNode/BinEstNode 实现类适配（mapper 与传输已解耦，只动实现类）；
+4. 验收口径：ts_heavy / large 档交错 A/B，P50 改善 <5% 则放弃该方向。
+
+明确不做：typical 档再优化（已 2 倍领先，无投产增量信息）；
+表达式重建分配簇复用（行为风险，已评估放弃）。
+
 ## 一、基准问题（按优先级）
 
 1. **全管线吞吐**：典型 SFC 每秒可编译多少（files/s），P50/P90 延迟多少。
