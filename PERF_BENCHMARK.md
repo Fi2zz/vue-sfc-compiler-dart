@@ -84,9 +84,11 @@
 被机器热漂移污染——本轮改为**模式交错×多轮中位**后结论反转。任何 A/B 性能
 对比必须交错采样；PERF_BENCHMARK 的对比表一律以同轮数据为准。
 
-**解码层微基准**（207 表达式批量 transport+decode）：JSON+jsonDecode 827µs；
-OXB2+纯 Dart ByteData 视图 13.4ms——原生 C 解码器在同抽象层级不可战胜，
-Map 中间层的消灭在 Dart 侧无胜利路径（详见 git 历史 e85a4da / dfd2ecf）。
+**解码层微基准**（207 表达式批量 transport+decode，三轮实测）：JSON+jsonDecode
+≈1050µs；OXB2+纯 Dart ByteData 视图 ≈1500µs（**bin ≈ json 的 142–149%**）。
+键表内联（OXB2 相比初版内联键编码 2317µs 已提速 ~35%）仍不敌原生 C 解码器
+——同抽象层级下 Map 中间层的消灭在 Dart 侧无胜利路径。⚠️ 勘误：本文档曾误记
+bin=13.4ms(16 倍)，系修复键表 bug 后未重测的无依据数字，2026-08-26 实测更正。
 
 **最终状态**：
 1. 默认 `TS_EXPR_BATCH=concat`；off/ffi/bin 保留作对照与回退（env 可切）。
