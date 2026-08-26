@@ -1,0 +1,84 @@
+{
+  "env": {
+    "node": "v23.5.0",
+    "os": "darwin arm64",
+    "cores": "",
+    "mode": "jit(v8)",
+    "timestamp": "2026-08-26T01:14:48.341Z"
+  },
+  "tiers": {
+    "tiny": {
+      "files": 5,
+      "bytes": 342,
+      "iter_us": {
+        "p50": 183.458,
+        "p90": 319.375,
+        "mean": 210,
+        "min": 109.834
+      },
+      "files_per_s_p50": "27254.2",
+      "rss_delta_bytes": 19873792
+    },
+    "ts_heavy": {
+      "files": 5,
+      "bytes": 1084,
+      "iter_us": {
+        "p50": 343.084,
+        "p90": 529.458,
+        "mean": 401,
+        "min": 277.208
+      },
+      "files_per_s_p50": "14573.7",
+      "rss_delta_bytes": 3080192
+    },
+    "tmpl_heavy": {
+      "files": 5,
+      "bytes": 4595,
+      "iter_us": {
+        "p50": 955.084,
+        "p90": 1357.042,
+        "mean": 1057,
+        "min": 845.291
+      },
+      "files_per_s_p50": "5235.1",
+      "rss_delta_bytes": 26116096
+    },
+    "error": {
+      "files": 5,
+      "bytes": 177,
+      "iter_us": {
+        "p50": 97.875,
+        "p90": 109.292,
+        "mean": 102,
+        "min": 90.417
+      },
+      "files_per_s_p50": "51085.6",
+      "rss_delta_bytes": 819200
+    },
+    "typical": {
+      "files": 20,
+      "bytes": 2844,
+      "iter_us": {
+        "p50": 271.125,
+        "p90": 322.709,
+        "mean": 289,
+        "min": 214
+      },
+      "files_per_s_p50": "73766.7",
+      "rss_delta_bytes": 5472256
+    },
+    "large": {
+      "files": 2,
+      "bytes": 41750,
+      "iter_us": {
+        "p50": 7800,
+        "p90": 8432.75,
+        "mean": 7883,
+        "min": 6952.583
+      },
+      "files_per_s_p50": "256.4",
+      "rss_delta_bytes": 52445184
+    }
+  },
+  "concurrency": null
+}

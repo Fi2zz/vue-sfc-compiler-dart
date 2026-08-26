@@ -43,6 +43,24 @@
 
 投产含义：服务端常驻进程应使用 AOT（`dart compile exe`）部署；TS 重负载若需再提速，优先改 worker 序列化格式（二进制/零拷贝），其次才是 Dart 侧。
 
+## 首期结果补充：官方 @vue/compiler-sfc 3.5.41 同机对照（2026-08-26，node v23.5.0/V8，runs=300）
+
+`bench/bench_official.mjs` 与 Dart runner 同语料同方法（共享 `bench/corpus_shared.json`）：
+
+| 档位 | 官方 P50 | Dart-AOT P50 | Dart 相对速度 |
+|---|---|---|---|
+| tiny | 183µs | 59µs | **3.11x 快** |
+| typical | 271µs | 127µs | **2.13x 快** |
+| ts_heavy | 343µs | 213µs | 1.61x 快 |
+| tmpl_heavy | 955µs | 853µs | 1.12x 快 |
+| large(34KB) | 7800µs | 8936µs | **0.87x——Dart 慢 13%** |
+| error | 98µs | 22µs | 4.45x 快 |
+
+结论与行动项：
+1. 中小 SFC（构建工具主场景）Dart-AOT 领先官方 2–4 倍。
+2. **大文件是唯一落后项**——印证方案预警的 mapper 疑点（`pointAt` 对行表的逐节点线性扫描、`_weaveComments` 最深包含递归）。行动项：`pointAt` 改二分 + 行表缓存，预期拉平甚至反超。
+3. 官方对照跑法已固化进 bench 工具链，后续每次优化重跑三份 JSON 即可回归对比。
+
 ## 一、基准问题（按优先级）
 
 1. **全管线吞吐**：典型 SFC 每秒可编译多少（files/s），P50/P90 延迟多少。
