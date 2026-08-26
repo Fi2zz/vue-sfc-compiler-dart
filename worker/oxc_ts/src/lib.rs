@@ -167,6 +167,123 @@ pub extern "C" fn oxc_parse_batch(
     into_raw(json)
 }
 
+/// Binary batch variant: same inputs as `oxc_parse_batch`, but the response
+/// is a compact tagged encoding decoded Dart-side without any text parsing:
+///   header: magic u32 0x4F584231, item_count u32,
+///           index: item_count x (offset u32, len u32) into the blob
+///   values: 0=obj 1=arr 2=str 3=num(f64 LE) 4=true 5=false 6=null
+///   obj:    count u32, then count x (key str, value)
+///   arr:    count u32, then count x value
+///   str:    len u32 + UTF-8 bytes
+#[no_mangle]
+pub extern "C" fn oxc_parse_batch_bin(
+    code: *const *const c_char,
+    count: u32,
+    lang: u32,
+) -> *mut c_char {
+    let bytes: Vec<u8> = catch_unwind(AssertUnwindSafe(|| unsafe {
+        let slice = slice::from_raw_parts(code, count as usize);
+        let mut payloads: Vec<Vec<u8>> = Vec::with_capacity(count as usize);
+        for &p in slice {
+            if p.is_null() {
+                payloads.push(plain_error_json("null entry").into_bytes());
+                continue;
+            }
+            let cstr = CStr::from_ptr(p);
+            match str::from_utf8(cstr.to_bytes()) {
+                Ok(s) => payloads.push(parse_to_json(s, lang).into_bytes()),
+                Err(_) => payloads.push(plain_error_json("bad utf8").into_bytes()),
+            }
+        }
+        encode_bin_batch(&payloads)
+    }))
+    .unwrap_or_else(|_| plain_error_json("oxc panicked during batch parse").into_bytes());
+    // Hand bytes across via a length-prefixed C string: NUL bytes are legal
+    // in the blob, so prefix the byte length and terminate for safety.
+    let mut out = Vec::with_capacity(bytes.len() + 9);
+    out.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
+    out.extend_from_slice(&bytes);
+    out.push(0);
+    let mut boxed = out.into_boxed_slice();
+    let ptr = boxed.as_mut_ptr();
+    std::mem::forget(boxed);
+    ptr as *mut c_char
+}
+
+fn encode_bin_batch(payloads: &[Vec<u8>]) -> Vec<u8> {
+    let mut out = Vec::new();
+    out.extend_from_slice(&0x4F_58_42_31u32.to_le_bytes());
+    out.extend_from_slice(&(payloads.len() as u32).to_le_bytes());
+    let mut offset = 8 + payloads.len() * 8;
+    for p in payloads {
+        out.extend_from_slice(&(offset as u32).to_le_bytes());
+        out.extend_from_slice(&(p.len() as u32).to_le_bytes());
+        offset += p.len();
+    }
+    for p in payloads {
+        let v: serde_json::Value = serde_json::from_slice(p).unwrap_or_else(|_| {
+            serde_json::json!({"ok": false, "error": "unparseable payload"})
+        });
+        write_bin_value(&mut out, &v);
+    }
+    out
+}
+
+fn write_bin_value(out: &mut Vec<u8>, v: &serde_json::Value) {
+    match v {
+        serde_json::Value::Object(m) => {
+            out.push(0);
+            out.extend_from_slice(&(m.len() as u32).to_le_bytes());
+            for (k, val) in m {
+                write_bin_str(out, k);
+                write_bin_value(out, val);
+            }
+        }
+        serde_json::Value::Array(a) => {
+            out.push(1);
+            out.extend_from_slice(&(a.len() as u32).to_le_bytes());
+            for val in a {
+                write_bin_value(out, val);
+            }
+        }
+        serde_json::Value::String(s) => {
+            out.push(2);
+            write_bin_str(out, s);
+        }
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                out.push(7);
+                out.extend_from_slice(&i.to_le_bytes());
+            } else {
+                out.push(3);
+                out.extend_from_slice(&n.as_f64().unwrap_or(0.0).to_le_bytes());
+            }
+        }
+        serde_json::Value::Bool(true) => out.push(4),
+        serde_json::Value::Bool(false) => out.push(5),
+        serde_json::Value::Null => out.push(6),
+    }
+}
+
+fn write_bin_str(out: &mut Vec<u8>, s: &str) {
+    out.extend_from_slice(&(s.len() as u32).to_le_bytes());
+    out.extend_from_slice(s.as_bytes());
+}
+
+/// Release a binary batch buffer returned by `oxc_parse_batch_bin`.
+/// The allocation is `[len u32][blob][0]`; pass the pointer and the BLOB
+/// length (the reader reads len from the prefix).
+#[no_mangle]
+pub extern "C" fn oxc_free_bin(ptr: *mut u8, blob_len: u32) {
+    if ptr.is_null() {
+        return;
+    }
+    let total = blob_len as usize + 5;
+    unsafe {
+        drop(Vec::from_raw_parts(ptr, total, total));
+    }
+}
+
 /// Release a JSON string previously returned by `oxc_parse`.
 #[no_mangle]
 pub extern "C" fn oxc_free(ptr: *mut c_char) {

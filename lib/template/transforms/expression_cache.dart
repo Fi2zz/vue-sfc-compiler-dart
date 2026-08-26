@@ -50,12 +50,15 @@ List<TmplNode> childrenOf(TmplNode n) {
 /// Strategy A: one oxc_parse_batch round-trip; each item decodes through the
 /// regular single-parse mapping path. Whole-batch failure leaves the cache
 /// untouched so every entry falls back individually.
-void fillExpressionCacheFfi(Map<String, AstNode> cache, List<String> sources) {
+void fillExpressionCacheFfi(Map<String, AstNode> cache, List<String> sources,
+    {bool binary = false}) {
   if (sources.isEmpty) return;
   final oxc = OxcFFI.load();
   final List<Map<String, dynamic>> items;
   try {
-    items = oxc.parseJsonBatch(sources, 'ts');
+    items = binary
+        ? oxc.parseBinBatch(sources, 'ts')
+        : oxc.parseJsonBatch(sources, 'ts');
   } catch (_) {
     return;
   }

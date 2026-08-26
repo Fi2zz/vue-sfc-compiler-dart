@@ -81,6 +81,26 @@
 2. **B 否决**：深拷贝再基线的分配风暴超过运输节省，实测净负收益——保留实现作对照记录，默认不启用。
 3. 开关：`TS_EXPR_BATCH=ffi` 启用（阈值 ≥8 表达式才批处理）；默认 off 待生产验证后翻转。
 
+**结论**：
+1. **A 采纳**：large 档 -9.5%，其余档位经阈值保护无回退；FFI 调用次数 601→0（表达式侧）。门禁全绿（v1 159 / v2 115 / v4 12 / dom 53+438 / probe / golden）。
+2. **B 否决**：深拷贝再基线的分配风暴超过运输节省，实测净负收益——保留实现作对照记录，默认不启用。
+3. 开关：`TS_EXPR_BATCH=ffi` 启用（阈值 ≥8 表达式才批处理）；默认 off 待生产验证后翻转。
+
+## 三期：二进制直读（方案 B 的解码层）——实测否决（2026-08-26）
+
+**实现**：worker 新增 `oxc_parse_batch_bin`（标签化编码：obj/arr/str/f64/i64/bool/null + 长度前缀索引，配对释放符号 `oxc_free_bin`）；Dart 端 `BinBatchReader` 用 ByteData 直接解码为与 jsonDecode 同构的 Map/List（mapper 零改动），开关 `TS_EXPR_BATCH=bin`。
+
+| 批量调用 207 表达式（transport+decode） | P50 |
+|---|---|
+| A：JSON 数组 → 原生 `jsonDecode` | **859µs** |
+| B(bin)：二进制 → 纯 Dart ByteData 解码 | 2317µs（json 的 **270%**） |
+
+端到端 large 档 9.74ms，比 A（8.05ms）差 21%。正确性门禁全绿（v1/v2/v4/dom/probe）。
+
+**为什么输**：Dart 原生 `jsonDecode` 是 C++ 实现，字节扫描极快；纯 Dart 的标签分发在每个字段上都要方法调用 + 子串分配。只要解码产物还是 Map 中间层，"换格式"就赢不了"原生解析"。要真正赢必须让二进制直通 AstNode 构建（mapper 输入层重写，影响面覆盖 mapper_expr/stmt/type 三文件），投入产出比不支持。
+
+**沉淀**：`oxc_parse_batch_bin`/`oxc_free_bin` 与 BinBatchReader 保留在代码库（env=bin 启用），作为该结论的可复现证据；默认路径为方案 A。
+
 ## 一、基准问题（按优先级）
 
 1. **全管线吞吐**：典型 SFC 每秒可编译多少（files/s），P50/P90 延迟多少。

@@ -115,8 +115,8 @@ void _fillExprCache(TmplNode ast, TransformOptions opts) {
   final sources = collectExpressionSources(ast);
   if (sources.length < _exprBatchMinSources) return;
   final cache = <String, AstNode>{};
-  if (mode == 'ffi') {
-    fillExpressionCacheFfi(cache, sources);
+  if (mode == 'ffi' || mode == 'bin') {
+    fillExpressionCacheFfi(cache, sources, binary: mode == 'bin');
   } else if (mode == 'concat') {
     fillExpressionCacheConcat(cache, sources);
   }
