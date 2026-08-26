@@ -110,13 +110,20 @@ class OxcMapper {
   }
 
   /// (row, byteColumn) for a byte offset, matching tree-sitter semantics.
+  /// Binary search over the line table: O(log lines) per point instead of
+  /// O(lines); buildNode calls this twice per node.
   (int, int) pointAt(int offset) {
-    var row = 0;
-    for (var i = 0; i < lineStarts.length; i++) {
-      if (lineStarts[i] > offset) break;
-      row = i;
+    var lo = 0;
+    var hi = lineStarts.length - 1;
+    while (lo < hi) {
+      final mid = (lo + hi + 1) ~/ 2;
+      if (lineStarts[mid] <= offset) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
     }
-    return (row, offset - lineStarts[row]);
+    return (lo, offset - lineStarts[lo]);
   }
 
   List<int> _buildLineStarts() {
