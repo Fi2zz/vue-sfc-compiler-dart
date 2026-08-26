@@ -119,9 +119,17 @@ bool hasDynamicKeyVBind(ElementNode node) => node.props.any(
 String toValidAssetId(String name, String type) {
   final buf = StringBuffer('_${type}_');
   for (var i = 0; i < name.length; i++) {
-    final c = name[i];
-    final word = RegExp(r'[\w]').hasMatch(c);
-    buf.write(word ? c : (c == '-' ? '_' : name.codeUnitAt(i).toString()));
+    final code = name.codeUnitAt(i);
+    final word =
+        (code >= 0x30 && code <= 0x39) || // 0-9
+        (code >= 0x41 && code <= 0x5A) || // A-Z
+        (code >= 0x61 && code <= 0x7A) || // a-z
+        code == 0x5F; // _
+    if (word) {
+      buf.write(name[i]);
+    } else {
+      buf.write(name[i] == '-' ? '_' : code.toString());
+    }
   }
   return buf.toString();
 }

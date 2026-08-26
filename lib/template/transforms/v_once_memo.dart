@@ -8,6 +8,14 @@ import '../tmpl_error_messages.dart';
 final _seenOnce = <TmplNode>{};
 final _seenMemo = <TmplNode>{};
 
+/// Official uses module-level WeakSets ("seen within the same compilation");
+/// Dart has no WeakSet, so the sets are cleared at each transform() entry to
+/// keep the same semantics without leaking node references across compiles.
+void resetOnceMemoSeen() {
+  _seenOnce.clear();
+  _seenMemo.clear();
+}
+
 Object? transformOnce(TmplNode node, TransformContext context) {
   if (node is ElementNode && findDir(node, 'once', true) != null) {
     if (_seenOnce.contains(node) || context.inVOnce || context.inSSR) {

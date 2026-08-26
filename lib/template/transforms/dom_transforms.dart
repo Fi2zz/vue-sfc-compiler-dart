@@ -453,21 +453,23 @@ bool _isValidHtmlNesting(String parent, String child) {
     case 'form':
       return child != 'form';
     case 'table':
-      return {
-        'caption',
-        'colgroup',
-        'thead',
-        'tbody',
-        'tfoot',
-        'tr',
-        'script',
-      }.contains(child);
+      return _tableChildren.contains(child);
     case 'tr':
       return {'td', 'th', 'script'}.contains(child);
   }
   if (headOnly.contains(parent)) return false;
   return true;
 }
+
+const _tableChildren = {
+  'caption',
+  'colgroup',
+  'thead',
+  'tbody',
+  'tfoot',
+  'tr',
+  'script',
+};
 
 const _phrasingBreakers = {
   'address',

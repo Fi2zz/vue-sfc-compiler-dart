@@ -282,5 +282,8 @@ final class TextCallNode extends TmplNode {
   TextCallNode(this.content, this.loc);
 }
 
-// Official locStub: {start:{0,1,1}, end:{0,1,1}, source:''}.
-TmplLoc locStub() => TmplLoc(TmplPosition(0, 1, 1), TmplPosition(0, 1, 1), '');
+// Official locStub: {start:{0,1,1}, end:{0,1,1}, source:''} — a module-level
+// shared constant. Safe to share here too: loc mutation (setLocEnd and
+// friends) only ever touches parser-produced locs, never the stub.
+final _locStub = TmplLoc(TmplPosition(0, 1, 1), TmplPosition(0, 1, 1), '');
+TmplLoc locStub() => _locStub;

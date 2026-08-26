@@ -5,8 +5,10 @@ import 'shared_utils.dart';
 import 'transform_context.dart';
 import 'tmpl_ast.dart';
 import 'transforms/hoist_static.dart';
+import 'transforms/v_once_memo.dart';
 
 void transform(RootNode root, TransformOptions options) {
+  resetOnceMemoSeen();
   final context = TransformContext(root, options);
   traverseNode(root, context);
   if (options.hoistStatic) {

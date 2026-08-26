@@ -241,9 +241,11 @@ int _opStart(AstNode parent, AstNode argument, int Function(int) b2c) {
   return b2c(argument.endByte);
 }
 
+final _plainIdentRE = RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$');
+
 /// 官方 genPropsAccessExp。
 String _propsAccessExp(String name) {
-  final plain = RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$').hasMatch(name);
+  final plain = _plainIdentRE.hasMatch(name);
   return plain ? '__props.$name' : '__props[${_jsStr(name)}]';
 }
 
@@ -480,37 +482,41 @@ String _expSource(Object exp) =>
 
 /// Port of isMemberExpressionNode.
 bool isMemberExpressionOf(Object exp, TransformContext context) {
-  try {
-    final source = _expSource(exp);
-    final parser = TSParser();
-    final root = parser.parse(code: source, language: 'ts');
-    final node = _unwrapTop(root);
-    if (node == null) return false;
-    if (node.type == 'member_expression' ||
-        node.type == 'subscript_expression') {
-      return true;
-    }
-    return node.type == 'identifier' && _source(source, node) != 'undefined';
-  } catch (_) {
-    return false;
+  final (node, nodeSource) = _topNodeOf(_expSource(exp), context);
+  if (node == null) return false;
+  if (node.type == 'member_expression' || node.type == 'subscript_expression') {
+    return true;
   }
+  return node.type == 'identifier' && _source(nodeSource, node) != 'undefined';
 }
 
 String _source(String source, AstNode node) => SrcView(source).textOf(node);
 
 /// Port of isFnExpressionNode.
 bool isFnExpression(Object exp, TransformContext context) {
+  final (node, _) = _topNodeOf(_expSource(exp), context);
+  if (node == null) return false;
+  return node.type == 'function_expression' ||
+      node.type == 'arrow_function' ||
+      node.type == 'generator_function';
+}
+
+/// Unwrapped top node for [source], served from the batch exprCache when
+/// present (key is the wrapped form; _unwrapTop strips the parens so node
+/// types match a bare parse). Falls back to an individual parse on miss or
+/// when the cached tree carries an ERROR node. Returns the node plus the
+/// source string its byte offsets are relative to.
+(AstNode?, String) _topNodeOf(String source, TransformContext context) {
+  final wrapped = '($source)';
+  final cached = context.exprCache?[wrapped];
+  if (cached != null && !_hasErrorNode(cached)) {
+    return (_unwrapTop(cached), wrapped);
+  }
   try {
-    final source = _expSource(exp);
-    final parser = TSParser();
-    final root = parser.parse(code: source, language: 'ts');
-    final node = _unwrapTop(root);
-    if (node == null) return false;
-    return node.type == 'function_expression' ||
-        node.type == 'arrow_function' ||
-        node.type == 'generator_function';
+    final root = TSParser().parse(code: source, language: 'ts');
+    return (_unwrapTop(root), source);
   } catch (_) {
-    return false;
+    return (null, source);
   }
 }
 

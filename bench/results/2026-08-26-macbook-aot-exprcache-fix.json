@@ -1,0 +1,57 @@
+{
+  "env": {
+    "dart": "3.12.2 (stable) (Tue Jun 9 01:11:39 2026 -0700) on \"macos_arm64\"",
+    "os": "Version 26.5.2 (Build 25F84)",
+    "cores": 10,
+    "mode": "aot",
+    "timestamp": "2026-08-26T14:41:44.594142"
+  },
+  "tiers": {
+    "tmpl_heavy": {
+      "files": 5,
+      "bytes": 4595,
+      "iter_us": {
+        "p50": 742,
+        "p90": 2043,
+        "mean": 1000,
+        "min": 671
+      },
+      "files_per_s_p50": "6738.5",
+      "rss_delta_bytes": 96665600
+    },
+    "large": {
+      "files": 2,
+      "bytes": 41750,
+      "iter_us": {
+        "p50": 7477,
+        "p90": 14414,
+        "mean": 8635,
+        "min": 5953
+      },
+      "files_per_s_p50": "267.5",
+      "rss_delta_bytes": 708558848
+    }
+  },
+  "concurrency": {
+    "1": {
+      "isolates": 1,
+      "total_ms": 40
+    },
+    "2": {
+      "isolates": 2,
+      "total_ms": 27
+    },
+    "4": {
+      "isolates": 4,
+      "total_ms": 16
+    },
+    "8": {
+      "isolates": 8,
+      "total_ms": 18
+    },
+    "1_speedup": "1.00",
+    "2_speedup": "1.48",
+    "4_speedup": "2.50",
+    "8_speedup": "2.22"
+  }
+}

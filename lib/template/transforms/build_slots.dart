@@ -13,6 +13,9 @@ final class SlotsBuildResult {
   SlotsBuildResult(this.slots, this.hasDynamicSlots);
 }
 
+final _vElseRE = RegExp(r'^else(?:-if)?$');
+final _vElseAdjacentIfRE = RegExp(r'^(?:else-)?if$');
+
 JSFunctionExpression _buildClientSlotFn(
   Object? props,
   Object? vForExp,
@@ -155,7 +158,7 @@ void _buildOneTemplateSlot(
     slotLoc,
   );
   final vIf = findDir(slotElement, 'if');
-  final vElse = findDir(slotElement, RegExp(r'^else(?:-if)?$'), true);
+  final vElse = findDir(slotElement, _vElseRE, true);
   if (vIf != null) {
     _slotWithIf(vIf, slotName, slotFunction, st);
   } else if (vElse != null) {
@@ -203,7 +206,7 @@ void _slotWithElse(
   }
   if (prev != null &&
       isTemplateNode(prev) &&
-      findDir(prev, RegExp(r'^(?:else-)?if$')) != null) {
+      findDir(prev, _vElseAdjacentIfRE) != null) {
     _attachElseSlot(vElse, slotName, slotFunction, st);
   } else {
     context.onError(

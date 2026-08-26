@@ -22,7 +22,14 @@ List<String> collectExpressionSources(TmplNode root) {
     } else if (n is ElementNode) {
       for (final p in n.props) {
         if (p is! DirectiveNode) continue;
-        _addExpr(out, p.exp);
+        // v-for: the whole `x in y` exp has no consumer (transformExpression
+        // skips it); finalizeForParseResult processes parseResult.source
+        // instead, so collect that (null when for-parse failed).
+        if (p.name == 'for') {
+          _addExpr(out, p.forParseResult?.source);
+        } else {
+          _addExpr(out, p.exp);
+        }
         final arg = p.arg;
         if (arg is SimpleExpression && !arg.static_) _addExpr(out, arg);
       }

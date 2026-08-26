@@ -249,9 +249,10 @@ final class ExpressionWalker {
   // --- scope declaration walking ---
 
   void _markScopeIds(List<AstNode> ids) {
-    _scopeStack.add(ids.map((n) => view.textOf(n)).toList());
-    for (final id in ids) {
-      knownIds.mark(view.textOf(id));
+    final names = ids.map((n) => view.textOf(n)).toList();
+    _scopeStack.add(names);
+    for (final name in names) {
+      knownIds.mark(name);
     }
   }
 

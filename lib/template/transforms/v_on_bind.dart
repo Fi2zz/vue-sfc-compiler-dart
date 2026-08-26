@@ -9,6 +9,8 @@ import 'transform_utils.dart';
 
 typedef OnAugmentor = DirTransformResult Function(DirTransformResult result);
 
+final _uppercaseRE = RegExp(r'[A-Z]');
+
 DirTransformResult transformOnCore(
   DirectiveNode dir,
   ElementNode node,
@@ -70,7 +72,7 @@ Object _resolveEventName(
       final eventString =
           node.tagType != etElement ||
               rawName.startsWith('vnode') ||
-              !RegExp(r'[A-Z]').hasMatch(rawName)
+              !_uppercaseRE.hasMatch(rawName)
           ? toHandlerKey(camelize(rawName))
           : 'on:$rawName';
       return createSimpleExp(eventString, true, arg.loc);
