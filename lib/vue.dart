@@ -29,15 +29,18 @@ class Vue {
   /// Official parse() semantics: never throws for structural problems,
   /// returns descriptor + collected error messages (including template
   /// content parse errors surfaced by the full-source tokenize pass).
-  static SfcParseOutcome parseCollecting(String source,
-      {required String filename}) {
+  static SfcParseOutcome parseCollecting(
+    String source, {
+    required String filename,
+  }) {
     try {
       final descriptor = parse(source, filename: filename);
       final errors = <String>[];
       final template = descriptor.template;
       if (template != null) {
-        errors.addAll(collectTemplateParseErrors(template.content)
-            .map((e) => e.message));
+        errors.addAll(
+          collectTemplateParseErrors(template.content).map((e) => e.message),
+        );
       }
       return SfcParseOutcome(descriptor, errors);
     } catch (e) {

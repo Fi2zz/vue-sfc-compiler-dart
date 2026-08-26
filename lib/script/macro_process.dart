@@ -123,11 +123,7 @@ bool processDefineProps(
   return true;
 }
 
-bool _processWithDefaults(
-  SetupContext ctx,
-  AstNode node, {
-  AstNode? declId,
-}) {
+bool _processWithDefaults(SetupContext ctx, AstNode node, {AstNode? declId}) {
   if (!isCallOf(node, 'withDefaults', ctx.view)) return false;
   final args = _args(node);
   final first = args.isEmpty ? null : args.first;
@@ -163,8 +159,10 @@ void _processPropsDestructure(SetupContext ctx, AstNode pattern) {
       final id = childOfType(p, 'shorthand_property_identifier_pattern');
       if (id == null) continue;
       final key = ctx.view.textOf(id);
-      ctx.propsDestructuredBindings[key] =
-          DestructureBinding(key, p.children.last);
+      ctx.propsDestructuredBindings[key] = DestructureBinding(
+        key,
+        p.children.last,
+      );
     } else if (p.type == 'pair_pattern') {
       _pairDestructure(ctx, p);
     } else if (p.type == 'rest_pattern') {
@@ -180,13 +178,17 @@ void _pairDestructure(SetupContext ctx, AstNode pair) {
   final key = ctx.view.textOf(keyNode);
   final value = pair.children.last;
   if (value.type == 'identifier') {
-    ctx.propsDestructuredBindings[key] =
-        DestructureBinding(ctx.view.textOf(value), null);
+    ctx.propsDestructuredBindings[key] = DestructureBinding(
+      ctx.view.textOf(value),
+      null,
+    );
   } else if (value.type == 'assignment_pattern') {
     final left = value.children.first;
     if (left.type == 'identifier') {
-      ctx.propsDestructuredBindings[key] =
-          DestructureBinding(ctx.view.textOf(left), value.children.last);
+      ctx.propsDestructuredBindings[key] = DestructureBinding(
+        ctx.view.textOf(left),
+        value.children.last,
+      );
     }
   }
 }
@@ -271,17 +273,19 @@ void _checkForbiddenOptions(SetupContext ctx, AstNode options) {
 /// Object literal "properties" in source order: pairs + methods + spread.
 List<AstNode> objectProperties(AstNode object) {
   return object.children
-      .where((c) =>
-          c.type == 'pair' ||
-          c.type == 'method_definition' ||
-          c.type == 'spread_element')
+      .where(
+        (c) =>
+            c.type == 'pair' ||
+            c.type == 'method_definition' ||
+            c.type == 'spread_element',
+      )
       .toList(growable: false);
 }
 
 String? _propertyKeyText(SetupContext ctx, AstNode prop) {
   if (prop.type != 'pair' && prop.type != 'method_definition') return null;
-  final key = childOfType(prop, 'property_identifier') ??
-      childOfType(prop, 'string');
+  final key =
+      childOfType(prop, 'property_identifier') ?? childOfType(prop, 'string');
   if (key == null) return null;
   var name = ctx.view.textOf(key);
   if (key.type == 'string' && name.length >= 2) {
@@ -331,7 +335,8 @@ bool processDefineModel(SetupContext ctx, AstNode node, MiniMagic s) {
   final args = _args(node);
   final arg0 = args.isEmpty ? null : args.first;
   // Official also accepts expression-free TemplateLiteral names (#14622).
-  final hasName = arg0 != null &&
+  final hasName =
+      arg0 != null &&
       (arg0.type == 'string' ||
           (arg0.type == 'template_string' &&
               !arg0.children.any((c) => c.type == 'template_substitution')));
@@ -363,11 +368,7 @@ ModelDecl _recordModel(
       !objectHasSpreadOrComputed(ctx, options)) {
     optionsText = _stripGetSet(ctx, options, optionsText!);
   }
-  return ModelDecl(
-    name,
-    typeNode: _typeArg(node),
-    optionsText: optionsText,
-  );
+  return ModelDecl(name, typeNode: _typeArg(node), optionsText: optionsText);
 }
 
 String _stripGetSet(SetupContext ctx, AstNode options, String text) {
@@ -377,8 +378,9 @@ String _stripGetSet(SetupContext ctx, AstNode options, String text) {
     final name = _propertyKeyText(ctx, props[i]);
     if (name != 'get' && name != 'set') continue;
     final start = props[i].startByte;
-    final end =
-        i + 1 < props.length ? props[i + 1].startByte : options.endByte - 1;
+    final end = i + 1 < props.length
+        ? props[i + 1].startByte
+        : options.endByte - 1;
     ranges.add([start - options.startByte, end - options.startByte]);
   }
   for (final r in ranges.reversed) {
@@ -408,8 +410,9 @@ void _rewriteModelCall(
       !objectHasSpreadOrComputed(ctx, options)) {
     optionsRemoved = _removePropOptions(ctx, s, options, hasName, arg0);
   }
-  final injectAt =
-      arg0 != null ? ctx.abs(arg0.startByte) : ctx.abs(node.endByte) - 1;
+  final injectAt = arg0 != null
+      ? ctx.abs(arg0.startByte)
+      : ctx.abs(node.endByte) - 1;
   final namePart = hasName
       ? ''
       : '${jsonString(model.name)}${optionsRemoved ? '' : ', '}';
@@ -430,8 +433,9 @@ bool _removePropOptions(
     if (name == 'get' || name == 'set') continue;
     removed++;
     final start = props[i].startByte;
-    final end =
-        i + 1 < props.length ? props[i + 1].startByte : options.endByte - 1;
+    final end = i + 1 < props.length
+        ? props[i + 1].startByte
+        : options.endByte - 1;
     s.remove(ctx.abs(start), ctx.abs(end));
   }
   if (removed == props.length) {

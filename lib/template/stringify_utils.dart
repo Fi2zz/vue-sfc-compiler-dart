@@ -117,15 +117,22 @@ String _jsonMap(Map<Object?, Object?> map, int indent, int depth) {
   final entries = <String>[];
   map.forEach((k, v) {
     if (v is JsUndefined) return;
-    entries.add('${_jsonStr(jsStr(k))}${indent < 0 ? ':' : ': '}'
-        '${_jsonAt(v, indent, depth + 1)}');
+    entries.add(
+      '${_jsonStr(jsStr(k))}${indent < 0 ? ':' : ': '}'
+      '${_jsonAt(v, indent, depth + 1)}',
+    );
   });
   if (entries.isEmpty) return '{}';
   return _jsonJoin('{', '}', entries, indent, depth);
 }
 
 String _jsonJoin(
-    String open, String close, List<String> items, int indent, int depth) {
+  String open,
+  String close,
+  List<String> items,
+  int indent,
+  int depth,
+) {
   if (indent < 0) return '$open${items.join(',')}$close';
   final pad = ' ' * (indent * (depth + 1));
   final padEnd = ' ' * (indent * depth);
@@ -140,14 +147,15 @@ String escapeHtml(Object? value) {
   final str = jsStr(value);
   if (!_escapeRE.hasMatch(str)) return str;
   return str.replaceAllMapped(
-      _escapeRE,
-      (m) => switch (m[0]) {
-            '"' => '&quot;',
-            '&' => '&amp;',
-            "'" => '&#39;',
-            '<' => '&lt;',
-            _ => '&gt;',
-          });
+    _escapeRE,
+    (m) => switch (m[0]) {
+      '"' => '&quot;',
+      '&' => '&amp;',
+      "'" => '&#39;',
+      '<' => '&lt;',
+      _ => '&gt;',
+    },
+  );
 }
 
 // --- toDisplayString -------------------------------------------------------
@@ -182,8 +190,9 @@ Object? normalizeStyle(Object? value) {
   if (value is List) {
     final res = <String, Object?>{};
     for (final item in value) {
-      final normalized =
-          item is String ? parseStringStyle(item) : normalizeStyle(item);
+      final normalized = item is String
+          ? parseStringStyle(item)
+          : normalizeStyle(item);
       if (normalized is Map<String, Object?>) res.addAll(normalized);
     }
     return res;
@@ -197,7 +206,8 @@ final _styleCommentRE = RegExp(r'/\*[^]*?\*/');
 
 Map<String, Object?> parseStringStyle(String cssText) {
   final ret = <String, Object?>{};
-  for (final item in cssText.replaceAll(_styleCommentRE, '').split(_listDelimiterRE)) {
+  for (final item
+      in cssText.replaceAll(_styleCommentRE, '').split(_listDelimiterRE)) {
     if (item.isEmpty) continue;
     // 官方 JS 用 /:(.+)/ split 捕获；Dart 的 split 会插入捕获组且 [^] 语义
     // 不同，改为手动首个冒号切分（与 /:(.+)/ 首匹配等价）。

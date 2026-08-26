@@ -18,7 +18,16 @@ abstract final class Seq {
   static const styleEnd = [60, 47, 115, 116, 121, 108, 101]; // </style
   static const titleEnd = [60, 47, 116, 105, 116, 108, 101]; // </title
   static const textareaEnd = [
-    60, 47, 116, 101, 120, 116, 97, 114, 101, 97
+    60,
+    47,
+    116,
+    101,
+    120,
+    116,
+    97,
+    114,
+    101,
+    97,
   ]; // </textarea
 }
 
@@ -35,8 +44,9 @@ bool isWhitespaceCode(int c) =>
     c == 32 || c == 10 || c == 9 || c == 12 || c == 13;
 bool isEndOfTagSection(int c) => c == 47 || c == 62 || isWhitespaceCode(c);
 
-List<int> toCharCodes(String s) =>
-    [for (var i = 0; i < s.length; i++) s.codeUnitAt(i)];
+List<int> toCharCodes(String s) => [
+  for (var i = 0; i < s.length; i++) s.codeUnitAt(i),
+];
 
 abstract class TokenizerCallbacks {
   void onerr(int code, int index);
@@ -70,8 +80,10 @@ final class Tokenizer {
   int index = 0;
   int entityStart = 0;
   int baseState = 1;
-  late final EntityDecoder entityDecoder =
-      EntityDecoder(kHtmlDecodeTree, emitCodePoint);
+  late final EntityDecoder entityDecoder = EntityDecoder(
+    kHtmlDecodeTree,
+    emitCodePoint,
+  );
   bool inRCDATA = false;
   bool inXML = false;
   bool inVPre = false;
@@ -87,8 +99,8 @@ final class Tokenizer {
   final (String, String) delimiters;
 
   Tokenizer(this.stack, this.cbs, {this.delimiters = ('{{', '}}')})
-      : delimiterOpen = toCharCodes(delimiters.$1),
-        delimiterClose = toCharCodes(delimiters.$2);
+    : delimiterOpen = toCharCodes(delimiters.$1),
+      delimiterClose = toCharCodes(delimiters.$2);
 
   bool get inSFCRoot => mode == modeSfc && stack.isEmpty;
 
@@ -179,7 +191,9 @@ final class Tokenizer {
   void stateSpecialStartSequence(int c) {
     final seq = currentSequence!;
     final atEnd = sequenceIndex == seq.length;
-    final matched = atEnd ? isEndOfTagSection(c) : (c | 32) == seq[sequenceIndex];
+    final matched = atEnd
+        ? isEndOfTagSection(c)
+        : (c | 32) == seq[sequenceIndex];
     if (!matched) {
       inRCDATA = false;
     } else if (!atEnd) {
@@ -601,9 +615,10 @@ final class Tokenizer {
     // 官方：文本/RCDATA 用 Legacy（无分号 legacy 实体可用），其余一律
     // Attribute 模式。
     entityDecoder.startEntity(
-        baseState == 1 || baseState == 32
-            ? DecodingMode.legacy
-            : DecodingMode.attribute);
+      baseState == 1 || baseState == 32
+          ? DecodingMode.legacy
+          : DecodingMode.attribute,
+    );
   }
 
   void stateInEntity() {
@@ -688,40 +703,74 @@ final class Tokenizer {
 
   void _dispatch(int c) {
     switch (state) {
-      case 1: stateText(c);
-      case 2: stateInterpolationOpen(c);
-      case 3: stateInterpolation(c);
-      case 4: stateInterpolationClose(c);
-      case 31: stateSpecialStartSequence(c);
-      case 32: stateInRCDATA(c);
-      case 26: stateCDATASequence(c);
-      case 19: handleInAttrValue(c, 34);
-      case 12: stateInAttrName(c);
-      case 13: stateInDirName(c);
-      case 14: stateInDirArg(c);
-      case 15: stateInDynamicDirArg(c);
-      case 16: stateInDirModifier(c);
-      case 28: stateInCommentLike(c);
-      case 27: stateInSpecialComment(c);
-      case 11: stateBeforeAttrName(c);
-      case 6: stateInTagName(c);
-      case 34: stateInSFCRootTagName(c);
-      case 9: stateInClosingTagName(c);
-      case 5: stateBeforeTagName(c);
-      case 17: stateAfterAttrName(c);
-      case 20: handleInAttrValue(c, 39);
-      case 18: stateBeforeAttrValue(c);
-      case 8: stateBeforeClosingTagName(c);
-      case 10: stateAfterClosingTagName(c);
-      case 29: stateBeforeSpecialS(c);
-      case 30: stateBeforeSpecialT(c);
-      case 21: stateInAttrValueNoQuotes(c);
-      case 7: stateInSelfClosingTag(c);
-      case 23: stateInDeclaration(c);
-      case 22: stateBeforeDeclaration(c);
-      case 25: stateBeforeComment(c);
-      case 24: stateInProcessingInstruction(c);
-      case 33: stateInEntity();
+      case 1:
+        stateText(c);
+      case 2:
+        stateInterpolationOpen(c);
+      case 3:
+        stateInterpolation(c);
+      case 4:
+        stateInterpolationClose(c);
+      case 31:
+        stateSpecialStartSequence(c);
+      case 32:
+        stateInRCDATA(c);
+      case 26:
+        stateCDATASequence(c);
+      case 19:
+        handleInAttrValue(c, 34);
+      case 12:
+        stateInAttrName(c);
+      case 13:
+        stateInDirName(c);
+      case 14:
+        stateInDirArg(c);
+      case 15:
+        stateInDynamicDirArg(c);
+      case 16:
+        stateInDirModifier(c);
+      case 28:
+        stateInCommentLike(c);
+      case 27:
+        stateInSpecialComment(c);
+      case 11:
+        stateBeforeAttrName(c);
+      case 6:
+        stateInTagName(c);
+      case 34:
+        stateInSFCRootTagName(c);
+      case 9:
+        stateInClosingTagName(c);
+      case 5:
+        stateBeforeTagName(c);
+      case 17:
+        stateAfterAttrName(c);
+      case 20:
+        handleInAttrValue(c, 39);
+      case 18:
+        stateBeforeAttrValue(c);
+      case 8:
+        stateBeforeClosingTagName(c);
+      case 10:
+        stateAfterClosingTagName(c);
+      case 29:
+        stateBeforeSpecialS(c);
+      case 30:
+        stateBeforeSpecialT(c);
+      case 21:
+        stateInAttrValueNoQuotes(c);
+      case 7:
+        stateInSelfClosingTag(c);
+      case 23:
+        stateInDeclaration(c);
+      case 22:
+        stateBeforeDeclaration(c);
+      case 25:
+        stateBeforeComment(c);
+      case 24:
+        stateInProcessingInstruction(c);
+      case 33:
+        stateInEntity();
     }
   }
 }

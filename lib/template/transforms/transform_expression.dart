@@ -12,8 +12,7 @@ final _literalWhitelisted = {'true', 'false', 'null', 'this'};
 
 Object? transformExpression(TmplNode node, TransformContext context) {
   if (node is InterpolationNode) {
-    node.content =
-        processExpression(node.content as SimpleExpression, context);
+    node.content = processExpression(node.content as SimpleExpression, context);
   } else if (node is ElementNode) {
     final memo = findDir(node, 'memo');
     for (var i = 0; i < node.props.length; i++) {
@@ -25,12 +24,17 @@ Object? transformExpression(TmplNode node, TransformContext context) {
   return null;
 }
 
-void _processDirectiveExp(DirectiveNode dir, DirectiveNode? memo,
-    TransformContext context, TmplNode node) {
+void _processDirectiveExp(
+  DirectiveNode dir,
+  DirectiveNode? memo,
+  TransformContext context,
+  TmplNode node,
+) {
   final exp = dir.exp;
   final arg = dir.arg;
   // key has been processed in transformFor (vMemo + vFor combination only).
-  final memoKeyProcessed = memo != null &&
+  final memoKeyProcessed =
+      memo != null &&
       context.vForMemoKeyedNodes.contains(node) &&
       arg is SimpleExpression &&
       arg.content == 'key';
@@ -56,10 +60,13 @@ final class _ParsedExp {
   _ParsedExp(this.root, this.source);
 }
 
-TmplNode processExpression(SimpleExpression node, TransformContext context,
-    {bool asParams = false,
-    bool asRawStatements = false,
-    KnownIds? localVars}) {
+TmplNode processExpression(
+  SimpleExpression node,
+  TransformContext context, {
+  bool asParams = false,
+  bool asRawStatements = false,
+  KnownIds? localVars,
+}) {
   if (!context.prefixIdentifiers || node.content.trim().isEmpty) {
     return node;
   }
@@ -69,14 +76,23 @@ TmplNode processExpression(SimpleExpression node, TransformContext context,
   if (ast == null && isSimpleIdentifier(rawExp)) {
     return _processSimpleIdentifier(node, context, rawExp, asParams);
   }
-  final parsed = _parseExpression(node, context, rawExp, asParams,
-      asRawStatements);
+  final parsed = _parseExpression(
+    node,
+    context,
+    rawExp,
+    asParams,
+    asRawStatements,
+  );
   if (parsed == null) return node;
   return _rebuildExpression(node, context, rawExp, parsed);
 }
 
-TmplNode _processSimpleIdentifier(SimpleExpression node,
-    TransformContext context, String rawExp, bool asParams) {
+TmplNode _processSimpleIdentifier(
+  SimpleExpression node,
+  TransformContext context,
+  String rawExp,
+  bool asParams,
+) {
   final isScopeVarReference = (context.identifiers[rawExp] ?? 0) != 0;
   final isAllowedGlobal = isGloballyAllowed(rawExp);
   final isLiteral = _literalWhitelisted.contains(rawExp);
@@ -98,16 +114,26 @@ TmplNode _processSimpleIdentifier(SimpleExpression node,
 bool _isConstBinding(String? type) =>
     type == 'setup-const' || type == 'literal-const';
 
-String _rewriteIdentifier(String raw, TransformContext context,
-    {AstNode? parent,
-    WalkedIdent? id,
-    int Function(int)? byteToChar,
-    String Function(int, int)? sliceText}) {
+String _rewriteIdentifier(
+  String raw,
+  TransformContext context, {
+  AstNode? parent,
+  WalkedIdent? id,
+  int Function(int)? byteToChar,
+  String Function(int, int)? sliceText,
+}) {
   final bindings = context.bindingMetadata;
   final type = bindings[raw];
   if (context.inline) {
-    return _rewriteInline(raw, type, context,
-        parent: parent, id: id, byteToChar: byteToChar, sliceText: sliceText);
+    return _rewriteInline(
+      raw,
+      type,
+      context,
+      parent: parent,
+      id: id,
+      byteToChar: byteToChar,
+      sliceText: sliceText,
+    );
   }
   if (type != null && (type.startsWith('setup') || type == 'literal-const')) {
     return '\$setup.$raw';
@@ -124,13 +150,14 @@ String _rewriteIdentifier(String raw, TransformContext context,
 /// 官方 rewriteIdentifier 的 inline 分支：render 内联进 setup 后，绑定按
 /// kind 直接引用（ref 类补 .value / unref），不再有 $setup 前缀。
 String _rewriteInline(
-    String raw,
-    String? type,
-    TransformContext context,
-    {AstNode? parent,
-    WalkedIdent? id,
-    int Function(int)? byteToChar,
-    String Function(int, int)? sliceText}) {
+  String raw,
+  String? type,
+  TransformContext context, {
+  AstNode? parent,
+  WalkedIdent? id,
+  int Function(int)? byteToChar,
+  String Function(int, int)? sliceText,
+}) {
   final lval = _lvalKind(parent, id, byteToChar ?? (b) => b);
   switch (type) {
     case 'setup-const':
@@ -154,18 +181,20 @@ String _rewriteInline(
       final first = parent!.children.first;
       if (parent.type == 'assignment_expression') {
         final right = parent.children.last;
-        final op =
-            cut(first.endByte, right.startByte).trim();
+        final op = cut(first.endByte, right.startByte).trim();
         final rExp = cut(right.startByte, right.endByte);
-        final processed = stringifyExpression(processExpression(
-            SimpleExpression(rExp, false, locStub()), context,
-            localVars: KnownIds(context.identifiers)));
+        final processed = stringifyExpression(
+          processExpression(
+            SimpleExpression(rExp, false, locStub()),
+            context,
+            localVars: KnownIds(context.identifiers),
+          ),
+        );
         return '${context.helperString(hIsRef)}($raw)$tsIgnore'
             ' ? $raw.value $op $processed : $raw';
       }
       // update_expression：n++ / ++n，替换区间扩到整个表达式。
-      final opText =
-          cut(_opStart(parent, first, b2c), parent.endByte).trim();
+      final opText = cut(_opStart(parent, first, b2c), parent.endByte).trim();
       final prefix = first.startByte == parent.startByte ? '' : opText;
       final postfix = first.startByte == parent.startByte ? opText : '';
       id!
@@ -176,8 +205,7 @@ String _rewriteInline(
     case 'props':
       return _propsAccessExp(raw);
     case 'props-aliased':
-      final alias =
-          context.bindingMetadata['__propsAliases:$raw'] ?? raw;
+      final alias = context.bindingMetadata['__propsAliases:$raw'] ?? raw;
       return _propsAccessExp(alias);
   }
   return '_ctx.$raw';
@@ -185,14 +213,18 @@ String _rewriteInline(
 
 enum _LVal { none, assign, update }
 
-_LVal _lvalKind(AstNode? parent, WalkedIdent? id,
-    int Function(int byteOffset) byteToChar) {
+_LVal _lvalKind(
+  AstNode? parent,
+  WalkedIdent? id,
+  int Function(int byteOffset) byteToChar,
+) {
   if (parent == null || id == null || parent.children.isEmpty) {
     return _LVal.none;
   }
   final start = byteToChar(parent.children.first.startByte);
   final end = byteToChar(parent.children.first.endByte);
-  final covers = parent.children.first.type == 'identifier' &&
+  final covers =
+      parent.children.first.type == 'identifier' &&
       start <= id.startChar &&
       id.endChar <= end;
   switch (parent.type) {
@@ -218,8 +250,13 @@ String _propsAccessExp(String name) {
 String _jsStr(String s) =>
     '"${s.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
 
-_ParsedExp? _parseExpression(SimpleExpression node, TransformContext context,
-    String rawExp, bool asParams, bool asRawStatements) {
+_ParsedExp? _parseExpression(
+  SimpleExpression node,
+  TransformContext context,
+  String rawExp,
+  bool asParams,
+  bool asRawStatements,
+) {
   final source = asRawStatements
       ? ' $rawExp '
       : '($rawExp)${asParams ? '=>{}' : ''}';
@@ -231,15 +268,25 @@ _ParsedExp? _parseExpression(SimpleExpression node, TransformContext context,
     final parser = TSParser();
     final root = parser.parse(code: source, language: 'ts');
     if (_hasErrorNode(root)) {
-      context.onError(TmplCompileError(
-          45, 'Error parsing JavaScript expression: $rawExp', node.loc));
+      context.onError(
+        TmplCompileError(
+          45,
+          'Error parsing JavaScript expression: $rawExp',
+          node.loc,
+        ),
+      );
       node.ast = ExpAst.failed;
       return null;
     }
     return _ParsedExp(root, source);
   } catch (e) {
-    context.onError(TmplCompileError(
-        45, 'Error parsing JavaScript expression: $rawExp', node.loc));
+    context.onError(
+      TmplCompileError(
+        45,
+        'Error parsing JavaScript expression: $rawExp',
+        node.loc,
+      ),
+    );
     node.ast = ExpAst.failed;
     return null;
   }
@@ -250,17 +297,33 @@ bool _hasErrorNode(AstNode node) {
   return node.children.any(_hasErrorNode);
 }
 
-TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
-    String rawExp, _ParsedExp parsed) {
+TmplNode _rebuildExpression(
+  SimpleExpression node,
+  TransformContext context,
+  String rawExp,
+  _ParsedExp parsed,
+) {
   final srcView = SrcView(parsed.source);
   final knownIds = KnownIds(context.identifiers);
   final ids = <WalkedIdent>[];
-  void onIdent(WalkedIdent id, AstNode? parent, bool isRefed, bool isLocal,
-      {bool destructureAssignment = false}) {
-    _onIdentifier(id, parent, isRefed, isLocal, context, ids,
-        srcView.charOf,
-        (s, e) => srcView.slice(srcView.charOf(s), srcView.charOf(e)),
-        destructureAssignment: destructureAssignment);
+  void onIdent(
+    WalkedIdent id,
+    AstNode? parent,
+    bool isRefed,
+    bool isLocal, {
+    bool destructureAssignment = false,
+  }) {
+    _onIdentifier(
+      id,
+      parent,
+      isRefed,
+      isLocal,
+      context,
+      ids,
+      srcView.charOf,
+      (s, e) => srcView.slice(srcView.charOf(s), srcView.charOf(e)),
+      destructureAssignment: destructureAssignment,
+    );
   }
 
   final walker = ExpressionWalker(srcView, onIdent, knownIds);
@@ -270,25 +333,38 @@ TmplNode _rebuildExpression(SimpleExpression node, TransformContext context,
   return _spliceChildren(node, rawExp, ids, knownIds);
 }
 
-void _onIdentifier(WalkedIdent id, AstNode? parent, bool isRefed,
-    bool isLocal, TransformContext context, List<WalkedIdent> ids,
-    int Function(int byteOffset) byteToChar,
-    String Function(int, int) sliceText,
-    {bool destructureAssignment = false}) {
+void _onIdentifier(
+  WalkedIdent id,
+  AstNode? parent,
+  bool isRefed,
+  bool isLocal,
+  TransformContext context,
+  List<WalkedIdent> ids,
+  int Function(int byteOffset) byteToChar,
+  String Function(int, int) sliceText, {
+  bool destructureAssignment = false,
+}) {
   if (id.name.startsWith('_filter_')) return;
   final needPrefix = isRefed && _canPrefix(id.name);
   if (needPrefix && !isLocal) {
     // 对象简写与赋值解构目标：改写 value 后需补回 'key: '（官方
     // isStaticProperty(parent)&&parent.shorthand 分支）。
-    final shorthandKey = parent != null &&
+    final shorthandKey =
+        parent != null &&
         (parent.type == 'object' ||
             parent.type == 'object_pattern' ||
             parent.type == 'object_assignment_pattern');
     if (shorthandKey && (parent.type == 'object' || destructureAssignment)) {
       id.prefix = '${id.name}: ';
     }
-    id.rewritten = _rewriteIdentifier(id.name, context,
-        parent: parent, id: id, byteToChar: byteToChar, sliceText: sliceText);
+    id.rewritten = _rewriteIdentifier(
+      id.name,
+      context,
+      parent: parent,
+      id: id,
+      byteToChar: byteToChar,
+      sliceText: sliceText,
+    );
     ids.add(id);
   } else {
     if (!(needPrefix && isLocal) && !_isCallOrMember(parent)) {
@@ -315,16 +391,22 @@ bool _isCallOrMember(AstNode? parent) {
   return excluded.contains(parent.type);
 }
 
-TmplNode _spliceChildren(SimpleExpression node, String rawExp,
-    List<WalkedIdent> ids, KnownIds knownIds) {
+TmplNode _spliceChildren(
+  SimpleExpression node,
+  String rawExp,
+  List<WalkedIdent> ids,
+  KnownIds knownIds,
+) {
   final children = <Object?>[];
   for (var i = 0; i < ids.length; i++) {
     final id = ids[i];
     final start = id.startChar - 1;
     final end = id.endChar - 1;
     final last = i > 0 ? ids[i - 1] : null;
-    final leadingText =
-        rawExp.substring(last != null ? last.endChar - 1 : 0, start);
+    final leadingText = rawExp.substring(
+      last != null ? last.endChar - 1 : 0,
+      start,
+    );
     if (leadingText.isNotEmpty || id.prefix != null) {
       children.add(leadingText + (id.prefix ?? ''));
     }
@@ -344,15 +426,24 @@ TmplNode _spliceChildren(SimpleExpression node, String rawExp,
 }
 
 SimpleExpression _identExpression(
-    SimpleExpression node, String rawExp, WalkedIdent id, int start, int end) {
+  SimpleExpression node,
+  String rawExp,
+  WalkedIdent id,
+  int start,
+  int end,
+) {
   final source = rawExp.substring(start, end);
   final loc = TmplLoc(
     _advanceWithClone(node.loc.start, source, start),
     _advanceWithClone(node.loc.start, source, end),
     source,
   );
-  return SimpleExpression(id.rewritten ?? id.name, false, loc,
-      id.isConstant ? ctCanStringify : ctNotConstant);
+  return SimpleExpression(
+    id.rewritten ?? id.name,
+    false,
+    loc,
+    id.isConstant ? ctCanStringify : ctNotConstant,
+  );
 }
 
 /// Port of official advancePositionWithClone as used in processExpression:
@@ -369,8 +460,7 @@ TmplPosition _advanceWithClone(TmplPosition pos, String source, int n) {
   final clone = pos.clone();
   clone.offset += n;
   clone.line += linesCount;
-  clone.column =
-      lastNewLinePos == -1 ? clone.column + n : n - lastNewLinePos;
+  clone.column = lastNewLinePos == -1 ? clone.column + n : n - lastNewLinePos;
   return clone;
 }
 
@@ -400,15 +490,13 @@ bool isMemberExpressionOf(Object exp, TransformContext context) {
         node.type == 'subscript_expression') {
       return true;
     }
-    return node.type == 'identifier' &&
-        _source(source, node) != 'undefined';
+    return node.type == 'identifier' && _source(source, node) != 'undefined';
   } catch (_) {
     return false;
   }
 }
 
-String _source(String source, AstNode node) =>
-    SrcView(source).textOf(node);
+String _source(String source, AstNode node) => SrcView(source).textOf(node);
 
 /// Port of isFnExpressionNode.
 bool isFnExpression(Object exp, TransformContext context) {

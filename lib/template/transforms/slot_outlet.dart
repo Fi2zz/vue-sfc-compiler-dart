@@ -19,7 +19,7 @@ Object? transformSlotOutlet(TmplNode node, TransformContext context) {
     result.$1,
     '{}',
     'undefined',
-    'true'
+    'true',
   ];
   var expectedLen = 2;
   if (result.$2 != null) {
@@ -27,8 +27,12 @@ Object? transformSlotOutlet(TmplNode node, TransformContext context) {
     expectedLen = 3;
   }
   if (children.isNotEmpty) {
-    slotArgs[3] =
-        JSFunctionExpression(<Object?>[], children, newline: false, loc: loc);
+    slotArgs[3] = JSFunctionExpression(
+      <Object?>[],
+      children,
+      newline: false,
+      loc: loc,
+    );
     expectedLen = 4;
   }
   if (context.scopeId != null && !context.slotted) {
@@ -41,7 +45,9 @@ Object? transformSlotOutlet(TmplNode node, TransformContext context) {
 }
 
 (Object, Object?) _processSlotOutlet(
-    ElementNode node, TransformContext context) {
+  ElementNode node,
+  TransformContext context,
+) {
   Object slotName = '"default"';
   Object? slotProps;
   final nonNameProps = <TmplNode>[];
@@ -71,21 +77,31 @@ Object? transformSlotOutlet(TmplNode node, TransformContext context) {
         if (p.name == 'bind' &&
             p.arg is SimpleExpression &&
             (p.arg as SimpleExpression).static_) {
-          (p.arg as SimpleExpression).content =
-              camelize((p.arg as SimpleExpression).content);
+          (p.arg as SimpleExpression).content = camelize(
+            (p.arg as SimpleExpression).content,
+          );
         }
         nonNameProps.add(p);
       }
     }
   }
   if (nonNameProps.isNotEmpty) {
-    final built = buildProps(node, context,
-        props: nonNameProps, isComponent: false, isDynamicComponent: false);
+    final built = buildProps(
+      node,
+      context,
+      props: nonNameProps,
+      isComponent: false,
+      isDynamicComponent: false,
+    );
     slotProps = built.props;
     if (built.directives.isNotEmpty) {
-      context.onError(TmplCompileError(
-          36, 'Runtime directives are not allowed on <slot>.',
-          built.directives[0].loc));
+      context.onError(
+        TmplCompileError(
+          36,
+          'Runtime directives are not allowed on <slot>.',
+          built.directives[0].loc,
+        ),
+      );
     }
   }
   return (slotName, slotProps);

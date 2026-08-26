@@ -9,28 +9,32 @@ import 'transform_utils.dart';
 
 typedef OnAugmentor = DirTransformResult Function(DirTransformResult result);
 
-DirTransformResult transformOnCore(DirectiveNode dir, ElementNode node,
-    TransformContext context,
-    [OnAugmentor? augmentor]) {
+DirTransformResult transformOnCore(
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context, [
+  OnAugmentor? augmentor,
+]) {
   final loc = dir.loc;
   final modifiers = dir.modifiers;
   final arg = dir.arg;
   if (dir.exp == null && modifiers.isEmpty) {
-    context.onError(
-        TmplCompileError(35, 'v-on is missing expression.', loc));
+    context.onError(TmplCompileError(35, 'v-on is missing expression.', loc));
   }
   final eventName = _resolveEventName(dir, node, context, arg);
   TmplNode? exp = dir.exp;
   if (exp is SimpleExpression && exp.content.trim().isEmpty) exp = null;
-  var shouldCache =
-      context.cacheHandlers && exp == null && !context.inVOnce;
-  final handlerResult =
-      _processHandlerExp(node, context, dir, exp as SimpleExpression?);
+  var shouldCache = context.cacheHandlers && exp == null && !context.inVOnce;
+  final handlerResult = _processHandlerExp(
+    node,
+    context,
+    dir,
+    exp as SimpleExpression?,
+  );
   exp = handlerResult.$1;
   shouldCache = handlerResult.$2 ?? shouldCache;
   var ret = DirTransformResult([
-    createObjectProp(eventName,
-        exp ?? createSimpleExp('() => {}', false, loc))
+    createObjectProp(eventName, exp ?? createSimpleExp('() => {}', false, loc)),
   ]);
   if (augmentor != null) ret = augmentor(ret);
   if (shouldCache) {
@@ -46,29 +50,36 @@ DirTransformResult transformOnCore(DirectiveNode dir, ElementNode node,
   return ret;
 }
 
-Object _resolveEventName(DirectiveNode dir, ElementNode node,
-    TransformContext context, Object? arg) {
+Object _resolveEventName(
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+  Object? arg,
+) {
   if (arg is SimpleExpression) {
     if (arg.static_) {
       var rawName = arg.content;
       if (rawName.startsWith('vnode')) {
-        context.onError(
-            TmplCompileError(51, tmplErrorMessage(51), arg.loc));
+        context.onError(TmplCompileError(51, tmplErrorMessage(51), arg.loc));
       }
       if (rawName.startsWith('vue:')) {
         rawName = 'vnode-${rawName.substring(4)}';
       }
       // vnode lifecycle listeners always camelize (see #2249); only plain
       // element events with uppercase keep their case (custom elements).
-      final eventString = node.tagType != etElement ||
+      final eventString =
+          node.tagType != etElement ||
               rawName.startsWith('vnode') ||
               !RegExp(r'[A-Z]').hasMatch(rawName)
           ? toHandlerKey(camelize(rawName))
           : 'on:$rawName';
       return createSimpleExp(eventString, true, arg.loc);
     }
-    return createCompoundExp(
-        ['${context.helperString(hToHandlerKey)}(', arg, ')']);
+    return createCompoundExp([
+      '${context.helperString(hToHandlerKey)}(',
+      arg,
+      ')',
+    ]);
   }
   final compound = arg as CompoundExpression;
   compound.children.insert(0, '${context.helperString(hToHandlerKey)}(');
@@ -77,8 +88,12 @@ Object _resolveEventName(DirectiveNode dir, ElementNode node,
 }
 
 /// Returns (processed handler expression, shouldCache override or null).
-(TmplNode?, bool?) _processHandlerExp(ElementNode node,
-    TransformContext context, DirectiveNode dir, SimpleExpression? exp) {
+(TmplNode?, bool?) _processHandlerExp(
+  ElementNode node,
+  TransformContext context,
+  DirectiveNode dir,
+  SimpleExpression? exp,
+) {
   if (exp == null) return (null, null);
   var shouldCache = false;
   final isMemberExp = isMemberExpressionOf(exp, context);
@@ -87,11 +102,15 @@ Object _resolveEventName(DirectiveNode dir, ElementNode node,
   TmplNode handled = exp;
   if (context.prefixIdentifiers) {
     if (isInlineStatement) context.addIdentifiers('\$event');
-    handled = processExpression(exp, context,
-        asRawStatements: hasMultipleStatements);
+    handled = processExpression(
+      exp,
+      context,
+      asRawStatements: hasMultipleStatements,
+    );
     dir.exp = handled;
     if (isInlineStatement) context.removeIdentifiers('\$event');
-    shouldCache = context.cacheHandlers &&
+    shouldCache =
+        context.cacheHandlers &&
         !context.inVOnce &&
         !(handled is SimpleExpression && handled.constType > 0) &&
         !(isMemberExp && node.tagType == etComponent) &&
@@ -107,7 +126,7 @@ Object _resolveEventName(DirectiveNode dir, ElementNode node,
     handled = createCompoundExp([
       '$head => ${hasMultipleStatements ? '{' : '('}',
       handled,
-      hasMultipleStatements ? '}' : ')'
+      hasMultipleStatements ? '}' : ')',
     ]);
   }
   return (handled, shouldCache);
@@ -125,16 +144,19 @@ TmplNode _extendMemberHandler(TmplNode exp) {
 }
 
 DirTransformResult transformBindCore(
-    DirectiveNode dir, ElementNode node, TransformContext context) {
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+) {
   final modifiers = dir.modifiers;
   final loc = dir.loc;
   final arg = dir.arg;
   final exp = dir.exp;
   if (exp is SimpleExpression && exp.content.trim().isEmpty) {
-    context.onError(
-        TmplCompileError(34, 'v-bind is missing expression.', loc));
-    return DirTransformResult(
-        [createObjectProp(arg!, createSimpleExp('', true, loc))]);
+    context.onError(TmplCompileError(34, 'v-bind is missing expression.', loc));
+    return DirTransformResult([
+      createObjectProp(arg!, createSimpleExp('', true, loc)),
+    ]);
   }
   _normalizeBindArg(arg);
   if (modifiers.any((m) => m.content == 'camel')) {

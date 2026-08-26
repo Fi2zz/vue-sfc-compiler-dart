@@ -46,8 +46,11 @@ class CssParser {
     final node = CssAtRule();
     node.name = startToken.content.substring(1);
     if (node.name.isEmpty) {
-      throw CssSyntaxError('At-rule without name', startToken.start,
-          startToken.start + startToken.content.length);
+      throw CssSyntaxError(
+        'At-rule without name',
+        startToken.start,
+        startToken.start + startToken.content.length,
+      );
     }
     _init(node, startToken.start);
 
@@ -168,8 +171,7 @@ class CssParser {
 
     _scanImportant(node, tokens);
 
-    final hasWord =
-        tokens.any((t) => t.type != 'space' && t.type != 'comment');
+    final hasWord = tokens.any((t) => t.type != 'space' && t.type != 'comment');
     if (hasWord) {
       node.raws.between =
           node.raws.between! + firstSpaces.map((t) => t.content).join();
@@ -225,8 +227,9 @@ class CssParser {
       }
     }
     // 官方：word token 取 token[3] + 1（该词之后的位置），否则 token[2]。
-    final offset =
-        token.type == 'word' ? (token.end ?? token.start) + 1 : token.start;
+    final offset = token.type == 'word'
+        ? (token.end ?? token.start) + 1
+        : token.start;
     throw CssSyntaxError('Missed semicolon', offset);
   }
 
@@ -241,7 +244,10 @@ class CssParser {
       if (brackets == 0 && type == ':') {
         if (prev == null) {
           throw CssSyntaxError(
-              'Double colon', token.start, token.start + token.content.length);
+            'Double colon',
+            token.start,
+            token.start + token.content.length,
+          );
         } else if (prev.type == 'word' && prev.content == 'progid') {
           continue;
         } else {
@@ -323,9 +329,10 @@ class CssParser {
   }
 
   Never _unknownWord(CssToken token) => throw CssSyntaxError(
-      'Unknown word ${token.content}',
-      token.start,
-      token.start + token.content.length);
+    'Unknown word ${token.content}',
+    token.start,
+    token.start + token.content.length,
+  );
 
   // ------------------------------------------------------------- other/rule
 
@@ -377,7 +384,10 @@ class CssParser {
     if (tokenizer.endOfFile()) end = true;
     if (brackets.isNotEmpty) {
       throw CssSyntaxError(
-          'Unclosed bracket', bracket!.start, bracket.start + 1);
+        'Unclosed bracket',
+        bracket!.start,
+        bracket.start + 1,
+      );
     }
 
     if (end && colon) {
@@ -405,8 +415,12 @@ class CssParser {
 
   // ---------------------------------------------------------------- helpers
 
-  void _raw(CssNode node, String prop, List<CssToken> tokens,
-      [bool customProperty = false]) {
+  void _raw(
+    CssNode node,
+    String prop,
+    List<CssToken> tokens, [
+    bool customProperty = false,
+  ]) {
     final length = tokens.length;
     var value = '';
     var clean = true;

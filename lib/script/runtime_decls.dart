@@ -43,9 +43,12 @@ final class _RuntimeProp {
 }
 
 List<_RuntimeProp> _propsFromType(SetupContext ctx) {
-  final elements = resolveTypeElements(ctx.propsTypeDecl!, ctx.view,
-      ctx.typeScope,
-      leadingIgnored: ctx.propsTypeLeadingIgnored);
+  final elements = resolveTypeElements(
+    ctx.propsTypeDecl!,
+    ctx.view,
+    ctx.typeScope,
+    leadingIgnored: ctx.propsTypeLeadingIgnored,
+  );
   final out = <_RuntimeProp>[];
   for (final key in elements.props.keys) {
     // 官方 genRuntimeProps：类型推导的 props 键登记进 bindingMetadata
@@ -92,9 +95,11 @@ String? _destructuredDefault(
       );
     }
   }
-  final needSkipFactory = inferredType == null &&
+  final needSkipFactory =
+      inferredType == null &&
       (isFunctionType(unwrapped) || unwrapped.type == 'identifier');
-  final needFactoryWrap = !needSkipFactory &&
+  final needFactoryWrap =
+      !needSkipFactory &&
       !isLiteralNode(unwrapped) &&
       !(inferredType?.contains('Function') ?? false);
   return needFactoryWrap ? '() => ($value)' : value;
@@ -106,8 +111,8 @@ String? _staticDefaultForKey(SetupContext ctx, String key) {
   if (defaults == null || defaults.type != 'object') return null;
   for (final pair in defaults.children) {
     if (pair.type != 'pair') continue;
-    final k = childOfType(pair, 'property_identifier') ??
-        childOfType(pair, 'string');
+    final k =
+        childOfType(pair, 'property_identifier') ?? childOfType(pair, 'string');
     if (k == null) continue;
     var name = ctx.view.textOf(k);
     if (k.type == 'string' && name.length >= 2) {
@@ -144,7 +149,8 @@ bool _staticDefaults(SetupContext ctx) {
   for (final c in d.children) {
     if (c.type == 'spread_element') return false;
     if (c.type == 'pair') {
-      final k = childOfType(c, 'property_identifier') ??
+      final k =
+          childOfType(c, 'property_identifier') ??
           childOfType(c, 'string') ??
           childOfType(c, 'number');
       if (k == null) return false; // computed key
@@ -157,8 +163,9 @@ String? _extractPropsFromType(SetupContext ctx) {
   final props = _propsFromType(ctx);
   if (props.isEmpty) return null;
   final staticDefaults = _staticDefaults(ctx);
-  final entries =
-      props.map((p) => _genPropEntry(ctx, p, staticDefaults)).toList();
+  final entries = props
+      .map((p) => _genPropEntry(ctx, p, staticDefaults))
+      .toList();
   var decls = '{\n    ${entries.join(',\n    ')}\n  }';
   if (ctx.propsRuntimeDefaults != null && !staticDefaults) {
     final defaults = ctx.view.textOf(ctx.propsRuntimeDefaults!);
@@ -179,13 +186,13 @@ String? genRuntimeProps(SetupContext ctx) {
         final finalKey = escapedPropName(key);
         final binding = ctx.propsDestructuredBindings[key]!;
         final unwrapped = unwrapTSNode(binding.defaultNode!);
-        final skip = isFunctionType(unwrapped) || unwrapped.type == 'identifier';
-        defaults.add(
-          '$finalKey: $d${skip ? ', __skip_$finalKey: true' : ''}',
-        );
+        final skip =
+            isFunctionType(unwrapped) || unwrapped.type == 'identifier';
+        defaults.add('$finalKey: $d${skip ? ', __skip_$finalKey: true' : ''}');
       }
       if (defaults.isNotEmpty) {
-        propsDecls = '/*@__PURE__*/${ctx.helper('mergeDefaults')}'
+        propsDecls =
+            '/*@__PURE__*/${ctx.helper('mergeDefaults')}'
             '($propsDecls, {\n  ${defaults.join(',\n  ')}\n})';
       }
     }
@@ -253,8 +260,7 @@ String? genRuntimeEmits(SetupContext ctx) {
     emitsDecl = ctx.view.textOf(ctx.emitsRuntimeDecl!).trim();
   } else if (ctx.emitsTypeDecl != null) {
     final events = extractRuntimeEmits(ctx);
-    emitsDecl =
-        events.isEmpty ? '' : '[${events.map(jsonString).join(', ')}]';
+    emitsDecl = events.isEmpty ? '' : '[${events.map(jsonString).join(', ')}]';
   }
   if (ctx.hasDefineModelCall) {
     final modelEvents =
@@ -272,8 +278,9 @@ String? genModelProps(SetupContext ctx) {
   for (final entry in ctx.modelDecls.entries) {
     final decl = _genModelEntry(ctx, entry.value);
     decls += '\n    ${jsonString(entry.key)}: $decl,';
-    final modifiers =
-        entry.key == 'modelValue' ? 'modelModifiers' : '${entry.key}Modifiers';
+    final modifiers = entry.key == 'modelValue'
+        ? 'modelModifiers'
+        : '${entry.key}Modifiers';
     decls += '\n    ${jsonString(modifiers)}: {},';
   }
   return '{$decls\n  }';

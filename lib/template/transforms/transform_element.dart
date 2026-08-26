@@ -26,11 +26,12 @@ void _postTransformElement(TmplNode node, TransformContext context) {
   }
   final tag = node.tag;
   final isComponent = node.tagType == etComponent;
-  final vnodeTag =
-      isComponent ? resolveComponentType(node, context) : '"$tag"';
-  final isDynamicComponent = vnodeTag is JSCallExpression &&
+  final vnodeTag = isComponent ? resolveComponentType(node, context) : '"$tag"';
+  final isDynamicComponent =
+      vnodeTag is JSCallExpression &&
       vnodeTag.callee == hResolveDynamicComponent;
-  var shouldUseBlock = isDynamicComponent ||
+  var shouldUseBlock =
+      isDynamicComponent ||
       vnodeTag == hTeleport ||
       vnodeTag == hSuspense ||
       (!isComponent &&
@@ -42,14 +43,19 @@ void _postTransformElement(TmplNode node, TransformContext context) {
   List<String>? dynamicPropNames;
   JSArrayExpression? vnodeDirectives;
   if (node.props.isNotEmpty) {
-    final r = buildProps(node, context,
-        isComponent: isComponent, isDynamicComponent: isDynamicComponent);
+    final r = buildProps(
+      node,
+      context,
+      isComponent: isComponent,
+      isDynamicComponent: isDynamicComponent,
+    );
     vnodeProps = r.props;
     patchFlag = r.patchFlag;
     dynamicPropNames = r.dynamicPropNames;
     if (r.directives.isNotEmpty) {
       vnodeDirectives = createArrayExp(
-          r.directives.map((dir) => buildDirectiveArgs(dir, context)).toList());
+        r.directives.map((dir) => buildDirectiveArgs(dir, context)).toList(),
+      );
     }
     if (r.shouldUseBlock) shouldUseBlock = true;
   }
@@ -63,20 +69,27 @@ void _postTransformElement(TmplNode node, TransformContext context) {
     vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames);
   }
   node.codegenNode = createVNodeCall(
-      context,
-      VNodeCallSpec(vnodeTag,
-          props: vnodeProps,
-          children: vnodeChildren,
-          patchFlag: patchFlag == 0 ? null : patchFlag,
-          dynamicProps: vnodeDynamicProps,
-          directives: vnodeDirectives,
-          isBlock: shouldUseBlock,
-          isComponent: isComponent,
-          loc: node.loc));
+    context,
+    VNodeCallSpec(
+      vnodeTag,
+      props: vnodeProps,
+      children: vnodeChildren,
+      patchFlag: patchFlag == 0 ? null : patchFlag,
+      dynamicProps: vnodeDynamicProps,
+      directives: vnodeDirectives,
+      isBlock: shouldUseBlock,
+      isComponent: isComponent,
+      loc: node.loc,
+    ),
+  );
 }
 
-(Object?, int, bool) _buildChildren(ElementNode node, Object vnodeTag,
-    bool isComponent, TransformContext context) {
+(Object?, int, bool) _buildChildren(
+  ElementNode node,
+  Object vnodeTag,
+  bool isComponent,
+  TransformContext context,
+) {
   var patchFlag = 0;
   var extraBlock = false;
   Object? vnodeChildren;
@@ -84,8 +97,13 @@ void _postTransformElement(TmplNode node, TransformContext context) {
     extraBlock = true;
     patchFlag |= 1024;
     if (node.children.length > 1) {
-      context.onError(TmplCompileError(
-          46, '<KeepAlive> expects exactly one child component.', node.loc));
+      context.onError(
+        TmplCompileError(
+          46,
+          '<KeepAlive> expects exactly one child component.',
+          node.loc,
+        ),
+      );
     }
   }
   final shouldBuildAsSlots =
@@ -113,8 +131,11 @@ void _postTransformElement(TmplNode node, TransformContext context) {
   return (vnodeChildren, patchFlag, extraBlock);
 }
 
-Object resolveComponentType(ElementNode node, TransformContext context,
-    [bool ssr = false]) {
+Object resolveComponentType(
+  ElementNode node,
+  TransformContext context, [
+  bool ssr = false,
+]) {
   var tag = node.tag;
   final isExplicitDynamic = isComponentTag(tag);
   final isProp = findProp(node, 'is', false, true);
@@ -161,8 +182,10 @@ Object? _dynamicComponentExp(TransformContext context, Object isProp) {
     if (exp == null) {
       isProp.exp = createSimpleExp('is', false, isProp.arg?.loc);
       if (context.prefixIdentifiers) {
-        isProp.exp =
-            processExpression(isProp.exp! as SimpleExpression, context);
+        isProp.exp = processExpression(
+          isProp.exp! as SimpleExpression,
+          context,
+        );
       }
       exp = isProp.exp;
     }
@@ -206,13 +229,15 @@ String? resolveSetupReference(String name, TransformContext context) {
     return null;
   }
 
-  final fromConst = checkType('setup-const') ??
+  final fromConst =
+      checkType('setup-const') ??
       checkType('setup-reactive-const') ??
       checkType('literal-const');
   if (fromConst != null) {
     return context.inline ? fromConst : '\$setup[${jsonEncode(fromConst)}]';
   }
-  final fromMaybeRef = checkType('setup-let') ??
+  final fromMaybeRef =
+      checkType('setup-let') ??
       checkType('setup-ref') ??
       checkType('setup-maybe-ref');
   if (fromMaybeRef != null) {

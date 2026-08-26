@@ -38,9 +38,11 @@ void _walkDocument(CssContainer container, void Function(CssNode) visitor) {
 }
 
 void _collectKeyframes(
-    CssAtRule node, String shortId, Map<String, String> keyframes) {
-  if (_keyframesRE.hasMatch(node.name) &&
-      !node.params.endsWith('-$shortId')) {
+  CssAtRule node,
+  String shortId,
+  Map<String, String> keyframes,
+) {
+  if (_keyframesRE.hasMatch(node.name) && !node.params.endsWith('-$shortId')) {
     keyframes[node.params] = node.params = '${node.params}-$shortId';
   }
 }
@@ -54,20 +56,24 @@ void _rewriteAnimationDecls(CssRoot root, Map<String, String> keyframes) {
           .join(',');
     }
     if (_animationRE.hasMatch(decl.prop)) {
-      decl.value = decl.value.split(',').map((v) {
-        final vals = v.trim().split(RegExp(r'\s+'));
-        final i = vals.indexWhere(keyframes.containsKey);
-        if (i == -1) return v;
-        vals[i] = keyframes[vals[i]]!;
-        return vals.join(' ');
-      }).join(',');
+      decl.value = decl.value
+          .split(',')
+          .map((v) {
+            final vals = v.trim().split(RegExp(r'\s+'));
+            final i = vals.indexWhere(keyframes.containsKey);
+            if (i == -1) return v;
+            vals[i] = keyframes[vals[i]]!;
+            return vals.join(' ');
+          })
+          .join(',');
     }
   });
 }
 
 void _processRule(String id, CssRule rule, Set<CssRule> processed) {
   final parent = rule.parent;
-  final insideKeyframes = parent is CssAtRule && _keyframesRE.hasMatch(parent.name);
+  final insideKeyframes =
+      parent is CssAtRule && _keyframesRE.hasMatch(parent.name);
   if (processed.contains(rule) || insideKeyframes) return;
   processed.add(rule);
   rule.selector = transformSelector(rule.selector, (selectorRoot) {
@@ -87,8 +93,13 @@ bool _isDeep(CssRule rule) {
   return false;
 }
 
-void _rewriteSelector(String id, CssRule rule, SelSelector selector, bool deep,
-    [bool slotted = false]) {
+void _rewriteSelector(
+  String id,
+  CssRule rule,
+  SelSelector selector,
+  bool deep, [
+  bool slotted = false,
+]) {
   SelNode? node;
   var shouldInject = !deep;
   selector.each((n) {
@@ -113,7 +124,8 @@ void _rewriteSelector(String id, CssRule rule, SelSelector selector, bool deep,
       if (res.skip) return null;
     }
     final plain = n.type != 'pseudo' && n.type != 'combinator';
-    final isWhere = n.type == 'pseudo' &&
+    final isWhere =
+        n.type == 'pseudo' &&
         (n.value == ':is' || n.value == ':where') &&
         node == null;
     if (plain || isWhere) node = n;
@@ -131,8 +143,13 @@ void _rewriteSelector(String id, CssRule rule, SelSelector selector, bool deep,
 
 /// Returns (handled, shouldInject override). :deep/:global leave shouldInject
 /// unchanged; :slotted forces it to false.
-({bool handled, bool? shouldInject}) _pseudoBranch(String id, CssRule rule,
-    SelSelector selector, SelPseudo pseudo, bool deep) {
+({bool handled, bool? shouldInject}) _pseudoBranch(
+  String id,
+  CssRule rule,
+  SelSelector selector,
+  SelPseudo pseudo,
+  bool deep,
+) {
   final value = pseudo.value;
   if (value == ':deep' || value == '::v-deep') {
     rule.deep = true;
@@ -176,8 +193,13 @@ void _dropDeepCombinator(SelSelector selector, SelPseudo pseudo) {
   selector.removeChild(pseudo);
 }
 
-void _rewriteSlotted(String id, CssRule rule, SelSelector selector,
-    SelPseudo pseudo, bool deep) {
+void _rewriteSlotted(
+  String id,
+  CssRule rule,
+  SelSelector selector,
+  SelPseudo pseudo,
+  bool deep,
+) {
   _rewriteSelector(id, rule, pseudo.nodes[0] as SelSelector, deep, true);
   SelNode last = pseudo;
   (pseudo.nodes[0] as SelContainer).each((ss) {
@@ -192,7 +214,10 @@ void _rewriteSlotted(String id, CssRule rule, SelSelector selector,
 /// already assigned; no prev -> drop the star, or replace a lone star with an
 /// empty combinator that becomes the injection point.
 ({bool stop, bool skip, SelNode? node}) _universalBranch(
-    SelSelector selector, SelNode n, bool nodeSet) {
+  SelSelector selector,
+  SelNode n,
+  bool nodeSet,
+) {
   final prev = selector.at(selector.index(n) - 1);
   final next = selector.at(selector.index(n) + 1);
   if (prev == null) {
@@ -237,8 +262,7 @@ bool _wrapNestedRules(CssRule rule, bool shouldInject) {
 void _extractAndWrapNodes(CssContainer parentNode) {
   final nodes = parentNode.nodes;
   if (nodes == null) return;
-  final decls =
-      nodes.where((n) => n is CssDecl || n is CssComment).toList();
+  final decls = nodes.where((n) => n is CssDecl || n is CssComment).toList();
   if (decls.isEmpty) return;
   for (final n in decls) {
     parentNode.removeChild(n);
@@ -251,8 +275,13 @@ void _extractAndWrapNodes(CssContainer parentNode) {
   parentNode.prepend(wrapped);
 }
 
-void _injectAttribute(String id, SelSelector selector, SelNode? node,
-    bool shouldInject, bool slotted) {
+void _injectAttribute(
+  String id,
+  SelSelector selector,
+  SelNode? node,
+  bool shouldInject,
+  bool slotted,
+) {
   if (node != null) {
     node.spaces.after = '';
   } else {

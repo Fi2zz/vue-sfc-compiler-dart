@@ -40,12 +40,12 @@ void traverseChildren(TmplNode parent, TransformContext context) {
 }
 
 List<TmplNode> _childList(TmplNode node) => switch (node) {
-      RootNode n => n.children,
-      ElementNode n => n.children,
-      IfBranchNode n => n.children,
-      ForNode n => n.children,
-      _ => throw StateError('no children: ${node.type}'),
-    };
+  RootNode n => n.children,
+  ElementNode n => n.children,
+  IfBranchNode n => n.children,
+  ForNode n => n.children,
+  _ => throw StateError('no children: ${node.type}'),
+};
 
 void traverseNode(TmplNode node, TransformContext context) {
   context.currentNode = node;
@@ -94,9 +94,9 @@ void _traverseDown(TmplNode node, TransformContext context) {
 
 /// Port of createStructuralDirectiveTransform: [name] is String or RegExp.
 NodeTransform createStructuralDirectiveTransform(
-    Object name,
-    Object? Function(TmplNode node, DirectiveNode dir, TransformContext ctx)
-        fn) {
+  Object name,
+  Object? Function(TmplNode node, DirectiveNode dir, TransformContext ctx) fn,
+) {
   bool matches(String n) =>
       name is String ? n == name : (name as RegExp).hasMatch(n);
   return (node, context) {
@@ -127,10 +127,9 @@ void createRootCodegen(RootNode root, TransformContext context) {
   final children = root.children;
   if (children.length == 1) {
     final singleElementRootChild = _getSingleElementRoot(root);
-    Object? codegenNode =
-        singleElementRootChild is ElementNode
-            ? singleElementRootChild.codegenNode
-            : null;
+    Object? codegenNode = singleElementRootChild is ElementNode
+        ? singleElementRootChild.codegenNode
+        : null;
     if (singleElementRootChild != null && codegenNode != null) {
       if (codegenNode is VNodeCall) {
         convertToBlock(codegenNode, context);
@@ -146,17 +145,19 @@ void createRootCodegen(RootNode root, TransformContext context) {
     }
     context.helper(hFragment);
     root.codegenNode = createVNodeCall(
-        context,
-        VNodeCallSpec(hFragment,
-            children: root.children,
-            patchFlag: patchFlag,
-            isBlock: true));
+      context,
+      VNodeCallSpec(
+        hFragment,
+        children: root.children,
+        patchFlag: patchFlag,
+        isBlock: true,
+      ),
+    );
   }
 }
 
 ElementNode? _getSingleElementRoot(RootNode root) {
-  final children =
-      root.children.where((x) => x.type != ntComment).toList();
+  final children = root.children.where((x) => x.type != ntComment).toList();
   return children.length == 1 &&
           children[0].type == ntElement &&
           !isSlotOutlet(children[0])

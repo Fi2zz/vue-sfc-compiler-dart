@@ -27,15 +27,19 @@ ElementNode? _singleElementRoot(RootNode root) {
       : null;
 }
 
-void _walk(TmplNode node, TmplNode? parent, TransformContext context,
-    bool doNotHoistNode, bool inFor) {
+void _walk(
+  TmplNode node,
+  TmplNode? parent,
+  TransformContext context,
+  bool doNotHoistNode,
+  bool inFor,
+) {
   final children = _children(node);
   final toCache = <TmplNode>[];
   for (var i = 0; i < children.length; i++) {
     final child = children[i];
     if (child is ElementNode && child.tagType == etElement) {
-      final constantType =
-          doNotHoistNode ? 0 : getConstantType(child, context);
+      final constantType = doNotHoistNode ? 0 : getConstantType(child, context);
       if (constantType > 0) {
         if (constantType >= ctCanHoist) {
           (child.codegenNode as VNodeCall).patchFlag = -1;
@@ -54,14 +58,12 @@ void _walk(TmplNode node, TmplNode? parent, TransformContext context,
             }
           }
           if (codegenNode.dynamicProps != null) {
-            codegenNode.dynamicProps =
-                context.hoist(codegenNode.dynamicProps);
+            codegenNode.dynamicProps = context.hoist(codegenNode.dynamicProps);
           }
         }
       }
     } else if (child is TextCallNode) {
-      final constantType =
-          doNotHoistNode ? 0 : getConstantType(child, context);
+      final constantType = doNotHoistNode ? 0 : getConstantType(child, context);
       if (constantType >= ctCanHoist) {
         final cn = child.codegenNode;
         if (cn is JSCallExpression && cn.arguments.isNotEmpty) {
@@ -73,7 +75,13 @@ void _walk(TmplNode node, TmplNode? parent, TransformContext context,
     }
     _walkChild(child, node, context, inFor);
   }
-  var cachedAsArray = _tryCacheAsArray(node, parent, children, toCache, context);
+  var cachedAsArray = _tryCacheAsArray(
+    node,
+    parent,
+    children,
+    toCache,
+    context,
+  );
   if (!cachedAsArray) {
     for (final child in toCache) {
       _setCodegenNode(child, context.cache(_codegenNodeOf(child)));
@@ -85,7 +93,11 @@ void _walk(TmplNode node, TmplNode? parent, TransformContext context,
 }
 
 void _walkChild(
-    TmplNode child, TmplNode node, TransformContext context, bool inFor) {
+  TmplNode child,
+  TmplNode node,
+  TransformContext context,
+  bool inFor,
+) {
   if (child is ElementNode) {
     final isComponent = child.tagType == etComponent;
     if (isComponent) context.scopes.vSlot++;
@@ -100,8 +112,13 @@ void _walkChild(
   }
 }
 
-bool _tryCacheAsArray(TmplNode node, TmplNode? parent,
-    List<TmplNode> children, List<TmplNode> toCache, TransformContext context) {
+bool _tryCacheAsArray(
+  TmplNode node,
+  TmplNode? parent,
+  List<TmplNode> children,
+  List<TmplNode> toCache,
+  TransformContext context,
+) {
   if (toCache.length != children.length || node is! ElementNode) {
     return false;
   }
@@ -115,14 +132,17 @@ bool _tryCacheAsArray(TmplNode node, TmplNode? parent,
   if (node.tagType == etElement &&
       codegenNode is VNodeCall &&
       codegenNode.children is List) {
-    codegenNode.children =
-        wrapArray(createArrayExp(List<Object?>.of(codegenNode.children as List)));
+    codegenNode.children = wrapArray(
+      createArrayExp(List<Object?>.of(codegenNode.children as List)),
+    );
     return true;
   }
   if (node.tagType == etComponent && codegenNode is VNodeCall) {
     final slot = _getSlotNode(codegenNode.children, 'default');
     if (slot != null) {
-      slot.returns = wrapArray(createArrayExp(List<Object?>.of(slot.returns as List)));
+      slot.returns = wrapArray(
+        createArrayExp(List<Object?>.of(slot.returns as List)),
+      );
       return true;
     }
   }
@@ -136,8 +156,9 @@ bool _tryCacheAsArray(TmplNode node, TmplNode? parent,
           ? _getSlotNodeFromArg(parentCn.children, slotDir!.arg!)
           : null;
       if (slot != null) {
-        slot.returns =
-            wrapArray(createArrayExp(List<Object?>.of(slot.returns as List)));
+        slot.returns = wrapArray(
+          createArrayExp(List<Object?>.of(slot.returns as List)),
+        );
         return true;
       }
     }
@@ -172,20 +193,20 @@ JSFunctionExpression? _getSlotNodeFromArg(Object? children, Object arg) {
 }
 
 List<TmplNode> _children(TmplNode node) => switch (node) {
-      RootNode n => n.children,
-      ElementNode n => n.children,
-      IfBranchNode n => n.children,
-      ForNode n => n.children,
-      _ => const [],
-    };
+  RootNode n => n.children,
+  ElementNode n => n.children,
+  IfBranchNode n => n.children,
+  ForNode n => n.children,
+  _ => const [],
+};
 
 Object? _codegenNodeOf(TmplNode node) => switch (node) {
-      ElementNode n => n.codegenNode,
-      TextCallNode n => n.codegenNode,
-      IfNode n => n.codegenNode,
-      ForNode n => n.codegenNode,
-      _ => null,
-    };
+  ElementNode n => n.codegenNode,
+  TextCallNode n => n.codegenNode,
+  IfNode n => n.codegenNode,
+  ForNode n => n.codegenNode,
+  _ => null,
+};
 
 void _setCodegenNode(TmplNode node, Object? codegenNode) {
   switch (node) {
@@ -245,7 +266,10 @@ int getConstantType(TmplNode node, TransformContext context) {
 }
 
 int _elementConstantType(
-    ElementNode node, VNodeCall codegenNode, TransformContext context) {
+  ElementNode node,
+  VNodeCall codegenNode,
+  TransformContext context,
+) {
   var returnType = ctCanStringify;
   final generatedPropsType = getGeneratedPropsConstantType(node, context);
   if (generatedPropsType == 0) {
@@ -271,7 +295,10 @@ int _elementConstantType(
 }
 
 int _bindPropsConstantType(
-    ElementNode node, int returnType, TransformContext context) {
+  ElementNode node,
+  int returnType,
+  TransformContext context,
+) {
   if (returnType <= ctCanSkipPatch) return returnType;
   for (final p in node.props) {
     if (p is DirectiveNode && p.name == 'bind' && p.exp != null) {
@@ -287,8 +314,11 @@ int _bindPropsConstantType(
 }
 
 int _maybeUnblock(
-    ElementNode node, VNodeCall codegenNode, TransformContext context,
-    int returnType) {
+  ElementNode node,
+  VNodeCall codegenNode,
+  TransformContext context,
+  int returnType,
+) {
   if (!codegenNode.isBlock) return returnType;
   for (final p in node.props) {
     if (p is DirectiveNode) {
@@ -298,17 +328,18 @@ int _maybeUnblock(
   }
   context.removeHelper(hOpenBlock);
   context.removeHelper(
-      getVNodeBlockHelper(context.inSSR, codegenNode.isComponent));
+    getVNodeBlockHelper(context.inSSR, codegenNode.isComponent),
+  );
   codegenNode.isBlock = false;
   context.helper(getVNodeHelper(context.inSSR, codegenNode.isComponent));
   return returnType;
 }
 
 TmplNode _contentOf(TmplNode node) => switch (node) {
-      InterpolationNode n => n.content,
-      TextCallNode n => n.content,
-      _ => node,
-    };
+  InterpolationNode n => n.content,
+  TextCallNode n => n.content,
+  _ => node,
+};
 
 int _compoundConstantType(CompoundExpression node, TransformContext context) {
   var returnType = ctCanStringify;
@@ -339,8 +370,7 @@ int _getConstantTypeOfHelperCall(Object? value, TransformContext context) {
   return 0;
 }
 
-int getGeneratedPropsConstantType(
-    ElementNode node, TransformContext context) {
+int getGeneratedPropsConstantType(ElementNode node, TransformContext context) {
   var returnType = ctCanStringify;
   final props = getNodeProps(node);
   if (props is JSObjectExpression) {

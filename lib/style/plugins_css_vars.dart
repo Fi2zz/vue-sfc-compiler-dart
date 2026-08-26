@@ -3,8 +3,7 @@
 import 'css_ast.dart';
 
 final _vBindRE = RegExp(r'v-bind\s*\(');
-final _escapeSymbolsRE =
-    RegExp(r"""[ !"#$%&'()*+,./:;<=>?@\[\\\]^`{|}~]""");
+final _escapeSymbolsRE = RegExp(r"""[ !"#$%&'()*+,./:;<=>?@\[\\\]^`{|}~]""");
 
 /// shared.getEscapedCssVarName(key, doubleEscape=false).
 String escapedCssVarName(String key) =>
@@ -33,8 +32,9 @@ String hashSum(String s) {
 int _fold(int hash, String text) {
   if (text.isEmpty) return hash;
   for (var i = 0; i < text.length; i++) {
-    hash = (((hash << 5).toSigned(32) - hash) + text.codeUnitAt(i))
-        .toSigned(32);
+    hash = (((hash << 5).toSigned(32) - hash) + text.codeUnitAt(i)).toSigned(
+      32,
+    );
   }
   return hash < 0 ? hash * -2 : hash;
 }

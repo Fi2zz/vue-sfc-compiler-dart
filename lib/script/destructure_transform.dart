@@ -12,7 +12,9 @@ import 'src_view.dart';
 final _identRe = RegExp(r'^[_$a-zA-Z\xA0-￿][_$a-zA-Z0-9\xA0-￿]*$');
 
 String genPropsAccessExp(String name) {
-  return _identRe.hasMatch(name) ? '__props.$name' : '__props[${jsonEncode(name)}]';
+  return _identRe.hasMatch(name)
+      ? '__props.$name'
+      : '__props[${jsonEncode(name)}]';
 }
 
 String jsonEncode(String s) {
@@ -76,7 +78,8 @@ void transformDestructuredProps(
     for (final decl in childrenOfType(stmt, 'variable_declarator')) {
       final id = decl.children.first;
       final init = _lastNonAnnotation(decl);
-      final isDefineProps = isRoot &&
+      final isDefineProps =
+          isRoot &&
           init != null &&
           _isCallNamed(unwrapForCall(init), 'defineProps', ctx.view);
       for (final ident in extractIdentifiers(id)) {
@@ -98,7 +101,8 @@ void transformDestructuredProps(
           stmt.type == 'generator_function_declaration' ||
           stmt.type == 'class_declaration' ||
           stmt.type == 'abstract_class_declaration') {
-        final id = childOfType(stmt, 'identifier') ??
+        final id =
+            childOfType(stmt, 'identifier') ??
             childOfType(stmt, 'type_identifier');
         if (id != null) registerLocal(id);
       } else if ((stmt.type == 'for_in_statement' ||
@@ -134,10 +138,7 @@ void transformDestructuredProps(
                 identical(id, parent.children.first)) ||
             parent.type == 'augmented_assignment_expression' ||
             parent.type == 'update_expression')) {
-      ctx.fail(
-        'Cannot assign to destructured props as they are readonly.',
-        id,
-      );
+      ctx.fail('Cannot assign to destructured props as they are readonly.', id);
     }
     final name = ctx.view.textOf(id);
     final access = genPropsAccessExp(localToPublic[name]!);

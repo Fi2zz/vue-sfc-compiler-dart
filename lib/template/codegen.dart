@@ -39,8 +39,7 @@ final class CodegenContext {
 
   CodegenContext(RootNode ast, this.options) : source = _sourceOf(ast) {
     if (options.sourceMap) {
-      map = SourceMapGenerator()
-        ..setSourceContent(options.filename, source);
+      map = SourceMapGenerator()..setSourceContent(options.filename, source);
     }
   }
 
@@ -89,14 +88,16 @@ final class CodegenContext {
   }
 
   void _addMapping(TmplPosition pos, String? name) {
-    map!.addMapping(SourceMapMapping(
-      originalLine: pos.line,
-      originalColumn: pos.column - 1,
-      generatedLine: line,
-      generatedColumn: column - 1,
-      source: options.filename,
-      name: name,
-    ));
+    map!.addMapping(
+      SourceMapMapping(
+        originalLine: pos.line,
+        originalColumn: pos.column - 1,
+        generatedLine: line,
+        generatedColumn: column - 1,
+        source: options.filename,
+        name: name,
+      ),
+    );
   }
 
   void _advance(String code) {
@@ -139,22 +140,33 @@ final class CodegenResult {
 CodegenResult generate(RootNode ast, CodegenOptions options) {
   final context = CodegenContext(ast, options);
   final isSetupInlined = options.inline;
-  final preambleContext =
-      isSetupInlined ? CodegenContext(ast, options) : context;
+  final preambleContext = isSetupInlined
+      ? CodegenContext(ast, options)
+      : context;
   if (options.mode == 'module') {
     _genModulePreamble(
-        ast, preambleContext, options.scopeId != null, isSetupInlined);
+      ast,
+      preambleContext,
+      options.scopeId != null,
+      isSetupInlined,
+    );
   } else {
     _genFunctionPreamble(ast, preambleContext);
   }
   _genRenderFunction(ast, context, options);
-  return CodegenResult(ast, context.code,
-      isSetupInlined ? preambleContext.code : '',
-      context.map?.toJSON(file: options.filename));
+  return CodegenResult(
+    ast,
+    context.code,
+    isSetupInlined ? preambleContext.code : '',
+    context.map?.toJSON(file: options.filename),
+  );
 }
 
 void _genRenderFunction(
-    RootNode ast, CodegenContext context, CodegenOptions options) {
+  RootNode ast,
+  CodegenContext context,
+  CodegenOptions options,
+) {
   context.push(_renderSignature(options));
   context.indent();
   // 官方 useWithBlock：mode !== 'module' 且 prefixIdentifiers:false 时
@@ -216,17 +228,20 @@ void _genAssetsAndTemps(RootNode ast, CodegenContext context) {
       context.push('${i > 0 ? ', ' : ''}_temp$i');
     }
   }
-  if (ast.components.isNotEmpty ||
-      ast.directives.isNotEmpty ||
-      ast.temps > 0) {
+  if (ast.components.isNotEmpty || ast.directives.isNotEmpty || ast.temps > 0) {
     context.push('\n', newlineIndex: 0);
     context.newline();
   }
 }
 
 void _genAssets(List<String> assets, String type, CodegenContext context) {
-  final resolver = context
-      .helper(type == 'filter' ? hResolveFilter : type == 'component' ? hResolveComponent : hResolveDirective);
+  final resolver = context.helper(
+    type == 'filter'
+        ? hResolveFilter
+        : type == 'component'
+        ? hResolveComponent
+        : hResolveDirective,
+  );
   for (var i = 0; i < assets.length; i++) {
     var id = assets[i];
     final maybeSelfReference = id.endsWith('__self');
@@ -234,26 +249,34 @@ void _genAssets(List<String> assets, String type, CodegenContext context) {
     final isTs = context.options.isTS ? '!' : '';
     final self = maybeSelfReference ? ', true' : '';
     context.push(
-        'const ${toValidAssetId(id, type)} = $resolver(${jsonEncode(id)}$self)$isTs');
+      'const ${toValidAssetId(id, type)} = $resolver(${jsonEncode(id)}$self)$isTs',
+    );
     if (i < assets.length - 1) context.newline();
   }
 }
 
-void _genModulePreamble(RootNode ast, CodegenContext context, bool genScopeId,
-    bool inline) {
+void _genModulePreamble(
+  RootNode ast,
+  CodegenContext context,
+  bool genScopeId,
+  bool inline,
+) {
   if (ast.helpers.isNotEmpty) {
     final helpers = ast.helpers.toList();
     if (context.options.optimizeImports) {
       context.push(
-          'import { ${helpers.join(', ')} } from ${jsonEncode(context.options.runtimeModuleName)}\n',
-          newlineIndex: -1);
+        'import { ${helpers.join(', ')} } from ${jsonEncode(context.options.runtimeModuleName)}\n',
+        newlineIndex: -1,
+      );
       context.push(
-          '\n// Binding optimization for webpack code-split\nconst ${helpers.map((s) => '_$s = $s').join(', ')}\n',
-          newlineIndex: -1);
+        '\n// Binding optimization for webpack code-split\nconst ${helpers.map((s) => '_$s = $s').join(', ')}\n',
+        newlineIndex: -1,
+      );
     } else {
       context.push(
-          'import { ${helpers.map((s) => '$s as _$s').join(', ')} } from ${jsonEncode(context.options.runtimeModuleName)}\n',
-          newlineIndex: -1);
+        'import { ${helpers.map((s) => '$s as _$s').join(', ')} } from ${jsonEncode(context.options.runtimeModuleName)}\n',
+        newlineIndex: -1,
+      );
     }
   }
   if (ast.imports.isNotEmpty) {
@@ -271,8 +294,9 @@ void _genFunctionPreamble(RootNode ast, CodegenContext context) {
   if (helpers.isNotEmpty) {
     if (context.options.prefixIdentifiers) {
       context.push(
-          'const { ${helpers.map((s) => '$s: _$s').join(', ')} } = $vueBinding\n',
-          newlineIndex: -1);
+        'const { ${helpers.map((s) => '$s: _$s').join(', ')} } = $vueBinding\n',
+        newlineIndex: -1,
+      );
     } else {
       context.push('const _Vue = $vueBinding\n', newlineIndex: -1);
       if (ast.hoists.isNotEmpty) {
@@ -288,7 +312,10 @@ void _genFunctionPreamble(RootNode ast, CodegenContext context) {
 /// 官方 genFunctionPreamble 非 prefix 分支：有 hoist 时把静态创建类 helper
 /// 从 _Vue 解构（hoist 在 with (_ctx) 之外生成，需独立可见）。
 void _genStaticHelperDestructure(
-    RootNode ast, List<String> helpers, CodegenContext context) {
+  RootNode ast,
+  List<String> helpers,
+  CodegenContext context,
+) {
   const statics = [
     hCreateVNode,
     hCreateElementVNode,
@@ -296,8 +323,7 @@ void _genStaticHelperDestructure(
     hCreateText,
     hCreateStatic,
   ];
-  final used =
-      statics.where(helpers.contains).map((s) => '$s: _$s').join(', ');
+  final used = statics.where(helpers.contains).map((s) => '$s: _$s').join(', ');
   context.push('const { $used } = _Vue\n', newlineIndex: -1);
 }
 

@@ -33,9 +33,10 @@ final class _Specifier {
 /// Compile <script setup> into runtime code. Returns the generated code plus
 /// the official-style bindingMetadata consumed by compileTemplate.
 ({String code, Map<String, String> bindings}) compileScriptSetup(
-    SfcDescriptor descriptor,
-    {bool hoistStatic = true,
-    bool inlineTemplate = false}) {
+  SfcDescriptor descriptor, {
+  bool hoistStatic = true,
+  bool inlineTemplate = false,
+}) {
   final source = descriptor.source;
   final filename = descriptor.filename;
   final script = descriptor.script;
@@ -57,10 +58,12 @@ final class _Specifier {
 
   final startOffset = source.indexOf('>', scriptSetup.locStart) + 1;
   final endOffset = source.lastIndexOf('</', scriptSetup.locEnd);
-  final scriptStartOffset =
-      script == null ? -1 : source.indexOf('>', script.locStart) + 1;
-  final scriptEndOffset =
-      script == null ? -1 : source.lastIndexOf('</', script.locEnd);
+  final scriptStartOffset = script == null
+      ? -1
+      : source.indexOf('>', script.locStart) + 1;
+  final scriptEndOffset = script == null
+      ? -1
+      : source.lastIndexOf('</', script.locEnd);
 
   final setupSource = source.substring(startOffset, endOffset);
   final lang = ts ? 'ts' : 'js';
@@ -70,8 +73,7 @@ final class _Specifier {
   SrcView? scriptView;
   final typeScope = <String, TypeScopeEntry>{};
   if (script != null) {
-    final scriptSource =
-        source.substring(scriptStartOffset, scriptEndOffset);
+    final scriptSource = source.substring(scriptStartOffset, scriptEndOffset);
     scriptRoot = parser.parse(code: scriptSource, language: lang);
     scriptView = SrcView(scriptSource);
     // normal <script> type declarations are visible to setup type resolution
@@ -135,8 +137,7 @@ final class _Specifier {
   }
 
   // 2.2 process <script setup> body
-  _processSetupBody(ctx, s, setupRoot, vueImportAliases,
-      hoistStatic: hoist);
+  _processSetupBody(ctx, s, setupRoot, vueImportAliases, hoistStatic: hoist);
 
   // 3 props destructure transform
   if (ctx.propsDestructureDecl != null) {
@@ -206,8 +207,15 @@ final class _Specifier {
   }
 
   // 10. finalize default export
-  _assembleHeader(ctx, s, args, propsDecl, defaultExport != null,
-      inlineTemplate: inlineTemplate, bodyPrefix: cssVarsPrefix);
+  _assembleHeader(
+    ctx,
+    s,
+    args,
+    propsDecl,
+    defaultExport != null,
+    inlineTemplate: inlineTemplate,
+    bodyPrefix: cssVarsPrefix,
+  );
 
   // 11. finalize Vue helper imports
   if (ctx.helperImports.isNotEmpty) {
@@ -305,7 +313,13 @@ _Specifier _namedSpecifier(
   final local = ids.length > 1 ? view.textOf(ids[1]) : imported;
   final specTypeOnly =
       view.slice(spec.startByte, ids.first.startByte).trim() == 'type';
-  return _Specifier(spec, source, local, imported, stmtTypeOnly || specTypeOnly);
+  return _Specifier(
+    spec,
+    source,
+    local,
+    imported,
+    stmtTypeOnly || specTypeOnly,
+  );
 }
 
 /// Port of the setup-import dedupe pass (official step 1.2).
@@ -389,7 +403,12 @@ void _hoistNode(SetupContext ctx, MiniMagic s, int startByte, int endByte) {
 }
 
 bool _isWhitespace(int cu) =>
-    cu == 0x20 || cu == 0x09 || cu == 0x0A || cu == 0x0D || cu == 0x0B || cu == 0x0C;
+    cu == 0x20 ||
+    cu == 0x09 ||
+    cu == 0x0A ||
+    cu == 0x0D ||
+    cu == 0x0B ||
+    cu == 0x0C;
 
 // ---------------------------------------------------------------------------
 // normal <script>
@@ -421,21 +440,36 @@ AstNode? _processNormalScript(
           'const $normalScriptDefaultVar = ',
         );
       } else if (decl != null && decl.type == 'export_clause') {
-        _processExportDefaultSpecifier(ctx, s, node, decl, view, abs,
-            scriptEndOffset);
+        _processExportDefaultSpecifier(
+          ctx,
+          s,
+          node,
+          decl,
+          view,
+          abs,
+          scriptEndOffset,
+        );
       }
       if (decl != null && _isDeclarable(decl)) {
         // 官方 from === 'script'：静态 const 一律登记 literal-const。
-        walkDeclaration(ctx, decl, ctx.scriptBindings,
-            vueImportAliases: vueImportAliases,
-            fromScript: true,
-            view: view);
-      }
-    } else if (_isDeclarable(node)) {
-      walkDeclaration(ctx, node, ctx.scriptBindings,
+        walkDeclaration(
+          ctx,
+          decl,
+          ctx.scriptBindings,
           vueImportAliases: vueImportAliases,
           fromScript: true,
-          view: view);
+          view: view,
+        );
+      }
+    } else if (_isDeclarable(node)) {
+      walkDeclaration(
+        ctx,
+        node,
+        ctx.scriptBindings,
+        vueImportAliases: vueImportAliases,
+        fromScript: true,
+        view: view,
+      );
     }
   }
   return defaultExport;
@@ -500,8 +534,7 @@ void _processExportDefaultSpecifier(
     }
   }
   if (defaultSpec == null) return;
-  final local =
-      view.textOf(childrenOfType(defaultSpec, 'identifier').first);
+  final local = view.textOf(childrenOfType(defaultSpec, 'identifier').first);
   if (specifiers.length > 1) {
     s.remove(abs(defaultSpec.startByte), abs(defaultSpec.endByte));
   } else {
@@ -511,14 +544,9 @@ void _processExportDefaultSpecifier(
   if (sourceNode != null) {
     final frag = childOfType(sourceNode, 'string_fragment');
     final src = frag == null ? view.textOf(sourceNode) : view.textOf(frag);
-    s.prepend(
-      "import { $local as $normalScriptDefaultVar } from '$src'\n",
-    );
+    s.prepend("import { $local as $normalScriptDefaultVar } from '$src'\n");
   } else {
-    s.appendLeft(
-      scriptEndOffset,
-      '\nconst $normalScriptDefaultVar = $local\n',
-    );
+    s.appendLeft(scriptEndOffset, '\nconst $normalScriptDefaultVar = $local\n');
   }
 }
 
@@ -536,7 +564,8 @@ void _processSetupBody(
   for (final node in root.children) {
     if (node.type == 'expression_statement' && node.children.isNotEmpty) {
       final expr = unwrapTSNode(node.children.first);
-      final consumed = processDefineProps(ctx, expr) ||
+      final consumed =
+          processDefineProps(ctx, expr) ||
           processDefineEmits(ctx, expr) ||
           processDefineOptions(ctx, expr) ||
           processDefineSlots(ctx, expr, s);
@@ -783,12 +812,14 @@ void _assembleHeader(
   if (ctx.optionsRuntimeDecl != null) {
     definedOptions = ctx.view.textOf(ctx.optionsRuntimeDecl!).trim();
   }
-  final exposeCall =
-      ctx.hasDefineExposeCall || inlineTemplate ? '' : '  __expose();\n';
+  final exposeCall = ctx.hasDefineExposeCall || inlineTemplate
+      ? ''
+      : '  __expose();\n';
   final async = ctx.hasAwait ? 'async ' : '';
 
   if (ctx.ts) {
-    final def = (hasDefaultExport ? '\n  ...$normalScriptDefaultVar,' : '') +
+    final def =
+        (hasDefaultExport ? '\n  ...$normalScriptDefaultVar,' : '') +
         (definedOptions.isNotEmpty ? '\n  ...$definedOptions,' : '');
     s.prependLeft(
       ctx.startOffset,

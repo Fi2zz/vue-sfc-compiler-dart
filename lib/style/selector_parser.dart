@@ -7,7 +7,12 @@ part 'selector_parser_attribute.dart';
 
 const _whitespaceTokens = {tkSpace, tkCr, tkFeed, tkNewline, tkTab};
 const _whitespaceEquivTokens = {
-  tkSpace, tkCr, tkFeed, tkNewline, tkTab, tkComment,
+  tkSpace,
+  tkCr,
+  tkFeed,
+  tkNewline,
+  tkTab,
+  tkComment,
 };
 
 /// Mirrors selectorParser(func).processSync(css): parse, run [transform] on
@@ -83,7 +88,8 @@ final class SelParser {
         throw SelSyntaxError('Expected a backslash preceding the semicolon.');
       default:
         throw SelSyntaxError(
-            "Unexpected '${content()}'. Escaping special characters with \\ may help.");
+          "Unexpected '${content()}'. Escaping special characters with \\ may help.",
+        );
     }
   }
 
@@ -129,8 +135,7 @@ final class SelParser {
   }
 
   void _namespace() {
-    final Object before =
-        prevToken != null ? content(prevToken!) : true;
+    final Object before = prevToken != null ? content(prevToken!) : true;
     final next = nextToken;
     if (next != null && next.type == tkWord) {
       position++;
@@ -170,7 +175,8 @@ final class SelParser {
     final next = nextToken;
     final onlyComments = current.nodes.every((n) => n.type == 'comment');
     if (position == 0 ||
-        (prev != null && (prev.type == tkComma || prev.type == tkOpenParenthesis)) ||
+        (prev != null &&
+            (prev.type == tkComma || prev.type == tkOpenParenthesis)) ||
         onlyComments) {
       spaces = c;
       position++;
@@ -205,8 +211,9 @@ final class SelParser {
       _trailingCombinator(nextSig);
       return;
     }
-    final spaceNodes =
-        nextSig > position ? _parseWhitespaceEquivalentTokens(nextSig) : null;
+    final spaceNodes = nextSig > position
+        ? _parseWhitespaceEquivalentTokens(nextSig)
+        : null;
     final node = _combinatorNode(spaceNodes);
     if (position < tokens.length && currToken.type == tkSpace) {
       node.spaces.after = content();
@@ -241,7 +248,8 @@ final class SelParser {
       node = null;
     } else if (spaceNodes == null) {
       throw SelSyntaxError(
-          "Unexpected '${content()}'. Escaping special characters with \\ may help.");
+        "Unexpected '${content()}'. Escaping special characters with \\ may help.",
+      );
     }
     if (node != null) {
       if (spaceNodes != null) _applySpaceBefore(node, spaceNodes);
@@ -263,8 +271,10 @@ final class SelParser {
     final node = SelCombinator(value: ' ');
     if (space2.endsWith(' ') && rawSpace2.endsWith(' ')) {
       node.spaces.before = space2.substring(0, space2.length - 1);
-      node.ensureRaws().spaces['before'] =
-          rawSpace2.substring(0, rawSpace2.length - 1);
+      node.ensureRaws().spaces['before'] = rawSpace2.substring(
+        0,
+        rawSpace2.length - 1,
+      );
     } else if (space2.startsWith(' ') && rawSpace2.startsWith(' ')) {
       node.spaces.after = space2.substring(1);
       node.ensureRaws().spaces['after'] = rawSpace2.substring(1);
@@ -346,7 +356,9 @@ final class SelParser {
   // -------------------------------------------------------------- splitWord
 
   void _splitWord(
-      Object? namespace, void Function(String first, int length)? onFirst) {
+    Object? namespace,
+    void Function(String first, int length)? onFirst,
+  ) {
     var word = _mergedWord();
     final hasClass = _splitIndices(word, '.');
     var hasId = _splitIndices(word, '#');
@@ -354,7 +366,11 @@ final class SelParser {
     if (interpolations.isNotEmpty) {
       hasId = hasId.where((i) => !interpolations.contains(i)).toList();
     }
-    final indices = {...{0}, ...hasClass, ...hasId}.toList()..sort();
+    final indices = {
+      ...{0},
+      ...hasClass,
+      ...hasId,
+    }.toList()..sort();
     var ns = namespace;
     for (var i = 0; i < indices.length; i++) {
       final start = indices[i];
@@ -395,8 +411,7 @@ final class SelParser {
     for (var i = 0; i < word.length; i++) {
       if (word[i] != ch) continue;
       final escaped = i > 0 && word[i - 1] == '\\';
-      final keyframesPct =
-          ch == '.' && RegExp(r'^\d+\.\d+%$').hasMatch(word);
+      final keyframesPct = ch == '.' && RegExp(r'^\d+\.\d+%$').hasMatch(word);
       if (!escaped && !keyframesPct) result.add(i);
     }
     return result;
@@ -499,8 +514,9 @@ final class SelParser {
   }
 
   ({String space, String? rawSpace}) _convertWhitespaceNodesToSpace(
-      List<SelNode> nodes,
-      [bool requiredSpace = false]) {
+    List<SelNode> nodes, [
+    bool requiredSpace = false,
+  ]) {
     var space = '';
     var rawSpace = '';
     for (final n in nodes) {

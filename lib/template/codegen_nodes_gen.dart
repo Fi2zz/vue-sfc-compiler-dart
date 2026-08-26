@@ -36,8 +36,11 @@ void genNode(Object? node, CodegenContext context) {
     case TextNode n:
       context.push(jsonEncode(n.content), newlineIndex: -3, node: n);
     case SimpleExpression n:
-      context.push(n.static_ ? jsonEncode(n.content) : n.content,
-          newlineIndex: -3, node: n);
+      context.push(
+        n.static_ ? jsonEncode(n.content) : n.content,
+        newlineIndex: -3,
+        node: n,
+      );
     case InterpolationNode n:
       _genInterpolation(n, context);
     case TextCallNode n:
@@ -98,8 +101,10 @@ final class _CodegenMissingError implements Exception {
 
 void _genCodegenOf(Object? codegenNode, CodegenContext context, Object node) {
   if (codegenNode == null) {
-    throw _CodegenMissingError('Codegen node is missing for element/if/for '
-        'node. Apply appropriate transforms first.');
+    throw _CodegenMissingError(
+      'Codegen node is missing for element/if/for '
+      'node. Apply appropriate transforms first.',
+    );
   }
   genNode(codegenNode, context);
 }
@@ -114,9 +119,10 @@ void _genInterpolation(InterpolationNode node, CodegenContext context) {
 void _genComment(CommentNode node, CodegenContext context) {
   if (context.pure) context.push(pureAnnotation);
   context.push(
-      '${context.helper(hCreateComment)}(${jsonEncode(node.content)})',
-      newlineIndex: -3,
-      node: node);
+    '${context.helper(hCreateComment)}(${jsonEncode(node.content)})',
+    newlineIndex: -3,
+    node: node,
+  );
 }
 
 void _genCompoundExpression(CompoundExpression node, CodegenContext context) {
@@ -135,8 +141,12 @@ void genNodeListAsArray(List<Object?> nodes, CodegenContext context) {
   context.push(']');
 }
 
-void genNodeList(List<Object?> nodes, CodegenContext context,
-    {bool multilines = false, bool comma = true}) {
+void genNodeList(
+  List<Object?> nodes,
+  CodegenContext context, {
+  bool multilines = false,
+  bool comma = true,
+}) {
   for (var i = 0; i < nodes.length; i++) {
     final node = nodes[i];
     if (node is List) {
@@ -176,7 +186,8 @@ void _genObjectExpression(JSObjectExpression node, CodegenContext context) {
     context.push('{}', newlineIndex: -2, node: node);
     return;
   }
-  final multilines = properties.length > 1 ||
+  final multilines =
+      properties.length > 1 ||
       properties.any((p) => p.value is! SimpleExpression);
   context.push(multilines ? '{' : '{ ');
   if (multilines) context.indent();
@@ -244,7 +255,9 @@ void _genFunctionExpression(JSFunctionExpression node, CodegenContext context) {
 }
 
 void _genConditionalExpression(
-    JSConditionalExpression node, CodegenContext context) {
+  JSConditionalExpression node,
+  CodegenContext context,
+) {
   final test = node.test;
   final needNewline = node.newline;
   if (test is SimpleExpression) {
@@ -305,8 +318,10 @@ void _genTemplateLiteral(JSTemplateLiteral node, CodegenContext context) {
   for (var i = 0; i < l; i++) {
     final e = node.elements[i];
     if (e is String) {
-      context.push(e.replaceAllMapped(
-          RegExp(r'(`|\$|\\)'), (m) => '\\${m[0]}'), newlineIndex: -3);
+      context.push(
+        e.replaceAllMapped(RegExp(r'(`|\$|\\)'), (m) => '\\${m[0]}'),
+        newlineIndex: -3,
+      );
     } else {
       context.push('\${');
       if (multilines) context.indent();
@@ -352,23 +367,24 @@ void _genVNodeCall(VNodeCall node, CodegenContext context) {
   }
   if (node.isBlock) {
     context.push(
-        '(${context.helper(hOpenBlock)}(${node.disableTracking ? 'true' : ''}), ');
+      '(${context.helper(hOpenBlock)}(${node.disableTracking ? 'true' : ''}), ',
+    );
   }
   if (context.pure) context.push(pureAnnotation);
   final callHelper = node.isBlock
       ? getVNodeBlockHelper(context.options.inSSR, node.isComponent)
       : getVNodeHelper(context.options.inSSR, node.isComponent);
-  context.push('${context.helper(callHelper)}(',
-      newlineIndex: -2, node: node);
+  context.push('${context.helper(callHelper)}(', newlineIndex: -2, node: node);
   genNodeList(
-      _genNullableArgs([
-        node.tag,
-        node.props,
-        node.children,
-        patchFlagString,
-        node.dynamicProps
-      ]),
-      context);
+    _genNullableArgs([
+      node.tag,
+      node.props,
+      node.children,
+      patchFlagString,
+      node.dynamicProps,
+    ]),
+    context,
+  );
   context.push(')');
   if (node.isBlock) context.push(')');
   if (node.directives != null) {
@@ -394,8 +410,5 @@ List<Object?> _genNullableArgs(List<Object?> args) {
   while (i-- > 0) {
     if (args[i] != null) break;
   }
-  return args
-      .sublist(0, i + 1)
-      .map((arg) => arg ?? 'null')
-      .toList();
+  return args.sublist(0, i + 1).map((arg) => arg ?? 'null').toList();
 }

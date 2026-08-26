@@ -6,7 +6,7 @@ part of 'oxc_mapper.dart';
 
 extension OxcExprMapper on OxcMapper {
   /// Dispatch one ESTree expression node to its tree-sitter shape.
-  AstNode mapExpression(Map<String, dynamic> n) {
+  AstNode mapExpression(EstNode n) {
     final type = n['type'] as String;
     final start = n['start'] as int;
     final end = n['end'] as int;
@@ -122,12 +122,14 @@ extension OxcExprMapper on OxcMapper {
   }
 
   /// Map an assignment-target pattern (also used for declarator ids).
-  AstNode mapPattern(Map<String, dynamic> n) {
+  AstNode mapPattern(EstNode n) {
     if (n['type'] == 'AssignmentPattern') {
-      return buildNode('assignment_pattern', n['start'] as int, n['end'] as int, [
-        mapPattern(_m(n['left'])),
-        mapExpression(_m(n['right'])),
-      ]);
+      return buildNode(
+        'assignment_pattern',
+        n['start'] as int,
+        n['end'] as int,
+        [mapPattern(_m(n['left'])), mapExpression(_m(n['right']))],
+      );
     }
     if (n['type'] == 'RestElement') {
       return buildNode('rest_pattern', n['start'] as int, n['end'] as int, [
@@ -138,7 +140,7 @@ extension OxcExprMapper on OxcMapper {
   }
 
   /// Literal kinds: regex / bigint / bool / null / number / string.
-  AstNode mapLiteral(Map<String, dynamic> n) {
+  AstNode mapLiteral(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final raw = n['raw'] as String? ?? '';
@@ -159,14 +161,19 @@ extension OxcExprMapper on OxcMapper {
   }
 
   /// regex: children regex_pattern + optional regex_flags.
-  AstNode mapRegex(Map<String, dynamic> n) {
+  AstNode mapRegex(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final regex = _m(n['regex']);
     final pattern = regex['pattern'] as String;
     final flags = regex['flags'] as String;
     return buildNode('regex', start, end, [
-      buildNode('regex_pattern', start + 1, start + 1 + pattern.length, const []),
+      buildNode(
+        'regex_pattern',
+        start + 1,
+        start + 1 + pattern.length,
+        const [],
+      ),
       flags.isEmpty
           ? null
           : buildNode('regex_flags', end - flags.length, end, const []),
@@ -175,7 +182,7 @@ extension OxcExprMapper on OxcMapper {
 
   /// template_string: interleaved string_fragment / template_substitution.
   /// Empty fragments are omitted (tree-sitter drops zero-length fragments).
-  AstNode mapTemplateString(Map<String, dynamic> n) {
+  AstNode mapTemplateString(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final quasis = n['quasis'] as List;
@@ -188,7 +195,7 @@ extension OxcExprMapper on OxcMapper {
     return buildNode('template_string', start, end, kids);
   }
 
-  AstNode? _templateFragment(Map<String, dynamic> quasi) {
+  AstNode? _templateFragment(EstNode quasi) {
     // oxc TemplateElement spans include the delimiters: leading backtick or
     // `}` (1 byte), trailing `${` (2 bytes) or closing backtick (tail, 1
     // byte). The tree-sitter string_fragment covers only the content.
@@ -198,7 +205,7 @@ extension OxcExprMapper on OxcMapper {
     return buildNode('string_fragment', start, end, const []);
   }
 
-  AstNode _templateSubstitution(Map<String, dynamic> expr) {
+  AstNode _templateSubstitution(EstNode expr) {
     final start = expr['start'] as int;
     final end = expr['end'] as int;
     return buildNode('template_substitution', start - 2, end + 1, [
@@ -208,7 +215,7 @@ extension OxcExprMapper on OxcMapper {
 
   /// call_expression / new_expression: callee + type_arguments + arguments
   /// (span covers the parens). `new Foo` without parens has no arguments.
-  AstNode mapCallLike(Map<String, dynamic> n, String kind) {
+  AstNode mapCallLike(EstNode n, String kind) {
     final callee = _m(n['callee']);
     final typeArgs = n['typeArguments'];
     final searchFrom = typeArgs == null
@@ -240,7 +247,7 @@ extension OxcExprMapper on OxcMapper {
   }
 
   /// import(...): call_expression with an `import` leaf as the callee.
-  AstNode _importExpression(Map<String, dynamic> n) {
+  AstNode _importExpression(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final kids = <AstNode?>[
@@ -255,14 +262,18 @@ extension OxcExprMapper on OxcMapper {
 
   /// member_expression (dot) / subscript_expression (computed), inserting an
   /// optional_chain node for `?.` like tree-sitter does.
-  AstNode mapMember(Map<String, dynamic> n) {
+  AstNode mapMember(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final object = mapExpression(_m(n['object']));
     final prop = _m(n['property']);
     final chain = n['optional'] == true
-        ? buildNode('optional_chain', (prop['start'] as int) - 2,
-            prop['start'] as int, const [])
+        ? buildNode(
+            'optional_chain',
+            (prop['start'] as int) - 2,
+            prop['start'] as int,
+            const [],
+          )
         : null;
     if (n['computed'] == true) {
       return buildNode('subscript_expression', start, end, [
@@ -274,14 +285,18 @@ extension OxcExprMapper on OxcMapper {
     return buildNode('member_expression', start, end, [
       object,
       chain,
-      buildNode('property_identifier', prop['start'] as int,
-          prop['end'] as int, const []),
+      buildNode(
+        'property_identifier',
+        prop['start'] as int,
+        prop['end'] as int,
+        const [],
+      ),
     ]);
   }
 
   /// arrow_function: type params + formal_parameters + return type + body;
   /// a single unparenthesized identifier param is a bare identifier child.
-  AstNode mapArrow(Map<String, dynamic> n) {
+  AstNode mapArrow(EstNode n) {
     final params = n['params'] as List;
     final bare = _bareParam(params);
     final paramsNode = bare != null
@@ -299,14 +314,15 @@ extension OxcExprMapper on OxcMapper {
     ]);
   }
 
-  Map<String, dynamic>? _bareParam(List params) {
+  EstNode? _bareParam(List<dynamic> params) {
     if (params.length != 1) return null;
     final p = _m(params.first);
     if (p['type'] != 'Identifier') return null;
     // Bare iff the token after the param is `=>` (a parenthesized param is
     // followed by `)` first).
     final after = skipWs(p['end'] as int);
-    final bare = after + 1 < bytes.length &&
+    final bare =
+        after + 1 < bytes.length &&
         bytes[after] == 0x3D &&
         bytes[after + 1] == 0x3E;
     return bare ? p : null;
@@ -314,7 +330,7 @@ extension OxcExprMapper on OxcMapper {
 
   /// function_expression / function_declaration / generators: name +
   /// type params + formal_parameters + return type + statement_block.
-  AstNode mapFunction(Map<String, dynamic> n, String kind) {
+  AstNode mapFunction(EstNode n, String kind) {
     final id = n['id'];
     return buildNode(kind, n['start'] as int, n['end'] as int, [
       id == null ? null : mapExpression(_m(id)),
@@ -355,15 +371,13 @@ extension OxcExprMapper on OxcMapper {
   /// One formal parameter: the typescript grammar wraps every parameter in
   /// required_parameter / optional_parameter (rest wrapped again in
   /// rest_pattern); the javascript grammar uses bare patterns.
-  AstNode mapParameter(Map<String, dynamic> p) {
+  AstNode mapParameter(EstNode p) {
     final start = p['start'] as int;
     final end = p['end'] as int;
     if (!tsMode) return mapPattern(p);
     if (p['type'] == 'RestElement') {
       return buildNode('required_parameter', start, end, [
-        buildNode('rest_pattern', start, end, [
-          mapPattern(_m(p['argument'])),
-        ]),
+        buildNode('rest_pattern', start, end, [mapPattern(_m(p['argument']))]),
       ]);
     }
     if (p['type'] == 'AssignmentPattern') {
@@ -374,7 +388,7 @@ extension OxcExprMapper on OxcMapper {
 
   /// Parameter with a default value; a type annotation may sit between the
   /// pattern and the default: required_parameter[id, annotation, default].
-  AstNode _defaultParameter(Map<String, dynamic> p) {
+  AstNode _defaultParameter(EstNode p) {
     final start = p['start'] as int;
     final end = p['end'] as int;
     final left = _m(p['left']);
@@ -394,7 +408,7 @@ extension OxcExprMapper on OxcMapper {
   }
 
   /// required_parameter / optional_parameter: pattern + type_annotation.
-  AstNode _annotatedParameter(Map<String, dynamic> p) {
+  AstNode _annotatedParameter(EstNode p) {
     final start = p['start'] as int;
     final end = p['end'] as int;
     final kind = p['optional'] == true
@@ -410,20 +424,28 @@ extension OxcExprMapper on OxcMapper {
     // oxc pattern spans include the annotation; tree-sitter crops them.
     final ann = mapTypeNode(_m(p['typeAnnotation']));
     final pattern = mapPattern(p);
-    final cropped = buildNode(pattern.type, pattern.startByte,
-        skipWsBack(ann.startByte), pattern.children);
+    final cropped = buildNode(
+      pattern.type,
+      pattern.startByte,
+      skipWsBack(ann.startByte),
+      pattern.children,
+    );
     return buildNode(kind, start, end, [cropped, ann]);
   }
 
   /// Object-literal property: pair / shorthand / method / spread.
-  AstNode mapObjectProperty(Map<String, dynamic> p) {
+  AstNode mapObjectProperty(EstNode p) {
     if (p['type'] == 'SpreadElement') return mapExpression(p);
     if (p['method'] == true || p['kind'] != 'init') {
       return mapMethodLike(p, 'method_definition');
     }
     if (p['shorthand'] == true) {
-      return buildNode('shorthand_property_identifier', p['start'] as int,
-          p['end'] as int, const []);
+      return buildNode(
+        'shorthand_property_identifier',
+        p['start'] as int,
+        p['end'] as int,
+        const [],
+      );
     }
     return buildNode('pair', p['start'] as int, p['end'] as int, [
       mapPropertyKey(_m(p['key']), p['computed'] == true),
@@ -432,7 +454,7 @@ extension OxcExprMapper on OxcMapper {
   }
 
   /// Pattern-side object property: shorthand / pair_pattern / default.
-  AstNode mapPatternProperty(Map<String, dynamic> p) {
+  AstNode mapPatternProperty(EstNode p) {
     if (p['type'] == 'RestElement') return mapPattern(p);
     final start = p['start'] as int;
     final end = p['end'] as int;
@@ -444,8 +466,12 @@ extension OxcExprMapper on OxcMapper {
       ]);
     }
     if (p['shorthand'] == true) {
-      return buildNode('shorthand_property_identifier_pattern', start, end,
-          const []);
+      return buildNode(
+        'shorthand_property_identifier_pattern',
+        start,
+        end,
+        const [],
+      );
     }
     return buildNode('pair_pattern', start, end, [
       mapPropertyKey(_m(p['key']), p['computed'] == true),
@@ -455,17 +481,21 @@ extension OxcExprMapper on OxcMapper {
 
   /// Left side of a pattern default: a bare identifier becomes
   /// shorthand_property_identifier_pattern in tree-sitter.
-  AstNode _patternDefaultLeft(Map<String, dynamic> left) {
+  AstNode _patternDefaultLeft(EstNode left) {
     if (left['type'] == 'Identifier') {
-      return buildNode('shorthand_property_identifier_pattern',
-          left['start'] as int, left['end'] as int, const []);
+      return buildNode(
+        'shorthand_property_identifier_pattern',
+        left['start'] as int,
+        left['end'] as int,
+        const [],
+      );
     }
     return mapPattern(left);
   }
 
   /// Object key: property_identifier / string / number /
   /// computed_property_name (span covers the brackets).
-  AstNode mapPropertyKey(Map<String, dynamic> key, bool computed) {
+  AstNode mapPropertyKey(EstNode key, bool computed) {
     final start = key['start'] as int;
     final end = key['end'] as int;
     if (computed) {
@@ -480,7 +510,7 @@ extension OxcExprMapper on OxcMapper {
   }
 
   /// method_definition shared by object methods and class members.
-  AstNode mapMethodLike(Map<String, dynamic> p, String kind) {
+  AstNode mapMethodLike(EstNode p, String kind) {
     final value = _m(p['value']);
     final params = value['params'] as List? ?? const [];
     final body = value['body'];

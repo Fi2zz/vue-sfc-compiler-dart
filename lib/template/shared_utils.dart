@@ -10,18 +10,21 @@ bool Function(String) makeMap(String str) {
 }
 
 final isReservedProp = makeMap(
-    ',key,ref,ref_for,ref_key,onVnodeBeforeMount,onVnodeMounted,'
-    'onVnodeBeforeUpdate,onVnodeUpdated,onVnodeBeforeUnmount,onVnodeUnmounted');
+  ',key,ref,ref_for,ref_key,onVnodeBeforeMount,onVnodeMounted,'
+  'onVnodeBeforeUpdate,onVnodeUpdated,onVnodeBeforeUnmount,onVnodeUnmounted',
+);
 
-final isBuiltInDirective =
-    makeMap('bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,'
-        'slot,text,memo');
+final isBuiltInDirective = makeMap(
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,'
+  'slot,text,memo',
+);
 
 final isGloballyAllowed = makeMap(
-    'Infinity,undefined,NaN,isFinite,isNaN,parseFloat,parseInt,decodeURI,'
-    'decodeURIComponent,encodeURI,encodeURIComponent,Math,Number,Date,Array,'
-    'Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,console,Error,'
-    'Symbol');
+  'Infinity,undefined,NaN,isFinite,isNaN,parseFloat,parseInt,decodeURI,'
+  'decodeURIComponent,encodeURI,encodeURIComponent,Math,Number,Date,Array,'
+  'Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,console,Error,'
+  'Symbol',
+);
 
 bool isOn(String key) =>
     key.length > 2 &&
@@ -33,8 +36,8 @@ bool isModelListener(String key) => key.startsWith('onUpdate:');
 
 final _camelizeRE = RegExp(r'-\w');
 
-String camelize(String str) => str.replaceAllMapped(
-    _camelizeRE, (m) => m[0]!.substring(1).toUpperCase());
+String camelize(String str) =>
+    str.replaceAllMapped(_camelizeRE, (m) => m[0]!.substring(1).toUpperCase());
 
 final _hyphenateRE = RegExp(r'\B([A-Z])');
 
@@ -80,8 +83,12 @@ DirectiveNode? findDir(TmplNode node, Object name, [bool allowEmpty = false]) {
   return null;
 }
 
-Object? findProp(TmplNode node, String name,
-    [bool dynamicOnly = false, bool allowEmpty = false]) {
+Object? findProp(
+  TmplNode node,
+  String name, [
+  bool dynamicOnly = false,
+  bool allowEmpty = false,
+]) {
   if (node is! ElementNode) return null;
   for (final p in node.props) {
     if (p is AttributeNode) {
@@ -100,12 +107,14 @@ Object? findProp(TmplNode node, String name,
 bool isStaticArgOf(Object? arg, String name) =>
     arg is SimpleExpression && arg.static_ && arg.content == name;
 
-bool hasDynamicKeyVBind(ElementNode node) => node.props.any((p) =>
-    p is DirectiveNode &&
-    p.name == 'bind' &&
-    (p.arg == null ||
-        p.arg is! SimpleExpression ||
-        !(p.arg as SimpleExpression).static_));
+bool hasDynamicKeyVBind(ElementNode node) => node.props.any(
+  (p) =>
+      p is DirectiveNode &&
+      p.name == 'bind' &&
+      (p.arg == null ||
+          p.arg is! SimpleExpression ||
+          !(p.arg as SimpleExpression).static_),
+);
 
 String toValidAssetId(String name, String type) {
   final buf = StringBuffer('_${type}_');
@@ -119,8 +128,11 @@ String toValidAssetId(String name, String type) {
 
 // --- Position helpers ---
 
-TmplPosition advancePositionWithMutation(TmplPosition pos, String source,
-    [int? numberOfCharacters]) {
+TmplPosition advancePositionWithMutation(
+  TmplPosition pos,
+  String source, [
+  int? numberOfCharacters,
+]) {
   final n = numberOfCharacters ?? source.length;
   var linesCount = 0;
   var lastNewLinePos = -1;
@@ -132,13 +144,15 @@ TmplPosition advancePositionWithMutation(TmplPosition pos, String source,
   }
   pos.offset += n;
   pos.line += linesCount;
-  pos.column =
-      lastNewLinePos == -1 ? pos.column + n : n - lastNewLinePos;
+  pos.column = lastNewLinePos == -1 ? pos.column + n : n - lastNewLinePos;
   return pos;
 }
 
-TmplPosition advancePositionWithClone(TmplPosition pos, String source,
-    [int? numberOfCharacters]) {
+TmplPosition advancePositionWithClone(
+  TmplPosition pos,
+  String source, [
+  int? numberOfCharacters,
+]) {
   return advancePositionWithMutation(pos.clone(), source, numberOfCharacters);
 }
 

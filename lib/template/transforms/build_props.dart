@@ -12,8 +12,13 @@ final class PropsBuildResult {
   int patchFlag;
   List<String> dynamicPropNames;
   bool shouldUseBlock;
-  PropsBuildResult(this.props, this.directives, this.patchFlag,
-      this.dynamicPropNames, this.shouldUseBlock);
+  PropsBuildResult(
+    this.props,
+    this.directives,
+    this.patchFlag,
+    this.dynamicPropNames,
+    this.shouldUseBlock,
+  );
 }
 
 bool isComponentTag(String tag) => tag == 'component' || tag == 'Component';
@@ -33,11 +38,14 @@ class _BuildPropsState {
   final List<String> dynamicPropNames = [];
 }
 
-PropsBuildResult buildProps(ElementNode node, TransformContext context,
-    {List<TmplNode>? props,
-    required bool isComponent,
-    required bool isDynamicComponent,
-    bool ssr = false}) {
+PropsBuildResult buildProps(
+  ElementNode node,
+  TransformContext context, {
+  List<TmplNode>? props,
+  required bool isComponent,
+  required bool isDynamicComponent,
+  bool ssr = false,
+}) {
   final propList = props ?? node.props;
   final elementLoc = node.loc;
   final st = _BuildPropsState();
@@ -45,8 +53,9 @@ PropsBuildResult buildProps(ElementNode node, TransformContext context,
 
   void pushMergeArg([Object? arg]) {
     if (st.properties.isNotEmpty) {
-      st.mergeArgs
-          .add(createObjectExp(dedupeProperties(st.properties), elementLoc));
+      st.mergeArgs.add(
+        createObjectExp(dedupeProperties(st.properties), elementLoc),
+      );
       st.properties = [];
     }
     if (arg != null) st.mergeArgs.add(arg);
@@ -54,8 +63,12 @@ PropsBuildResult buildProps(ElementNode node, TransformContext context,
 
   void pushRefVForMarker() {
     if (context.scopes.vFor > 0) {
-      st.properties.add(createObjectProp(
-          createSimpleExp('ref_for', true), createSimpleExp('true')));
+      st.properties.add(
+        createObjectProp(
+          createSimpleExp('ref_for', true),
+          createSimpleExp('true'),
+        ),
+      );
     }
   }
 
@@ -64,27 +77,47 @@ PropsBuildResult buildProps(ElementNode node, TransformContext context,
     if (prop is AttributeNode) {
       _buildStaticProp(node, context, prop, st, pushRefVForMarker);
     } else if (prop is DirectiveNode) {
-      _buildDirectiveProp(node, context, prop, st, isComponent,
-          isDynamicComponent, ssr, hasChildren, pushMergeArg, pushRefVForMarker);
+      _buildDirectiveProp(
+        node,
+        context,
+        prop,
+        st,
+        isComponent,
+        isDynamicComponent,
+        ssr,
+        hasChildren,
+        pushMergeArg,
+        pushRefVForMarker,
+      );
     }
   }
-  final propsExpression =
-      _assemblePropsExpression(st, elementLoc, context);
+  final propsExpression = _assemblePropsExpression(st, elementLoc, context);
   _applyPatchFlags(st, isComponent);
   if (!context.inSSR && propsExpression != null) {
     return PropsBuildResult(
-        _normalizePropsExpression(propsExpression, st, context),
-        st.runtimeDirectives,
-        st.patchFlag,
-        st.dynamicPropNames,
-        st.shouldUseBlock);
+      _normalizePropsExpression(propsExpression, st, context),
+      st.runtimeDirectives,
+      st.patchFlag,
+      st.dynamicPropNames,
+      st.shouldUseBlock,
+    );
   }
-  return PropsBuildResult(propsExpression, st.runtimeDirectives, st.patchFlag,
-      st.dynamicPropNames, st.shouldUseBlock);
+  return PropsBuildResult(
+    propsExpression,
+    st.runtimeDirectives,
+    st.patchFlag,
+    st.dynamicPropNames,
+    st.shouldUseBlock,
+  );
 }
 
-void _buildStaticProp(ElementNode node, TransformContext context,
-    AttributeNode prop, _BuildPropsState st, void Function() pushRefVForMarker) {
+void _buildStaticProp(
+  ElementNode node,
+  TransformContext context,
+  AttributeNode prop,
+  _BuildPropsState st,
+  void Function() pushRefVForMarker,
+) {
   final name = prop.name;
   final value = prop.value;
   var isStatic = true;
@@ -97,8 +130,12 @@ void _buildStaticProp(ElementNode node, TransformContext context,
           binding == 'setup-ref' ||
           binding == 'setup-maybe-ref') {
         isStatic = false;
-        st.properties.add(createObjectProp(createSimpleExp('ref_key', true),
-            createSimpleExp(value.content, true, value.loc)));
+        st.properties.add(
+          createObjectProp(
+            createSimpleExp('ref_key', true),
+            createSimpleExp(value.content, true, value.loc),
+          ),
+        );
       }
     }
   }
@@ -107,23 +144,30 @@ void _buildStaticProp(ElementNode node, TransformContext context,
           (value != null && value.content.startsWith('vue:')))) {
     return;
   }
-  st.properties.add(createObjectProp(
+  st.properties.add(
+    createObjectProp(
       createSimpleExp(name, true, prop.nameLoc),
-      createSimpleExp(value?.content ?? '', isStatic,
-          value != null ? value.loc : prop.loc)));
+      createSimpleExp(
+        value?.content ?? '',
+        isStatic,
+        value != null ? value.loc : prop.loc,
+      ),
+    ),
+  );
 }
 
 void _buildDirectiveProp(
-    ElementNode node,
-    TransformContext context,
-    DirectiveNode prop,
-    _BuildPropsState st,
-    bool isComponent,
-    bool isDynamicComponent,
-    bool ssr,
-    bool hasChildren,
-    void Function([Object? arg]) pushMergeArg,
-    void Function() pushRefVForMarker) {
+  ElementNode node,
+  TransformContext context,
+  DirectiveNode prop,
+  _BuildPropsState st,
+  bool isComponent,
+  bool isDynamicComponent,
+  bool ssr,
+  bool hasChildren,
+  void Function([Object? arg]) pushMergeArg,
+  void Function() pushRefVForMarker,
+) {
   final name = prop.name;
   final arg = prop.arg;
   final isVBind = name == 'bind';
@@ -134,41 +178,72 @@ void _buildDirectiveProp(
   _maybeForceBlock(prop, isVBind, isVOn, hasChildren, st);
   if (isVBind && isStaticArgOf(arg, 'ref')) pushRefVForMarker();
   if (arg == null && (isVBind || isVOn)) {
-    _buildArglessDirective(node, context, prop, st, isVBind, isComponent,
-        pushMergeArg, pushRefVForMarker);
+    _buildArglessDirective(
+      node,
+      context,
+      prop,
+      st,
+      isVBind,
+      isComponent,
+      pushMergeArg,
+      pushRefVForMarker,
+    );
     return;
   }
   if (isVBind && prop.modifiers.any((m) => m.content == 'prop')) {
     st.patchFlag |= 32;
   }
-  _runDirectiveTransform(node, context, prop, st, isVOn, pushMergeArg,
-      hasChildren, isComponent, isDynamicComponent);
+  _runDirectiveTransform(
+    node,
+    context,
+    prop,
+    st,
+    isVOn,
+    pushMergeArg,
+    hasChildren,
+    isComponent,
+    isDynamicComponent,
+  );
 }
 
-bool _skipDirective(ElementNode node, TransformContext context,
-    DirectiveNode prop, bool isVBind, bool isVOn, bool ssr, bool isComponent) {
+bool _skipDirective(
+  ElementNode node,
+  TransformContext context,
+  DirectiveNode prop,
+  bool isVBind,
+  bool isVOn,
+  bool ssr,
+  bool isComponent,
+) {
   final name = prop.name;
   if (name == 'slot') {
     if (!isComponent) {
-      context.onError(TmplCompileError(
-          40, 'v-slot can only be used on components or <template> tags.',
-          prop.loc));
+      context.onError(
+        TmplCompileError(
+          40,
+          'v-slot can only be used on components or <template> tags.',
+          prop.loc,
+        ),
+      );
     }
     return true;
   }
   if (name == 'once' || name == 'memo') return true;
   if (name == 'is' ||
-      (isVBind &&
-          isStaticArgOf(prop.arg, 'is') &&
-          isComponentTag(node.tag))) {
+      (isVBind && isStaticArgOf(prop.arg, 'is') && isComponentTag(node.tag))) {
     return true;
   }
   if (isVOn && ssr) return true;
   return false;
 }
 
-void _maybeForceBlock(DirectiveNode prop, bool isVBind, bool isVOn,
-    bool hasChildren, _BuildPropsState st) {
+void _maybeForceBlock(
+  DirectiveNode prop,
+  bool isVBind,
+  bool isVOn,
+  bool hasChildren,
+  _BuildPropsState st,
+) {
   if ((isVBind && isStaticArgOf(prop.arg, 'key')) ||
       (isVOn && hasChildren && isStaticArgOf(prop.arg, 'vue:before-update'))) {
     st.shouldUseBlock = true;
@@ -176,23 +251,27 @@ void _maybeForceBlock(DirectiveNode prop, bool isVBind, bool isVOn,
 }
 
 void _buildArglessDirective(
-    ElementNode node,
-    TransformContext context,
-    DirectiveNode prop,
-    _BuildPropsState st,
-    bool isVBind,
-    bool isComponent,
-    void Function([Object? arg]) pushMergeArg,
-    void Function() pushRefVForMarker) {
+  ElementNode node,
+  TransformContext context,
+  DirectiveNode prop,
+  _BuildPropsState st,
+  bool isVBind,
+  bool isComponent,
+  void Function([Object? arg]) pushMergeArg,
+  void Function() pushRefVForMarker,
+) {
   st.hasDynamicKeys = true;
   final exp = prop.exp;
   if (exp == null) {
-    context.onError(TmplCompileError(
+    context.onError(
+      TmplCompileError(
         isVBind ? 34 : 35,
         isVBind
             ? 'v-bind is missing expression.'
             : 'v-on is missing expression.',
-        prop.loc));
+        prop.loc,
+      ),
+    );
     return;
   }
   if (isVBind) {
@@ -203,22 +282,23 @@ void _buildArglessDirective(
   } else {
     context.helper(hToHandlers);
     // 官方：toHandlers 调用携带指令 loc（映射起点/终点）。
-    pushMergeArg(createCallExp(
-        hToHandlers, isComponent ? [exp] : [exp, 'true'],
-        prop.loc));
+    pushMergeArg(
+      createCallExp(hToHandlers, isComponent ? [exp] : [exp, 'true'], prop.loc),
+    );
   }
 }
 
 void _runDirectiveTransform(
-    ElementNode node,
-    TransformContext context,
-    DirectiveNode prop,
-    _BuildPropsState st,
-    bool isVOn,
-    void Function([Object? arg]) pushMergeArg,
-    bool hasChildren,
-    bool isComponent,
-    bool isDynamicComponent) {
+  ElementNode node,
+  TransformContext context,
+  DirectiveNode prop,
+  _BuildPropsState st,
+  bool isVOn,
+  void Function([Object? arg]) pushMergeArg,
+  bool hasChildren,
+  bool isComponent,
+  bool isDynamicComponent,
+) {
   final directiveTransform = context.directiveTransforms[prop.name];
   if (directiveTransform != null) {
     final result = directiveTransform(prop, node, context);
@@ -242,8 +322,13 @@ void _runDirectiveTransform(
   }
 }
 
-void _analyzePatchFlag(JSProperty property, _BuildPropsState st,
-    bool isComponent, bool isDynamicComponent, TransformContext context) {
+void _analyzePatchFlag(
+  JSProperty property,
+  _BuildPropsState st,
+  bool isComponent,
+  bool isDynamicComponent,
+  TransformContext context,
+) {
   final key = property.key;
   var value = property.value;
   if (key is! SimpleExpression || !key.static_) {
@@ -263,7 +348,8 @@ void _analyzePatchFlag(JSProperty property, _BuildPropsState st,
   if (isEventHandler && value is JSCallExpression) {
     value = value.arguments.isNotEmpty ? value.arguments[0] : value;
   }
-  final constant = value is JSCacheExpression ||
+  final constant =
+      value is JSCacheExpression ||
       ((value is SimpleExpression || value is CompoundExpression) &&
           getConstantType(value as TmplNode, context) > 0);
   if (constant) return;
@@ -284,7 +370,10 @@ void _analyzePatchFlag(JSProperty property, _BuildPropsState st,
 }
 
 Object? _assemblePropsExpression(
-    _BuildPropsState st, TmplLoc elementLoc, TransformContext context) {
+  _BuildPropsState st,
+  TmplLoc elementLoc,
+  TransformContext context,
+) {
   if (st.mergeArgs.isNotEmpty) {
     _flushMergeProperties(st, elementLoc);
     if (st.mergeArgs.length > 1) {
@@ -301,8 +390,9 @@ Object? _assemblePropsExpression(
 
 void _flushMergeProperties(_BuildPropsState st, TmplLoc elementLoc) {
   if (st.properties.isNotEmpty) {
-    st.mergeArgs
-        .add(createObjectExp(dedupeProperties(st.properties), elementLoc));
+    st.mergeArgs.add(
+      createObjectExp(dedupeProperties(st.properties), elementLoc),
+    );
     st.properties = [];
   }
 }
@@ -324,7 +414,10 @@ void _applyPatchFlags(_BuildPropsState st, bool isComponent) {
 }
 
 Object? _normalizePropsExpression(
-    Object propsExpression, _BuildPropsState st, TransformContext context) {
+  Object propsExpression,
+  _BuildPropsState st,
+  TransformContext context,
+) {
   switch (propsExpression) {
     case JSObjectExpression objExpr:
       return _normalizeObjectProps(objExpr, st, context);
@@ -334,13 +427,16 @@ Object? _normalizePropsExpression(
       context.helper(hNormalizeProps);
       context.helper(hGuardReactiveProps);
       return createCallExp(hNormalizeProps, [
-        createCallExp(hGuardReactiveProps, [propsExpression])
+        createCallExp(hGuardReactiveProps, [propsExpression]),
       ]);
   }
 }
 
 Object? _normalizeObjectProps(
-    JSObjectExpression objExpr, _BuildPropsState st, TransformContext context) {
+  JSObjectExpression objExpr,
+  _BuildPropsState st,
+  TransformContext context,
+) {
   var classKeyIndex = -1;
   var styleKeyIndex = -1;
   var hasDynamicKey = false;
@@ -365,27 +461,35 @@ Object? _normalizeObjectProps(
 }
 
 void _normalizeClassProp(
-    JSObjectExpression objExpr, int classKeyIndex, TransformContext context) {
-  final classProp =
-      classKeyIndex >= 0 ? objExpr.properties[classKeyIndex] : null;
+  JSObjectExpression objExpr,
+  int classKeyIndex,
+  TransformContext context,
+) {
+  final classProp = classKeyIndex >= 0
+      ? objExpr.properties[classKeyIndex]
+      : null;
   if (classProp != null && !isStaticExp(classProp.value)) {
     context.helper(hNormalizeClass);
     classProp.value = createCallExp(hNormalizeClass, [classProp.value]);
   }
 }
 
-void _normalizeStyleProp(JSObjectExpression objExpr, int styleKeyIndex,
-    _BuildPropsState st, TransformContext context) {
-  final styleProp =
-      styleKeyIndex >= 0 ? objExpr.properties[styleKeyIndex] : null;
+void _normalizeStyleProp(
+  JSObjectExpression objExpr,
+  int styleKeyIndex,
+  _BuildPropsState st,
+  TransformContext context,
+) {
+  final styleProp = styleKeyIndex >= 0
+      ? objExpr.properties[styleKeyIndex]
+      : null;
   if (styleProp == null) return;
   final value = styleProp.value;
-  final dynamicArrayLiteral = value is SimpleExpression &&
+  final dynamicArrayLiteral =
+      value is SimpleExpression &&
       value.content.trim().isNotEmpty &&
       value.content.trim()[0] == '[';
-  if (st.hasStyleBinding ||
-      dynamicArrayLiteral ||
-      value is JSArrayExpression) {
+  if (st.hasStyleBinding || dynamicArrayLiteral || value is JSArrayExpression) {
     context.helper(hNormalizeStyle);
     styleProp.value = createCallExp(hNormalizeStyle, [value]);
   }
@@ -426,7 +530,9 @@ void _mergeAsArray(JSProperty existing, JSProperty incoming) {
 final directiveImportMap = <DirectiveNode, String>{};
 
 JSArrayExpression buildDirectiveArgs(
-    DirectiveNode dir, TransformContext context) {
+  DirectiveNode dir,
+  TransformContext context,
+) {
   final dirArgs = <Object?>[];
   final runtime = directiveImportMap[dir];
   if (runtime != null) {
@@ -446,11 +552,14 @@ JSArrayExpression buildDirectiveArgs(
       dirArgs.add('void 0');
     }
     final trueExpression = createSimpleExp('true', false, loc);
-    dirArgs.add(createObjectExp(
+    dirArgs.add(
+      createObjectExp(
         dir.modifiers
             .map((modifier) => createObjectProp(modifier, trueExpression))
             .toList(),
-        loc));
+        loc,
+      ),
+    );
   }
   return createArrayExp(dirArgs, dir.loc);
 }

@@ -14,8 +14,13 @@ final class PropData {
   final bool optional;
   final bool method;
 
-  PropData(this.key, this.typeNode, this.view,
-      {this.optional = false, this.method = false});
+  PropData(
+    this.key,
+    this.typeNode,
+    this.view, {
+    this.optional = false,
+    this.method = false,
+  });
 }
 
 /// Build a name -> declaration node map for a parsed script body.
@@ -35,7 +40,8 @@ Map<String, TypeScopeEntry> collectTypeScope(AstNode root, SrcView view) {
       if (_isTypeDecl(inner.type)) d = inner;
     }
     if (!_isTypeDecl(d.type)) continue;
-    final id = childOfType(d, 'type_identifier') ?? childOfType(d, 'identifier');
+    final id =
+        childOfType(d, 'type_identifier') ?? childOfType(d, 'identifier');
     if (id != null) out[view.textOf(id)] = (d, view);
   }
   return out;
@@ -54,7 +60,8 @@ bool _optionalMarker(SrcView view, AstNode nameNode, AstNode? annotation) {
 }
 
 String _propKey(SrcView view, AstNode node) {
-  final id = childOfType(node, 'property_identifier') ??
+  final id =
+      childOfType(node, 'property_identifier') ??
       childOfType(node, 'identifier') ??
       childOfType(node, 'string');
   if (id == null) return '';
@@ -94,8 +101,7 @@ TypeElements resolveTypeElements(
         break;
       case 'intersection_type':
       case 'union_type':
-        var pending =
-            (leadingIgnored && depth == 0) || ignored;
+        var pending = (leadingIgnored && depth == 0) || ignored;
         for (final c in n.children) {
           if (c.type == 'comment') {
             pending = view.textOf(c).contains('@vue-ignore');
@@ -124,8 +130,8 @@ void _fillFromMembers(AstNode n, SrcView view, TypeElements out) {
       final key = _propKey(view, m);
       if (key.isEmpty) continue;
       final ann = childOfType(m, 'type_annotation');
-      final nameNode = childOfType(m, 'property_identifier') ??
-          childOfType(m, 'string');
+      final nameNode =
+          childOfType(m, 'property_identifier') ?? childOfType(m, 'string');
       out.props[key] = PropData(
         key,
         ann,
@@ -135,8 +141,8 @@ void _fillFromMembers(AstNode n, SrcView view, TypeElements out) {
     } else if (m.type == 'method_signature') {
       final key = _propKey(view, m);
       if (key.isEmpty) continue;
-      final nameNode = childOfType(m, 'property_identifier') ??
-          childOfType(m, 'string');
+      final nameNode =
+          childOfType(m, 'property_identifier') ?? childOfType(m, 'string');
       out.props[key] = PropData(
         key,
         null,
@@ -157,8 +163,9 @@ void _fillFromReference(
   TypeElements out,
   int depth,
 ) {
-  final id =
-      n.type == 'type_identifier' ? n : childOfType(n, 'type_identifier');
+  final id = n.type == 'type_identifier'
+      ? n
+      : childOfType(n, 'type_identifier');
   if (id == null) return;
   final entry = scope[view.textOf(id)];
   if (entry == null) return;
@@ -205,9 +212,11 @@ List<String> inferRuntimeType(
     case 'union_type':
       return _flattenTypes(node.children, view, scope);
     case 'intersection_type':
-      return _flattenTypes(node.children, view, scope)
-          .where((t) => t != unknownType)
-          .toList(growable: false);
+      return _flattenTypes(
+        node.children,
+        view,
+        scope,
+      ).where((t) => t != unknownType).toList(growable: false);
     case 'parenthesized_type':
       return node.children.isEmpty
           ? const [unknownType]
@@ -239,9 +248,8 @@ List<String> _flattenTypes(
     members.add((c, pending));
     pending = false;
   }
-  List<String> of(AstNode t, bool ignored) => ignored
-      ? [unknownType]
-      : inferRuntimeType(t, view, scope);
+  List<String> of(AstNode t, bool ignored) =>
+      ignored ? [unknownType] : inferRuntimeType(t, view, scope);
   if (members.length == 1) return of(members.first.$1, members.first.$2);
   final seen = <String>{};
   final out = <String>[];
@@ -313,8 +321,9 @@ List<String> _referenceType(
   SrcView view,
   Map<String, TypeScopeEntry> scope,
 ) {
-  final id =
-      node.type == 'type_identifier' ? node : childOfType(node, 'type_identifier');
+  final id = node.type == 'type_identifier'
+      ? node
+      : childOfType(node, 'type_identifier');
   if (id == null) return const [unknownType];
   final name = view.textOf(id);
   final entry = scope[name];
@@ -350,11 +359,25 @@ List<String> _inferDeclared(
 
 List<String> _builtinType(String name) {
   const selves = {
-    'Array', 'Function', 'Object', 'Set', 'Map', 'WeakSet', 'WeakMap', 'Date',
-    'Promise', 'Error',
+    'Array',
+    'Function',
+    'Object',
+    'Set',
+    'Map',
+    'WeakSet',
+    'WeakMap',
+    'Date',
+    'Promise',
+    'Error',
   };
   const objects = {
-    'Partial', 'Required', 'Readonly', 'Record', 'Pick', 'Omit', 'InstanceType',
+    'Partial',
+    'Required',
+    'Readonly',
+    'Record',
+    'Pick',
+    'Omit',
+    'InstanceType',
   };
   const strings = {'Uppercase', 'Lowercase', 'Capitalize', 'Uncapitalize'};
   const arrays = {'Parameters', 'ConstructorParameters', 'ReadonlyArray'};

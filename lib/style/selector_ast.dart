@@ -249,8 +249,9 @@ final class SelPseudo extends SelContainer {
 
   @override
   String stringify() {
-    final params =
-        nodes.isEmpty ? '' : '(${nodes.map((n) => n.stringify()).join(',')})';
+    final params = nodes.isEmpty
+        ? ''
+        : '(${nodes.map((n) => n.stringify()).join(',')})';
     return '$rawSpaceBefore${valueToString()}$params$rawSpaceAfter';
   }
 }
@@ -301,13 +302,12 @@ final class SelAttribute extends SelNamespaceNode {
   }
 
   String _partValue(String name) => switch (name) {
-        'qualifiedAttribute' => qualifiedAttribute,
-        'operator' => operator ?? '',
-        'value' => _truthy(raws?.value) ?? attrValue ?? '',
-        'insensitiveFlag' =>
-          _truthy(raws?.insensitiveFlag) ?? insensitiveFlag,
-        _ => '',
-      };
+    'qualifiedAttribute' => qualifiedAttribute,
+    'operator' => operator ?? '',
+    'value' => _truthy(raws?.value) ?? attrValue ?? '',
+    'insensitiveFlag' => _truthy(raws?.insensitiveFlag) ?? insensitiveFlag,
+    _ => '',
+  };
 
   String _insensitiveString() {
     final sp = _spacesFor('insensitive');

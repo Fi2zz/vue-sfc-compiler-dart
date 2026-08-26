@@ -35,9 +35,13 @@ Object? transformStyle(TmplNode node, TransformContext context) {
   for (var i = 0; i < node.props.length; i++) {
     final p = node.props[i];
     if (p is AttributeNode && p.name == 'style' && p.value != null) {
-      node.props[i] = DirectiveNode('bind', ':style', p.loc,
-          arg: createSimpleExp('style', true, p.loc),
-          exp: _parseInlineCss(p.value!.content, p.loc));
+      node.props[i] = DirectiveNode(
+        'bind',
+        ':style',
+        p.loc,
+        arg: createSimpleExp('style', true, p.loc),
+        exp: _parseInlineCss(p.value!.content, p.loc),
+      );
     }
   }
   return null;
@@ -45,42 +49,49 @@ Object? transformStyle(TmplNode node, TransformContext context) {
 
 SimpleExpression _parseInlineCss(String cssText, TmplLoc loc) {
   final normalized = parseStringStyle(cssText);
-  return createSimpleExp(
-      jsonEncode(normalized), false, loc, ctCanStringify);
+  return createSimpleExp(jsonEncode(normalized), false, loc, ctCanStringify);
 }
 
 // --- v-html / v-text ---
 
 DirTransformResult transformVHtml(
-    DirectiveNode dir, ElementNode node, TransformContext context) {
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+) {
   final exp = dir.exp;
   final loc = dir.loc;
   if (exp == null) {
-    context.onError(
-        TmplCompileError(53, 'v-html is missing expression.', loc));
+    context.onError(TmplCompileError(53, 'v-html is missing expression.', loc));
   }
   if (node.children.isNotEmpty) {
-    context.onError(TmplCompileError(
-        54, 'v-html will override element children.', loc));
+    context.onError(
+      TmplCompileError(54, 'v-html will override element children.', loc),
+    );
     node.children = [];
   }
   return DirTransformResult([
-    createObjectProp(createSimpleExp('innerHTML', true, loc),
-        exp ?? createSimpleExp('', true))
+    createObjectProp(
+      createSimpleExp('innerHTML', true, loc),
+      exp ?? createSimpleExp('', true),
+    ),
   ]);
 }
 
 DirTransformResult transformVText(
-    DirectiveNode dir, ElementNode node, TransformContext context) {
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+) {
   final exp = dir.exp;
   final loc = dir.loc;
   if (exp == null) {
-    context.onError(
-        TmplCompileError(55, 'v-text is missing expression.', loc));
+    context.onError(TmplCompileError(55, 'v-text is missing expression.', loc));
   }
   if (node.children.isNotEmpty) {
-    context.onError(TmplCompileError(
-        56, 'v-text will override element children.', loc));
+    context.onError(
+      TmplCompileError(56, 'v-text will override element children.', loc),
+    );
     node.children = [];
   }
   Object? value;
@@ -91,43 +102,55 @@ DirTransformResult transformVText(
   } else {
     value = createSimpleExp('', true);
   }
-  return DirTransformResult(
-      [createObjectProp(createSimpleExp('textContent', true), value)]);
+  return DirTransformResult([
+    createObjectProp(createSimpleExp('textContent', true), value),
+  ]);
 }
 
 // --- DOM v-model ---
 
 DirTransformResult transformModelDom(
-    DirectiveNode dir, ElementNode node, TransformContext context) {
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+) {
   final baseResult = transformModelCore(dir, node, context);
   if (baseResult.props.isEmpty || node.tagType == etComponent) {
     return baseResult;
   }
   if (dir.arg != null) {
-    context.onError(TmplCompileError(
-        58, 'v-model argument is not supported on plain elements.',
-        dir.arg!.loc));
+    context.onError(
+      TmplCompileError(
+        58,
+        'v-model argument is not supported on plain elements.',
+        dir.arg!.loc,
+      ),
+    );
   }
   _applyDomModelDirective(dir, node, context, baseResult);
   baseResult.props = baseResult.props
-      .where((p) =>
-          !(p.key is SimpleExpression &&
-              (p.key as SimpleExpression).content == 'modelValue'))
+      .where(
+        (p) =>
+            !(p.key is SimpleExpression &&
+                (p.key as SimpleExpression).content == 'modelValue'),
+      )
       .toList();
   return baseResult;
 }
 
-void _applyDomModelDirective(DirectiveNode dir, ElementNode node,
-    TransformContext context, DirTransformResult baseResult) {
+void _applyDomModelDirective(
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+  DirTransformResult baseResult,
+) {
   final tag = node.tag;
   final isCustomElement = customElementOf(context, tag);
   if (tag != 'input' &&
       tag != 'textarea' &&
       tag != 'select' &&
       !isCustomElement) {
-    context.onError(TmplCompileError(
-        57, tmplErrorMessage(57),
-        dir.loc));
+    context.onError(TmplCompileError(57, tmplErrorMessage(57), dir.loc));
     return;
   }
   var directiveToUse = hVModelText;
@@ -148,8 +171,12 @@ void _applyDomModelDirective(DirectiveNode dir, ElementNode node,
   }
 }
 
-(String, bool) _resolveInputModelType(Object? type, ElementNode node,
-    TransformContext context, DirectiveNode dir) {
+(String, bool) _resolveInputModelType(
+  Object? type,
+  ElementNode node,
+  TransformContext context,
+  DirectiveNode dir,
+) {
   if (type == null) {
     if (hasDynamicKeyVBind(node)) return (hVModelDynamic, false);
     _checkDuplicatedValue(node, context);
@@ -167,8 +194,7 @@ void _applyDomModelDirective(DirectiveNode dir, ElementNode node,
     case 'checkbox':
       return (hVModelCheckbox, false);
     case 'file':
-      context.onError(TmplCompileError(
-          59, tmplErrorMessage(59), dir.loc));
+      context.onError(TmplCompileError(59, tmplErrorMessage(59), dir.loc));
       return (hVModelText, true);
     default:
       _checkDuplicatedValue(node, context);
@@ -179,21 +205,24 @@ void _applyDomModelDirective(DirectiveNode dir, ElementNode node,
 void _checkDuplicatedValue(ElementNode node, TransformContext context) {
   final value = findDir(node, 'bind');
   if (value != null && isStaticArgOf(value.arg, 'value')) {
-    context.onError(
-        TmplCompileError(60, tmplErrorMessage(60), value.loc));
+    context.onError(TmplCompileError(60, tmplErrorMessage(60), value.loc));
   }
 }
 
 // --- DOM v-on (modifiers) ---
 
 final _isEventOptionModifier = makeMap('passive,once,capture');
-final _isNonKeyModifier =
-    makeMap('stop,prevent,self,ctrl,shift,alt,meta,exact,middle');
+final _isNonKeyModifier = makeMap(
+  'stop,prevent,self,ctrl,shift,alt,meta,exact,middle',
+);
 final _maybeKeyModifier = makeMap('left,right');
 final _isKeyboardEvent = makeMap('onkeyup,onkeydown,onkeypress');
 
 DirTransformResult transformOnDom(
-    DirectiveNode dir, ElementNode node, TransformContext context) {
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+) {
   return transformOnCore(dir, node, context, (baseResult) {
     final modifiers = dir.modifiers;
     if (modifiers.isEmpty) return baseResult;
@@ -203,16 +232,21 @@ DirTransformResult transformOnDom(
     key = _applyClickTransforms(key, resolved.$2);
     if (resolved.$2.isNotEmpty) {
       context.helper(hVOnWithModifiers);
-      handlerExp = createCallExp(
-          hVOnWithModifiers, [handlerExp, jsonEncode(resolved.$2)]);
+      handlerExp = createCallExp(hVOnWithModifiers, [
+        handlerExp,
+        jsonEncode(resolved.$2),
+      ]);
     }
     if (resolved.$1.isNotEmpty &&
         (!isStaticExp(key) ||
             _isKeyboardEvent(
-                (key as SimpleExpression).content.toLowerCase()))) {
+              (key as SimpleExpression).content.toLowerCase(),
+            ))) {
       context.helper(hVOnWithKeys);
-      handlerExp =
-          createCallExp(hVOnWithKeys, [handlerExp, jsonEncode(resolved.$1)]);
+      handlerExp = createCallExp(hVOnWithKeys, [
+        handlerExp,
+        jsonEncode(resolved.$1),
+      ]);
     }
     if (resolved.$3.isNotEmpty) {
       key = _applyOptionPostfix(key, resolved.$3);
@@ -222,7 +256,9 @@ DirTransformResult transformOnDom(
 }
 
 (List<String>, List<String>, List<String>) _resolveModifiers(
-    Object key, List<SimpleExpression> modifiers) {
+  Object key,
+  List<SimpleExpression> modifiers,
+) {
   final keyModifiers = <String>[];
   final nonKeyModifiers = <String>[];
   final eventOptionModifiers = <String>[];
@@ -232,8 +268,7 @@ DirTransformResult transformOnDom(
       eventOptionModifiers.add(modifier);
     } else if (_maybeKeyModifier(modifier)) {
       if (isStaticExp(key)) {
-        if (_isKeyboardEvent(
-            (key as SimpleExpression).content.toLowerCase())) {
+        if (_isKeyboardEvent((key as SimpleExpression).content.toLowerCase())) {
           keyModifiers.add(modifier);
         } else {
           nonKeyModifiers.add(modifier);
@@ -263,39 +298,53 @@ Object _applyClickTransforms(Object key, List<String> nonKeyModifiers) {
 }
 
 Object _transformClick(Object key, String event) {
-  final isStaticClick = isStaticExp(key) &&
+  final isStaticClick =
+      isStaticExp(key) &&
       (key as SimpleExpression).content.toLowerCase() == 'onclick';
   if (isStaticClick) return createSimpleExp(event, true);
   if (key is! SimpleExpression) {
-    return createCompoundExp(
-        ['(', key, ') === "onClick" ? "$event" : (', key, ')']);
+    return createCompoundExp([
+      '(',
+      key,
+      ') === "onClick" ? "$event" : (',
+      key,
+      ')',
+    ]);
   }
   return key;
 }
 
 Object _applyOptionPostfix(Object key, List<String> eventOptionModifiers) {
-  final modifierPostfix =
-      eventOptionModifiers.map(capitalize).join('');
+  final modifierPostfix = eventOptionModifiers.map(capitalize).join('');
   return isStaticExp(key)
       ? createSimpleExp(
-          '${(key as SimpleExpression).content}$modifierPostfix', true)
+          '${(key as SimpleExpression).content}$modifierPostfix',
+          true,
+        )
       : createCompoundExp(['(', key, ') + "$modifierPostfix"']);
 }
 
 // --- v-show / cloak ---
 
 DirTransformResult transformShow(
-    DirectiveNode dir, ElementNode node, TransformContext context) {
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+) {
   if (dir.exp == null) {
     context.onError(
-        TmplCompileError(61, 'v-show is missing expression.', dir.loc));
+      TmplCompileError(61, 'v-show is missing expression.', dir.loc),
+    );
   }
   context.helper(hVShow);
   return DirTransformResult([], hVShow);
 }
 
 DirTransformResult noopDirectiveTransform(
-    DirectiveNode dir, ElementNode node, TransformContext context) {
+  DirectiveNode dir,
+  ElementNode node,
+  TransformContext context,
+) {
   return DirTransformResult([]);
 }
 
@@ -314,9 +363,13 @@ Object? transformTransition(TmplNode node, TransformContext context) {
 void _applyTransitionPersist(ElementNode node, TransformContext context) {
   if (node.children.isEmpty) return;
   if (_hasMultipleChildren(node)) {
-    context.onError(TmplCompileError(
-        62, '<Transition> expects exactly one child element or component.',
-        node.loc));
+    context.onError(
+      TmplCompileError(
+        62,
+        '<Transition> expects exactly one child element or component.',
+        node.loc,
+      ),
+    );
   }
   final child = node.children[0];
   if (child is ElementNode) {
@@ -330,9 +383,11 @@ void _applyTransitionPersist(ElementNode node, TransformContext context) {
 
 bool _hasMultipleChildren(ElementNode node) {
   final children = node.children = node.children
-      .where((c) =>
-          c.type != ntComment &&
-          !(c.type == ntText && (c as TextNode).content.trim().isEmpty))
+      .where(
+        (c) =>
+            c.type != ntComment &&
+            !(c.type == ntText && (c as TextNode).content.trim().isEmpty),
+      )
       .toList();
   final child = children.isNotEmpty ? children[0] : null;
   return children.length != 1 ||
@@ -343,9 +398,11 @@ bool _hasMultipleChildren(ElementNode node) {
 bool _branchMultiple(IfBranchNode branch) {
   // 官方 hasMultipleChildren 对 branch 递归：过滤注释/空白后检查长度。
   final children = branch.children
-      .where((c) =>
-          c.type != ntComment &&
-          !(c.type == ntText && (c as TextNode).content.trim().isEmpty))
+      .where(
+        (c) =>
+            c.type != ntComment &&
+            !(c.type == ntText && (c as TextNode).content.trim().isEmpty),
+      )
       .toList();
   final first = children.isNotEmpty ? children[0] : null;
   return children.length != 1 ||
@@ -359,9 +416,7 @@ Object? ignoreSideEffectTags(TmplNode node, TransformContext context) {
   if (node is ElementNode &&
       node.tagType == etElement &&
       (node.tag == 'script' || node.tag == 'style')) {
-    context.onError(TmplCompileError(
-        63, tmplErrorMessage(63),
-        node.loc));
+    context.onError(TmplCompileError(63, tmplErrorMessage(63), node.loc));
     context.removeNode();
   }
   return null;
@@ -372,12 +427,14 @@ Object? validateHtmlNesting(TmplNode node, TransformContext context) {
       node.tagType == etElement &&
       context.parent is ElementNode &&
       (context.parent as ElementNode).tagType == etElement &&
-      !_isValidHtmlNesting(
-          (context.parent as ElementNode).tag, node.tag)) {
-    context.onWarn(TmplCompileError(
+      !_isValidHtmlNesting((context.parent as ElementNode).tag, node.tag)) {
+    context.onWarn(
+      TmplCompileError(
         0,
         '<${node.tag}> cannot be child of <${(context.parent as ElementNode).tag}>.',
-        node.loc));
+        node.loc,
+      ),
+    );
   }
   return null;
 }
@@ -396,8 +453,15 @@ bool _isValidHtmlNesting(String parent, String child) {
     case 'form':
       return child != 'form';
     case 'table':
-      return {'caption', 'colgroup', 'thead', 'tbody', 'tfoot', 'tr', 'script'}
-          .contains(child);
+      return {
+        'caption',
+        'colgroup',
+        'thead',
+        'tbody',
+        'tfoot',
+        'tr',
+        'script',
+      }.contains(child);
     case 'tr':
       return {'td', 'th', 'script'}.contains(child);
   }
@@ -406,8 +470,33 @@ bool _isValidHtmlNesting(String parent, String child) {
 }
 
 const _phrasingBreakers = {
-  'address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl',
-  'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3',
-  'h4', 'h5', 'h6', 'header', 'hr', 'main', 'menu', 'nav', 'ol', 'p',
-  'pre', 'section', 'table', 'ul',
+  'address',
+  'article',
+  'aside',
+  'blockquote',
+  'details',
+  'div',
+  'dl',
+  'fieldset',
+  'figcaption',
+  'figure',
+  'footer',
+  'form',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'header',
+  'hr',
+  'main',
+  'menu',
+  'nav',
+  'ol',
+  'p',
+  'pre',
+  'section',
+  'table',
+  'ul',
 };

@@ -23,8 +23,10 @@ final class _AttrState {
   bool get hasOperator => !_falsy(operator);
   bool get hasValue => value != null;
 
-  Map<String, String> spacesFor(String part) => spaces.putIfAbsent(part, () => {});
-  Map<String, String> rawsFor(String part) => rawsSpaces.putIfAbsent(part, () => {});
+  Map<String, String> spacesFor(String part) =>
+      spaces.putIfAbsent(part, () => {});
+  Map<String, String> rawsFor(String part) =>
+      rawsSpaces.putIfAbsent(part, () => {});
 }
 
 bool _falsy(Object? o) => o == null || o == '' || o == false;
@@ -101,7 +103,8 @@ extension on SelParser {
             (st.lastAdded == 'namespace' && !st.spaceAfterMeaningfulToken)) &&
         next != null) {
       _flushSpaceBefore(st);
-      st.namespace = ((st.namespace is String) ? st.namespace as String : '') + c;
+      st.namespace =
+          ((st.namespace is String) ? st.namespace as String : '') + c;
       final raw = st.rawsStrings['namespace'];
       if (raw != null) st.rawsStrings['namespace'] = raw + c;
       st.lastAdded = 'namespace';
@@ -144,7 +147,12 @@ extension on SelParser {
   }
 
   void _attrWord(
-      _AttrState st, List<SelTok> attr, int pos, String c, SelTok? next) {
+    _AttrState st,
+    List<SelTok> attr,
+    int pos,
+    String c,
+    SelTok? next,
+  ) {
     if (next != null &&
         content(next) == '|' &&
         pos + 2 < attr.length &&
@@ -167,7 +175,8 @@ extension on SelParser {
   }
 
   void _attrWordValue(_AttrState st, String c) {
-    final appendValue = st.value == null ||
+    final appendValue =
+        st.value == null ||
         (st.lastAdded == 'value' &&
             !(st.spaceAfterMeaningfulToken || st.quoteMark != null));
     if (appendValue) {
@@ -190,8 +199,7 @@ extension on SelParser {
     st.value = oldValue + unescaped;
     st.quoteMark = null;
     if (unescaped != c || oldRaw.isNotEmpty) {
-      st.rawsStrings['value'] =
-          (oldRaw.isNotEmpty ? oldRaw : oldValue) + c;
+      st.rawsStrings['value'] = (oldRaw.isNotEmpty ? oldRaw : oldValue) + c;
     }
     st.lastAdded = 'value';
   }
@@ -214,7 +222,8 @@ extension on SelParser {
   void _attrString(_AttrState st, String c) {
     if (!st.hasAttribute || !st.hasOperator) {
       throw SelSyntaxError(
-          'Expected an attribute followed by an operator preceding the string.');
+        'Expected an attribute followed by an operator preceding the string.',
+      );
     }
     final m = RegExp(r"""^('|")([\s\S]*)\1$""").firstMatch(c);
     st.quoteMark = m?[1];
@@ -230,7 +239,8 @@ extension on SelParser {
     }
     if (st.value != null && st.value!.isNotEmpty) {
       throw SelSyntaxError(
-          'Unexpected "=" found; an operator was already defined.');
+        'Unexpected "=" found; an operator was already defined.',
+      );
     }
     st.operator = st.hasOperator ? st.operator! + c : c;
     st.lastAdded = 'operator';
@@ -243,7 +253,8 @@ extension on SelParser {
       st.commentBefore += c;
       return;
     }
-    final afterComment = st.spaceAfterMeaningfulToken ||
+    final afterComment =
+        st.spaceAfterMeaningfulToken ||
         (next != null && next.type == tkSpace) ||
         last == 'insensitive';
     if (afterComment) {
@@ -258,12 +269,12 @@ extension on SelParser {
   }
 
   String _attrPartValue(_AttrState st, String part) => switch (part) {
-        'namespace' => st.namespace is String ? st.namespace as String : '',
-        'attribute' => st.attribute ?? '',
-        'operator' => st.operator ?? '',
-        'value' => st.value ?? '',
-        _ => '',
-      };
+    'namespace' => st.namespace is String ? st.namespace as String : '',
+    'attribute' => st.attribute ?? '',
+    'operator' => st.operator ?? '',
+    'value' => st.value ?? '',
+    _ => '',
+  };
 
   void _flushSpaceBefore(_AttrState st) {
     if (st.spaceBefore.isNotEmpty) {

@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../ts_parser.dart';
+import 'est_node.dart';
 
 part 'mapper_expr.dart';
 part 'mapper_stmt.dart';
@@ -32,8 +33,8 @@ class OxcMapper {
   /// AstNode. Comments are woven into the tree as named children at their
   /// source positions, matching tree-sitter's extra attachment. The program
   /// node starts at its first child and always ends at end of input.
-  AstNode mapProgram(Map<String, dynamic> payload) {
-    final program = payload['program'] as Map<String, dynamic>;
+  AstNode mapProgram(EstNode payload) {
+    final program = payload.nodeOf(payload['program']);
     final body = program['body'] as List;
     final comments = payload['comments'] as List? ?? const [];
     final children = [for (final s in body) mapStatement(_m(s))];
@@ -173,10 +174,10 @@ class OxcMapper {
 
   // ---- JSON helpers ----
 
-  Map<String, dynamic> _m(Object? v) => v as Map<String, dynamic>;
+  EstNode _m(Object? v) => estOf(v);
 
   /// Dispatch a JSON node to its statement or expression mapping.
-  AstNode mapNode(Map<String, dynamic> n) {
+  AstNode mapNode(EstNode n) {
     if (statementTypes.contains(n['type'])) return mapStatement(n);
     return mapExpression(n);
   }

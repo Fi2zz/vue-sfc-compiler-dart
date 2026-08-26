@@ -15,6 +15,8 @@ use oxc_diagnostics::OxcDiagnostic;
 use oxc_estree::{CompactFormatter, ConfigNoFixes, ESTree, ESTreeSerializer};
 use oxc_parser::Parser;
 use oxc_span::SourceType;
+use serde_json::Value;
+use std::collections::HashMap;
 
 const LANG_TSX: u32 = 1;
 const LANG_JS: u32 = 2;
@@ -210,47 +212,126 @@ pub extern "C" fn oxc_parse_batch_bin(
     ptr as *mut c_char
 }
 
-fn encode_bin_batch(payloads: &[Vec<u8>]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(&0x4F_58_42_31u32.to_le_bytes());
-    out.extend_from_slice(&(payloads.len() as u32).to_le_bytes());
-    let mut offset = 8 + payloads.len() * 8;
-    for p in payloads {
-        out.extend_from_slice(&(offset as u32).to_le_bytes());
-        out.extend_from_slice(&(p.len() as u32).to_le_bytes());
-        offset += p.len();
+struct Interner {
+    ids: HashMap<String, u32>,
+    list: Vec<String>,
+}
+impl Interner {
+    fn new() -> Self { Self { ids: HashMap::new(), list: Vec::new() } }
+    fn intern(&mut self, s: &str) -> u32 {
+        *self.ids.entry(s.to_string()).or_insert_with(|| {
+            self.list.push(s.to_string());
+            (self.list.len() - 1) as u32
+        })
     }
-    for p in payloads {
-        let v: serde_json::Value = serde_json::from_slice(p).unwrap_or_else(|_| {
-            serde_json::json!({"ok": false, "error": "unparseable payload"})
-        });
-        write_bin_value(&mut out, &v);
+}
+
+fn encode_bin_batch(payloads: &[Vec<u8>]) -> Vec<u8> {
+    use serde_json::Value;
+    use std::collections::HashMap;
+    let mut out = Vec::new();
+    out.extend_from_slice(&0x4F_58_42_32u32.to_le_bytes()); // OXB2
+
+    let mut key_interner = Interner::new();
+    let mut type_interner = Interner::new();
+
+    // Pass 1: intern keys and type names across all payloads.
+    let mut values: Vec<Value> = payloads
+        .iter()
+        .map(|p| serde_json::from_slice::<Value>(p).unwrap_or(Value::Null))
+        .collect();
+    fn collect(v: &Value, ki: &mut Interner, ti: &mut Interner) {
+        match v {
+            Value::Object(m) => {
+                let typed = m.get("type").and_then(|t| t.as_str());
+                if let Some(t) = typed {
+                    ti.intern(t);
+                }
+                for (k, val) in m {
+                    if k != "type" || typed.is_none() {
+                        ki.intern(k);
+                    }
+                    collect(val, ki, ti);
+                }
+            }
+            Value::Array(a) => {
+                for val in a { collect(val, ki, ti); }
+            }
+            _ => {}
+        }
+    }
+    for v in &values { collect(v, &mut key_interner, &mut type_interner); }
+
+    out.extend_from_slice(&(key_interner.list.len() as u32).to_le_bytes());
+    for k in &key_interner.list {
+        out.extend_from_slice(&(k.len() as u32).to_le_bytes());
+        out.extend_from_slice(k.as_bytes());
+    }
+    out.extend_from_slice(&(type_interner.list.len() as u32).to_le_bytes());
+    for t in &type_interner.list {
+        out.extend_from_slice(&(t.len() as u32).to_le_bytes());
+        out.extend_from_slice(t.as_bytes());
+    }
+
+    // Pass 2: items + back-patched index.
+    out.extend_from_slice(&(values.len() as u32).to_le_bytes());
+    let index_at = out.len();
+    out.extend(std::iter::repeat(0u8).take(values.len() * 8));
+    for (i, v) in values.iter().enumerate() {
+        let off = out.len() as u32;
+        write_typed_value(&mut out, v, &key_interner, &type_interner);
+        let len = out.len() as u32 - off;
+        out[index_at + i * 8..index_at + i * 8 + 4].copy_from_slice(&off.to_le_bytes());
+        out[index_at + i * 8 + 4..index_at + i * 8 + 8].copy_from_slice(&len.to_le_bytes());
     }
     out
 }
 
-fn write_bin_value(out: &mut Vec<u8>, v: &serde_json::Value) {
+fn write_str(out: &mut Vec<u8>, s: &str) {
+    out.extend_from_slice(&(s.len() as u32).to_le_bytes());
+    out.extend_from_slice(s.as_bytes());
+}
+
+fn write_typed_value(
+    out: &mut Vec<u8>,
+    v: &Value,
+    key_interner: &Interner,
+    type_interner: &Interner,
+) {
     match v {
-        serde_json::Value::Object(m) => {
-            out.push(0);
-            out.extend_from_slice(&(m.len() as u32).to_le_bytes());
-            for (k, val) in m {
-                write_bin_str(out, k);
-                write_bin_value(out, val);
+        Value::Object(m) => {
+            let type_id = m
+                .get("type")
+                .and_then(|t| t.as_str())
+                .and_then(|t| type_interner.ids.get(t).copied());
+            match type_id {
+                Some(tid) => {
+                    out.push(8);
+                    out.extend_from_slice(&tid.to_le_bytes());
+                    out.extend_from_slice(&((m.len().saturating_sub(1)) as u32).to_le_bytes());
+                    for (k, val) in m {
+                        if k == "type" { continue; }
+                        out.extend_from_slice(&key_interner.ids[k].to_le_bytes());
+                        write_typed_value(out, val, key_interner, type_interner);
+                    }
+                }
+                None => {
+                    out.push(0);
+                    out.extend_from_slice(&(m.len() as u32).to_le_bytes());
+                    for (k, val) in m {
+                        out.extend_from_slice(&key_interner.ids[k].to_le_bytes());
+                        write_typed_value(out, val, key_interner, type_interner);
+                    }
+                }
             }
         }
-        serde_json::Value::Array(a) => {
+        Value::Array(a) => {
             out.push(1);
             out.extend_from_slice(&(a.len() as u32).to_le_bytes());
-            for val in a {
-                write_bin_value(out, val);
-            }
+            for val in a { write_typed_value(out, val, key_interner, type_interner); }
         }
-        serde_json::Value::String(s) => {
-            out.push(2);
-            write_bin_str(out, s);
-        }
-        serde_json::Value::Number(n) => {
+        Value::String(s) => { out.push(2); write_str(out, s); }
+        Value::Number(n) => {
             if let Some(i) = n.as_i64() {
                 out.push(7);
                 out.extend_from_slice(&i.to_le_bytes());
@@ -259,15 +340,10 @@ fn write_bin_value(out: &mut Vec<u8>, v: &serde_json::Value) {
                 out.extend_from_slice(&n.as_f64().unwrap_or(0.0).to_le_bytes());
             }
         }
-        serde_json::Value::Bool(true) => out.push(4),
-        serde_json::Value::Bool(false) => out.push(5),
-        serde_json::Value::Null => out.push(6),
+        Value::Bool(true) => out.push(4),
+        Value::Bool(false) => out.push(5),
+        Value::Null => out.push(6),
     }
-}
-
-fn write_bin_str(out: &mut Vec<u8>, s: &str) {
-    out.extend_from_slice(&(s.len() as u32).to_le_bytes());
-    out.extend_from_slice(s.as_bytes());
 }
 
 /// Release a binary batch buffer returned by `oxc_parse_batch_bin`.
@@ -291,4 +367,45 @@ pub extern "C" fn oxc_free(ptr: *mut c_char) {
         return;
     }
     unsafe { drop(CString::from_raw(ptr)) };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bin_batch_layout() {
+        let payloads = vec![
+            br#"{"ok":true,"program":{"type":"Program","start":0,"end":12,"body":[],"sourceType":"module"},"comments":[],"diagnostics":[]}"#
+                .to_vec(),
+        ];
+        let blob = encode_bin_batch(&payloads);
+        // header: magic + keyCount + keys + typeCount + types + itemCount + index
+        let rd = |p: usize| -> u32 {
+            u32::from_le_bytes([blob[p], blob[p + 1], blob[p + 2], blob[p + 3]])
+        };
+        assert_eq!(rd(0), 0x4F584232);
+        let kc = rd(4) as usize;
+        let mut p = 8;
+        for _ in 0..kc {
+            p += 4 + rd(p) as usize;
+        }
+        let tc = rd(p) as usize;
+        p += 4;
+        for _ in 0..tc {
+            p += 4 + rd(p) as usize;
+        }
+        let ic = rd(p) as usize;
+        p += 4;
+        assert_eq!(ic, 1);
+        let off = rd(p) as usize;
+        let len = rd(p + 4) as usize;
+        assert_eq!(off + len, blob.len(), "item must end at buffer end");
+        // item root: plain obj (payload root has no "type"), count = 5 pairs
+        assert_eq!(blob[off], 0);
+        assert_eq!(rd(off + 1), 4); // ok/program/comments/diagnostics
+        // first pair key should be interned id of one of the five root keys
+        let first_key = rd(off + 5);
+        assert!((first_key as usize) < kc);
+    }
 }

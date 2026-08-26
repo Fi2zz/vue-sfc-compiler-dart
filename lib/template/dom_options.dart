@@ -46,12 +46,14 @@ int domGetNamespace(String tag, ElementNode? parent, int rootNs) {
 int _mathMlChildNs(String tag, ElementNode parent, int ns) {
   if (parent.tag == 'annotation-xml') {
     if (tag == 'svg') return nsSvg;
-    final htmlIntegration = parent.props.any((a) =>
-        a is AttributeNode &&
-        a.name == 'encoding' &&
-        a.value != null &&
-        (a.value!.content == 'text/html' ||
-            a.value!.content == 'application/xhtml+xml'));
+    final htmlIntegration = parent.props.any(
+      (a) =>
+          a is AttributeNode &&
+          a.name == 'encoding' &&
+          a.value != null &&
+          (a.value!.content == 'text/html' ||
+              a.value!.content == 'application/xhtml+xml'),
+    );
     if (htmlIntegration) return nsHtml;
     return ns;
   }

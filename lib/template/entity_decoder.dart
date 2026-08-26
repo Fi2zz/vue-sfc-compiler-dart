@@ -25,8 +25,7 @@ bool _isAsciiAlphaNumeric(int code) =>
     (code >= 97 && code <= 122);
 
 /// Attribute values that aren't properly terminated don't parse as entities.
-bool _invalidAttributeEnd(int code) =>
-    code == 61 || _isAsciiAlphaNumeric(code);
+bool _invalidAttributeEnd(int code) => code == 61 || _isAsciiAlphaNumeric(code);
 
 int _digitValue(int code) {
   if (code >= 48 && code <= 57) return code - 48;
@@ -68,11 +67,34 @@ int determineBranch(List<int> tree, int current, int nodeIdx, int char) {
 /// mirroring entities' replaceCodePoint.
 double replaceCodePoint(num codePoint) {
   const replacements = {
-    0: 65533, 128: 8364, 130: 8218, 131: 402, 132: 8222, 133: 8230,
-    134: 8224, 135: 8225, 136: 710, 137: 8240, 138: 352, 139: 8249,
-    140: 338, 142: 381, 145: 8216, 146: 8217, 147: 8220, 148: 8221,
-    149: 8226, 150: 8211, 151: 8212, 152: 732, 153: 8482, 154: 353,
-    155: 8250, 156: 339, 158: 382, 159: 376,
+    0: 65533,
+    128: 8364,
+    130: 8218,
+    131: 402,
+    132: 8222,
+    133: 8230,
+    134: 8224,
+    135: 8225,
+    136: 710,
+    137: 8240,
+    138: 352,
+    139: 8249,
+    140: 338,
+    142: 381,
+    145: 8216,
+    146: 8217,
+    147: 8220,
+    148: 8221,
+    149: 8226,
+    150: 8211,
+    151: 8212,
+    152: 732,
+    153: 8482,
+    154: 353,
+    155: 8250,
+    156: 339,
+    158: 382,
+    159: 376,
   };
   final cp = codePoint.toDouble();
   if ((cp >= 0xd800 && cp <= 0xdfff) || cp > 0x10ffff) {
@@ -232,10 +254,11 @@ final class EntityDecoder {
 
   int _emitNamedEntityData(int node, int valueLength, int totalConsumed) {
     emitCodePoint(
-        valueLength == 1
-            ? decodeTree[node] & ~_kValueLength
-            : decodeTree[node + 1],
-        totalConsumed);
+      valueLength == 1
+          ? decodeTree[node] & ~_kValueLength
+          : decodeTree[node + 1],
+      totalConsumed,
+    );
     if (valueLength == 3) {
       // Multi-codepoint values emit a second character.
       emitCodePoint(decodeTree[node + 2], totalConsumed);

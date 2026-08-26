@@ -39,9 +39,14 @@ final class KnownIds {
   List<String> ownKeys() => own.keys.toList();
 }
 
-typedef OnIdentifier = void Function(WalkedIdent id, AstNode? parent,
-    bool isReferenced, bool isLocal,
-    {bool destructureAssignment});
+typedef OnIdentifier =
+    void Function(
+      WalkedIdent id,
+      AstNode? parent,
+      bool isReferenced,
+      bool isLocal, {
+      bool destructureAssignment,
+    });
 
 /// tree-sitter type containers whose subtrees are TS type space (skipped).
 bool _isTsTypeSpace(String type) {
@@ -131,8 +136,7 @@ final class ExpressionWalker {
       // 解构模式简写 { a }：对应 babel 简写属性的 value 节点（key!==value）。
       // 赋值解构目标（({ a } = v)）按官方 isInDestructureAssignment 视为
       // 引用并注入 'a: ' 前缀；绑定位置则是局部量。
-      _onIdent(node, parent,
-          destructureAssignment: _inDestructureAssignment());
+      _onIdent(node, parent, destructureAssignment: _inDestructureAssignment());
     } else if (_isFunctionType(type)) {
       _walkFunctionParams(node);
     } else if (type == 'statement_block') {
@@ -149,7 +153,9 @@ final class ExpressionWalker {
   void _leave(AstNode node, AstNode? parent) {
     if (parent != null) parentStack.removeLast();
     if (_isScopeNode(node) && !identical(node, rootExp)) {
-      final ids = _scopeStack.isNotEmpty ? _scopeStack.removeLast() : <String>[];
+      final ids = _scopeStack.isNotEmpty
+          ? _scopeStack.removeLast()
+          : <String>[];
       for (final id in ids) {
         knownIds.unmark(id);
       }
@@ -191,7 +197,8 @@ final class ExpressionWalker {
         return true;
       }
       final t = p.type;
-      final patternish = t.endsWith('_pattern') ||
+      final patternish =
+          t.endsWith('_pattern') ||
           t == 'object_assignment_pattern' ||
           t == 'pair_pattern';
       if (!patternish) break;
@@ -199,8 +206,11 @@ final class ExpressionWalker {
     return false;
   }
 
-  void _onIdent(AstNode node, AstNode? parent,
-      {bool destructureAssignment = false}) {
+  void _onIdent(
+    AstNode node,
+    AstNode? parent, {
+    bool destructureAssignment = false,
+  }) {
     final name = view.textOf(node);
     // babel Identifier 的 end 包含后缀 typeAnnotation（(e: any) 的参数区间
     // 覆盖 'e: any'），重建时借此剥除参数注解；tree-sitter 中注解是紧邻
@@ -219,13 +229,21 @@ final class ExpressionWalker {
       }
     }
     final id = WalkedIdent(
-        view.charOf(node.startByte), view.charOf(endByte), name);
+      view.charOf(node.startByte),
+      view.charOf(endByte),
+      name,
+    );
     var isRefed = _isReferencedIdentifier(node, parent);
     // 赋值解构目标内的标识符按引用处理（官方 ObjectProperty 分支）。
     if (destructureAssignment && !isRefed) isRefed = true;
     final isLocal = knownIds.contains(name);
-    onIdentifier(id, parent, isRefed, isLocal,
-        destructureAssignment: destructureAssignment);
+    onIdentifier(
+      id,
+      parent,
+      isRefed,
+      isLocal,
+      destructureAssignment: destructureAssignment,
+    );
   }
 
   // --- scope declaration walking ---
@@ -302,8 +320,7 @@ final class ExpressionWalker {
         final isVarDecl = stmt.type == 'variable_declaration';
         if (isVar != null && isVarDecl != isVar) return;
         for (final decl in stmt.children) {
-          if (decl.type == 'variable_declarator' &&
-              decl.children.isNotEmpty) {
+          if (decl.type == 'variable_declarator' && decl.children.isNotEmpty) {
             ids.addAll(extractIdentifiers(decl.children.first));
           }
         }
@@ -456,15 +473,13 @@ final class ExpressionWalker {
       case 'assignment_pattern':
         return true;
       case 'pair':
-        return !_pairKeyIs(parent, id) &&
-            _isInDestructureAssignment(parent);
+        return !_pairKeyIs(parent, id) && _isInDestructureAssignment(parent);
       case 'array_pattern':
         return _isInDestructureAssignment(parent);
       // 赋值解构目标里的显式键值 ({ x: y } = v)：y 按引用改写（官方
       // ObjectProperty 分支 key!==id && isInDestructureAssignment）。
       case 'pair_pattern':
-        return !_pairKeyIs(parent, id) &&
-            _isInDestructureAssignment(parent);
+        return !_pairKeyIs(parent, id) && _isInDestructureAssignment(parent);
     }
     return false;
   }

@@ -12,10 +12,18 @@ final class DirTransformResult {
 }
 
 typedef NodeTransform = Object? Function(TmplNode node, TransformContext ctx);
-typedef DirectiveTransform = DirTransformResult Function(
-    DirectiveNode dir, ElementNode node, TransformContext ctx);
-typedef TransformHoist = void Function(
-    List<TmplNode> children, TransformContext ctx, TmplNode parent);
+typedef DirectiveTransform =
+    DirTransformResult Function(
+      DirectiveNode dir,
+      ElementNode node,
+      TransformContext ctx,
+    );
+typedef TransformHoist =
+    void Function(
+      List<TmplNode> children,
+      TransformContext ctx,
+      TmplNode parent,
+    );
 
 final class TmplCompileError implements Exception {
   final int code;
@@ -161,8 +169,8 @@ extension TransformContextMethods on TransformContext {
     final removalIndex = node != null
         ? list.indexOf(node)
         : currentNode != null
-            ? childIndex
-            : -1;
+        ? childIndex
+        : -1;
     if (removalIndex < 0) {
       throw StateError('node being removed is not a child of current parent');
     }
@@ -194,16 +202,27 @@ extension TransformContextMethods on TransformContext {
       CodegenNode n => n.loc,
       _ => null,
     };
-    final identifier =
-        createSimpleExp('_hoisted_${hoists.length}', false, loc, ctCanHoist);
+    final identifier = createSimpleExp(
+      '_hoisted_${hoists.length}',
+      false,
+      loc,
+      ctCanHoist,
+    );
     identifier.hoisted = exp;
     return identifier;
   }
 
-  JSCacheExpression cache(Object? exp,
-      [bool isVNode = false, bool inVOnce = false]) {
-    final cacheExp = JSCacheExpression(cached.length, exp,
-        needPauseTracking: isVNode, inVOnce: inVOnce);
+  JSCacheExpression cache(
+    Object? exp, [
+    bool isVNode = false,
+    bool inVOnce = false,
+  ]) {
+    final cacheExp = JSCacheExpression(
+      cached.length,
+      exp,
+      needPauseTracking: isVNode,
+      inVOnce: inVOnce,
+    );
     cached.add(cacheExp);
     return cacheExp;
   }

@@ -7,11 +7,12 @@ import 'corpus_data.dart';
 
 void main() {
   File('bench/corpus_shared.json').writeAsStringSync(
-      const JsonEncoder.withIndent('  ').convert({
-        'tiny': tinyCorpus,
-        'ts_heavy': tsHeavyCorpus,
-        'tmpl_heavy': tmplHeavyCorpus,
-        'error': errorCorpus,
-      }));
+    const JsonEncoder.withIndent('  ').convert({
+      'tiny': tinyCorpus,
+      'ts_heavy': tsHeavyCorpus,
+      'tmpl_heavy': tmplHeavyCorpus,
+      'error': errorCorpus,
+    }),
+  );
   stdout.writeln('written bench/corpus_shared.json');
 }

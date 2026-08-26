@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'ts_syntax/oxc_ffi.dart';
+import 'ts_syntax/est_node.dart';
 import 'ts_syntax/oxc_mapper.dart';
 
 /// Dev-only corpus recorder: when TS_AST_CORPUS points to a file, every
@@ -68,7 +69,7 @@ class TSParser {
     final mapper = OxcMapper(code, language: language);
     try {
       final payload = OxcFFI.load().parseJson(code, language);
-      return mapper.mapProgram(payload);
+      return mapper.mapProgram(estOf(payload));
     } on OxcParseException {
       return mapper.errorTree();
     }

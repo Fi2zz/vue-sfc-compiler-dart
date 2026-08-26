@@ -86,7 +86,9 @@ class SourceMapGenerator {
       for (var i = 0; i < sources.length; i++) sources[i]: i,
     };
     final nameList = _names.toList();
-    final nameIndex = {for (var i = 0; i < nameList.length; i++) nameList[i]: i};
+    final nameIndex = {
+      for (var i = 0; i < nameList.length; i++) nameList[i]: i,
+    };
 
     final buf = StringBuffer();
     var prevGenLine = 1;

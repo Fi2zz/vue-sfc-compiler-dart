@@ -198,17 +198,21 @@ class SfcParser {
     final openEnd = _tagEnd(openLt);
     final selfClosing = source[openEnd - 2] == '/';
     final attrEnd = selfClosing ? openEnd - 2 : openEnd - 1;
-    final attrs =
-        _parseAttributes(source.substring(openLt + 1 + name.length, attrEnd));
+    final attrs = _parseAttributes(
+      source.substring(openLt + 1 + name.length, attrEnd),
+    );
     if (selfClosing) {
       return Raw(
-          type: name.toLowerCase(), content: '', attrs: attrs,
-          locStart: openLt, locEnd: openEnd);
+        type: name.toLowerCase(),
+        content: '',
+        attrs: attrs,
+        locStart: openLt,
+        locEnd: openEnd,
+      );
     }
     final closeStart = _findCloseStart(name, openEnd);
     // 官方 X_MISSING_END_TAG：闭合标签缺失（扫描到 EOF）。
-    if (closeStart >= source.length &&
-        _matchCloseTag(name, closeStart) <= 0) {
+    if (closeStart >= source.length && _matchCloseTag(name, closeStart) <= 0) {
       throw UnclosedBlockError(locStart: closeStart, locEnd: closeStart);
     }
     return Raw(
@@ -253,8 +257,10 @@ class SfcParser {
 
   /// lt 处若是 `</name\s*>` 闭合标签，返回其结束位置；否则 -1。
   int _matchCloseTag(String name, int lt) {
-    final match =
-        RegExp('</$name\\s*>', caseSensitive: false).matchAsPrefix(source, lt);
+    final match = RegExp(
+      '</$name\\s*>',
+      caseSensitive: false,
+    ).matchAsPrefix(source, lt);
     return match == null ? -1 : match.end;
   }
 
@@ -341,6 +347,5 @@ class SfcParser {
     return attrs;
   }
 
-  static bool _isWs(int c) =>
-      c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D;
+  static bool _isWs(int c) => c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D;
 }

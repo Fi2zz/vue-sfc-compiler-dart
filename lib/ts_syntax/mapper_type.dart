@@ -22,7 +22,7 @@ const _predefinedTypes = {
 
 extension OxcTypeMapper on OxcMapper {
   /// Dispatch TS-only nodes (types, annotations, declarations).
-  AstNode mapTypeNode(Map<String, dynamic> n) {
+  AstNode mapTypeNode(EstNode n) {
     final type = n['type'] as String;
     final start = n['start'] as int;
     final end = n['end'] as int;
@@ -94,8 +94,12 @@ extension OxcTypeMapper on OxcMapper {
       case 'TSInferType':
         final name = _m(_m(n['typeParameter'])['name']);
         return buildNode('infer_type', start, end, [
-          buildNode('type_identifier', name['start'] as int,
-              name['end'] as int, const []),
+          buildNode(
+            'type_identifier',
+            name['start'] as int,
+            name['end'] as int,
+            const [],
+          ),
         ]);
       case 'TSParenthesizedType':
         return buildNode('parenthesized_type', start, end, [
@@ -116,8 +120,12 @@ extension OxcTypeMapper on OxcMapper {
       case 'TSTypeAssertion':
         final inner = _m(n['typeAnnotation']);
         return buildNode('type_assertion', start, end, [
-          buildNode('type_arguments', (inner['start'] as int) - 1,
-              (inner['end'] as int) + 1, [mapTypeNode(inner)]),
+          buildNode(
+            'type_arguments',
+            (inner['start'] as int) - 1,
+            (inner['end'] as int) + 1,
+            [mapTypeNode(inner)],
+          ),
           mapExpression(_m(n['expression'])),
         ]);
       case 'TSAsExpression':
@@ -135,9 +143,15 @@ extension OxcTypeMapper on OxcMapper {
         return mapInterface(n);
       case 'TSTypeAliasDeclaration':
         return buildNode('type_alias_declaration', start, end, [
-          buildNode('type_identifier', _m(n['id'])['start'] as int,
-              _m(n['id'])['end'] as int, const []),
-          n['typeParameters'] == null ? null : mapTypeNode(_m(n['typeParameters'])),
+          buildNode(
+            'type_identifier',
+            _m(n['id'])['start'] as int,
+            _m(n['id'])['end'] as int,
+            const [],
+          ),
+          n['typeParameters'] == null
+              ? null
+              : mapTypeNode(_m(n['typeParameters'])),
           mapTypeNode(_m(n['typeAnnotation'])),
         ]);
       case 'TSEnumDeclaration':
@@ -161,13 +175,17 @@ extension OxcTypeMapper on OxcMapper {
   }
 
   /// type_identifier, or generic_type when type arguments are present.
-  AstNode mapTypeReference(Map<String, dynamic> n) {
+  AstNode mapTypeReference(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final name = _m(n['typeName'] ?? n['expression']);
     final typeArgs = n['typeArguments'];
-    final nameNode = buildNode('type_identifier', name['start'] as int,
-        name['end'] as int, const []);
+    final nameNode = buildNode(
+      'type_identifier',
+      name['start'] as int,
+      name['end'] as int,
+      const [],
+    );
     if (typeArgs == null) return nameNode;
     return buildNode('generic_type', start, end, [
       nameNode,
@@ -176,47 +194,52 @@ extension OxcTypeMapper on OxcMapper {
   }
 
   /// keyof -> index_type_query; readonly -> readonly_type.
-  AstNode mapTypeOperator(Map<String, dynamic> n) {
+  AstNode mapTypeOperator(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
-    final kind = n['operator'] == 'keyof' ? 'index_type_query' : 'readonly_type';
-    return buildNode(kind, start, end, [
-      mapTypeNode(_m(n['typeAnnotation'])),
-    ]);
+    final kind = n['operator'] == 'keyof'
+        ? 'index_type_query'
+        : 'readonly_type';
+    return buildNode(kind, start, end, [mapTypeNode(_m(n['typeAnnotation']))]);
   }
 
   /// type_parameter: name + optional constraint (span covers 'extends')
   /// and default_type (span covers '=').
-  AstNode mapTypeParameter(Map<String, dynamic> n) {
+  AstNode mapTypeParameter(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final name = _m(n['name']);
     return buildNode('type_parameter', start, end, [
-      buildNode('type_identifier', name['start'] as int, name['end'] as int,
-          const []),
+      buildNode(
+        'type_identifier',
+        name['start'] as int,
+        name['end'] as int,
+        const [],
+      ),
       _constraint(n['constraint']),
       _defaultType(n['default']),
     ]);
   }
 
-  AstNode? _constraint(Map<String, dynamic>? c) {
+  AstNode? _constraint(EstNode? c) {
     if (c == null) return null;
     final kw = skipWsBack(c['start'] as int) - 7; // 'extends'
     return buildNode('constraint', kw, c['end'] as int, [mapTypeNode(c)]);
   }
 
-  AstNode? _defaultType(Map<String, dynamic>? d) {
+  AstNode? _defaultType(EstNode? d) {
     if (d == null) return null;
     final eq = skipWsBack(d['start'] as int) - 1; // '='
     return buildNode('default_type', eq, d['end'] as int, [mapTypeNode(d)]);
   }
 
   /// as_expression: the `as const` form drops the const reference.
-  AstNode mapAsExpression(Map<String, dynamic> n) {
+  AstNode mapAsExpression(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final typeNode = _m(n['typeAnnotation']);
-    final constAssertion = typeNode['type'] == 'TSTypeReference' &&
+    final constAssertion =
+        typeNode['type'] == 'TSTypeReference' &&
         _m(typeNode['typeName'])['name'] == 'const';
     return buildNode('as_expression', start, end, [
       mapExpression(_m(n['expression'])),
@@ -225,7 +248,7 @@ extension OxcTypeMapper on OxcMapper {
   }
 
   /// template_literal_type: string_fragments and template_type holes.
-  AstNode mapTemplateLiteralType(Map<String, dynamic> n) {
+  AstNode mapTemplateLiteralType(EstNode n) {
     final start = n['start'] as int;
     final end = n['end'] as int;
     final quasis = n['quasis'] as List;
@@ -238,27 +261,41 @@ extension OxcTypeMapper on OxcMapper {
     return buildNode('template_literal_type', start, end, kids);
   }
 
-  AstNode _templateTypeHole(Map<String, dynamic> t) {
-    return buildNode('template_type', (t['start'] as int) - 2,
-        (t['end'] as int) + 1, [mapTypeNode(t)]);
+  AstNode _templateTypeHole(EstNode t) {
+    return buildNode(
+      'template_type',
+      (t['start'] as int) - 2,
+      (t['end'] as int) + 1,
+      [mapTypeNode(t)],
+    );
   }
 
   /// interface_declaration: name + interface_body of signatures.
-  AstNode mapInterface(Map<String, dynamic> n) {
+  AstNode mapInterface(EstNode n) {
     final body = _m(n['body']);
-    return buildNode('interface_declaration', n['start'] as int,
-        extendStatementEnd(n['end'] as int), [
-      buildNode('type_identifier', _m(n['id'])['start'] as int,
-          _m(n['id'])['end'] as int, const []),
-      n['typeParameters'] == null ? null : mapTypeNode(_m(n['typeParameters'])),
-      buildNode('interface_body', body['start'] as int, body['end'] as int, [
-        for (final m in body['body'] as List) mapInterfaceMember(_m(m)),
-      ]),
-    ]);
+    return buildNode(
+      'interface_declaration',
+      n['start'] as int,
+      extendStatementEnd(n['end'] as int),
+      [
+        buildNode(
+          'type_identifier',
+          _m(n['id'])['start'] as int,
+          _m(n['id'])['end'] as int,
+          const [],
+        ),
+        n['typeParameters'] == null
+            ? null
+            : mapTypeNode(_m(n['typeParameters'])),
+        buildNode('interface_body', body['start'] as int, body['end'] as int, [
+          for (final m in body['body'] as List) mapInterfaceMember(_m(m)),
+        ]),
+      ],
+    );
   }
 
   /// property/method/construct/call/index signatures.
-  AstNode mapInterfaceMember(Map<String, dynamic> m) {
+  AstNode mapInterfaceMember(EstNode m) {
     final start = m['start'] as int;
     switch (m['type']) {
       case 'TSPropertySignature':
@@ -266,7 +303,9 @@ extension OxcTypeMapper on OxcMapper {
         // any `;` separator that oxc includes in the span.
         return buildNode('property_signature', start, _signatureEnd(m), [
           mapPropertyKey(_m(m['key']), m['computed'] == true),
-          m['typeAnnotation'] == null ? null : mapTypeNode(_m(m['typeAnnotation'])),
+          m['typeAnnotation'] == null
+              ? null
+              : mapTypeNode(_m(m['typeAnnotation'])),
         ]);
       case 'TSMethodSignature':
         return buildNode('method_signature', start, _signatureEnd(m), [
@@ -292,19 +331,23 @@ extension OxcTypeMapper on OxcMapper {
   }
 
   /// Signature span ends at the annotation (or key), excluding separators.
-  int _signatureEnd(Map<String, dynamic> m) {
+  int _signatureEnd(EstNode m) {
     final ann = m['typeAnnotation'] ?? m['returnType'];
     if (ann != null) return _m(ann)['end'] as int;
     return _m(m['key'])['end'] as int;
   }
 
   /// index_signature: parameter name + its type + the value type_annotation.
-  AstNode mapIndexSignature(Map<String, dynamic> m) {
+  AstNode mapIndexSignature(EstNode m) {
     final param = _m((m['parameters'] as List).first);
     final paramAnn = _m(param['typeAnnotation']);
     return buildNode('index_signature', m['start'] as int, m['end'] as int, [
-      buildNode('identifier', param['start'] as int,
-          paramAnn['start'] as int, const []),
+      buildNode(
+        'identifier',
+        param['start'] as int,
+        paramAnn['start'] as int,
+        const [],
+      ),
       mapTypeNode(_m(paramAnn['typeAnnotation'])),
       mapTypeNode(_m(m['typeAnnotation'])),
     ]);
@@ -312,22 +355,34 @@ extension OxcTypeMapper on OxcMapper {
 
   /// enum_declaration: bare members are property_identifier; initialized
   /// members are enum_assignment.
-  AstNode mapEnum(Map<String, dynamic> n) {
+  AstNode mapEnum(EstNode n) {
     final body = _m(n['body']);
-    return buildNode('enum_declaration', n['start'] as int,
-        extendStatementEnd(n['end'] as int), [
-      buildNode('identifier', _m(n['id'])['start'] as int,
-          _m(n['id'])['end'] as int, const []),
-      buildNode('enum_body', body['start'] as int, body['end'] as int, [
-        for (final m in body['members'] as List) _enumMember(_m(m)),
-      ]),
-    ]);
+    return buildNode(
+      'enum_declaration',
+      n['start'] as int,
+      extendStatementEnd(n['end'] as int),
+      [
+        buildNode(
+          'identifier',
+          _m(n['id'])['start'] as int,
+          _m(n['id'])['end'] as int,
+          const [],
+        ),
+        buildNode('enum_body', body['start'] as int, body['end'] as int, [
+          for (final m in body['members'] as List) _enumMember(_m(m)),
+        ]),
+      ],
+    );
   }
 
-  AstNode _enumMember(Map<String, dynamic> m) {
+  AstNode _enumMember(EstNode m) {
     final id = _m(m['id']);
-    final key = buildNode('property_identifier', id['start'] as int,
-        id['end'] as int, const []);
+    final key = buildNode(
+      'property_identifier',
+      id['start'] as int,
+      id['end'] as int,
+      const [],
+    );
     final init = m['initializer'];
     if (init == null) return key;
     return buildNode('enum_assignment', m['start'] as int, m['end'] as int, [
@@ -338,7 +393,7 @@ extension OxcTypeMapper on OxcMapper {
 
   /// Identifier annotated with a TS type: returns the cropped identifier
   /// node (without `?`/annotation) plus the annotation node when present.
-  (AstNode, AstNode?) splitAnnotation(Map<String, dynamic> id) {
+  (AstNode, AstNode?) splitAnnotation(EstNode id) {
     final start = id['start'] as int;
     final ann = id['typeAnnotation'];
     if (ann == null) {

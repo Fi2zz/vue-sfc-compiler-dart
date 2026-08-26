@@ -27,7 +27,13 @@ void walkForAwait(
       ctx.hasAwait = true;
       final currentScope = scopeStack.last;
       final needsSemi = _needsSemi(currentScope, scopeStack.length, child);
-      _processAwait(ctx, child, needsSemi, parent?.type == 'expression_statement', s);
+      _processAwait(
+        ctx,
+        child,
+        needsSemi,
+        parent?.type == 'expression_statement',
+        s,
+      );
     }
     for (final c in child.children) {
       if (isFunctionType(c)) continue;
@@ -69,20 +75,22 @@ void _processAwait(
   // tree-sitter parenthesized_expression starts at '(', matching babel's
   // extra.parenStart, so the argument start is always correct here.
   final argumentStart = argument.startByte;
-  final argumentStr =
-      ctx.source.substring(ctx.abs(argumentStart), ctx.abs(argument.endByte));
+  final argumentStr = ctx.source.substring(
+    ctx.abs(argumentStart),
+    ctx.abs(argument.endByte),
+  );
   final containsNestedAwait = _awaitRe.hasMatch(argumentStr);
 
   s.overwrite(
     ctx.abs(node.startByte),
     ctx.abs(argumentStart),
     '${needSemi ? ';' : ''}(\n  ([__temp,__restore] = '
-        '${ctx.helper('withAsyncContext')}('
-        '${containsNestedAwait ? 'async ' : ''}() => ',
+    '${ctx.helper('withAsyncContext')}('
+    '${containsNestedAwait ? 'async ' : ''}() => ',
   );
   s.appendLeft(
     ctx.abs(node.endByte),
     ')),\n  ${isStatement ? '' : '__temp = '}await __temp,\n  __restore()'
-        '${isStatement ? '' : ',\n  __temp'}\n)',
+    '${isStatement ? '' : ',\n  __temp'}\n)',
   );
 }

@@ -7,7 +7,9 @@ import '../tmpl_ast.dart';
 const _propsHelperSet = {hNormalizeProps, hGuardReactiveProps};
 
 (Object?, List<JSCallExpression>) _getUnnormalizedProps(
-    Object? props, List<JSCallExpression> callPath) {
+  Object? props,
+  List<JSCallExpression> callPath,
+) {
   var current = props;
   while (current is JSCallExpression &&
       current.callee is String &&
@@ -28,8 +30,8 @@ void injectProp(Object? node, JSProperty prop, TransformContext context) {
   Object? props = node is VNodeCall
       ? node.props
       : (node as JSCallExpression).arguments.length > 2
-          ? node.arguments[2]
-          : null;
+      ? node.arguments[2]
+      : null;
   var callPath = <JSCallExpression>[];
   JSCallExpression? parentCall;
   if (props is JSCallExpression) {
@@ -49,8 +51,10 @@ void injectProp(Object? node, JSProperty prop, TransformContext context) {
     } else {
       if (props.callee == hToHandlers) {
         context.helper(hMergeProps);
-        propsWithInjection = createCallExp(
-            hMergeProps, [createObjectExp([prop]), props]);
+        propsWithInjection = createCallExp(hMergeProps, [
+          createObjectExp([prop]),
+          props,
+        ]);
       } else {
         props.arguments.insert(0, createObjectExp([prop]));
       }
@@ -63,8 +67,10 @@ void injectProp(Object? node, JSProperty prop, TransformContext context) {
     propsWithInjection = props;
   } else {
     context.helper(hMergeProps);
-    propsWithInjection = createCallExp(
-        hMergeProps, [createObjectExp([prop]), props]);
+    propsWithInjection = createCallExp(hMergeProps, [
+      createObjectExp([prop]),
+      props,
+    ]);
     if (parentCall != null && parentCall.callee == hGuardReactiveProps) {
       parentCall = callPath[callPath.length - 2];
     }
@@ -108,7 +114,10 @@ bool _injectSlotKey(JSCallExpression node, JSProperty prop) {
 }
 
 void _assignProps(
-    Object? node, Object? propsWithInjection, JSCallExpression? parentCall) {
+  Object? node,
+  Object? propsWithInjection,
+  JSCallExpression? parentCall,
+) {
   if (node is VNodeCall) {
     if (parentCall != null) {
       parentCall.arguments[0] = propsWithInjection;
@@ -132,9 +141,11 @@ void _assignProps(
 bool hasProp(JSProperty prop, JSObjectExpression props) {
   if (prop.key is! SimpleExpression) return false;
   final propKeyName = (prop.key as SimpleExpression).content;
-  return props.properties.any((p) =>
-      p.key is SimpleExpression &&
-      (p.key as SimpleExpression).content == propKeyName);
+  return props.properties.any(
+    (p) =>
+        p.key is SimpleExpression &&
+        (p.key as SimpleExpression).content == propKeyName,
+  );
 }
 
 Object? getMemoedVNodeCall(Object? node) {
@@ -178,8 +189,7 @@ bool _leafScopeRef(Object? node, Map<String, int> ids) {
         (ids[node.content] ?? 0) != 0;
   }
   if (node is CompoundExpression) {
-    return node.children
-        .any((c) => c is! String && hasScopeRef(c, ids));
+    return node.children.any((c) => c is! String && hasScopeRef(c, ids));
   }
   if (node is InterpolationNode) return hasScopeRef(node.content, ids);
   return false;

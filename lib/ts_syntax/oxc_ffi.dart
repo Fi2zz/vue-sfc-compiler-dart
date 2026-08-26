@@ -3,7 +3,8 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-import 'bin_batch_reader.dart';
+import 'bin_est_node.dart';
+import 'est_node.dart';
 import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
@@ -12,8 +13,8 @@ typedef _oxc_parse_native =
     Pointer<Utf8> Function(Pointer<Utf8>, Uint32, Uint32);
 typedef _oxc_batch_native =
     Pointer<Utf8> Function(Pointer<Pointer<Utf8>>, Uint32, Uint32);
-typedef _oxc_batch_bin_native = Pointer<Uint8> Function(
-    Pointer<Pointer<Utf8>>, Uint32, Uint32);
+typedef _oxc_batch_bin_native =
+    Pointer<Uint8> Function(Pointer<Pointer<Utf8>>, Uint32, Uint32);
 typedef _oxc_free_bin_native = Void Function(Pointer<Uint8>, Uint32);
 typedef _oxc_free_native = Void Function(Pointer<Utf8>);
 
@@ -34,7 +35,7 @@ class OxcFFI {
   late final Pointer<Utf8> Function(Pointer<Utf8>, int, int) _parse;
   late final Pointer<Utf8> Function(Pointer<Pointer<Utf8>>, int, int) _batch;
   late final Pointer<Uint8> Function(Pointer<Pointer<Utf8>>, int, int)
-      _batchBin;
+  _batchBin;
   late final void Function(Pointer<Uint8>, int) _freeBin;
   late final void Function(Pointer<Utf8>) _free;
 
@@ -55,9 +56,10 @@ class OxcFFI {
           Pointer<Uint8> Function(Pointer<Pointer<Utf8>>, int, int)
         >('oxc_parse_batch_bin');
     _freeBin = _lib
-        .lookupFunction<_oxc_free_bin_native, void Function(Pointer<Uint8>, int)>(
-          'oxc_free_bin',
-        );
+        .lookupFunction<
+          _oxc_free_bin_native,
+          void Function(Pointer<Uint8>, int)
+        >('oxc_free_bin');
     _free = _lib.lookupFunction<_oxc_free_native, void Function(Pointer<Utf8>)>(
       'oxc_free',
     );
@@ -134,7 +136,7 @@ class OxcFFI {
 
   /// Binary variant of [parseJsonBatch]: response is a tagged encoding read
   /// via ByteData straight into the same Map shapes (no text parsing).
-  List<Map<String, dynamic>> parseBinBatch(List<String> sources, String language) {
+  List<EstNode> parseBinBatch(List<String> sources, String language) {
     if (sources.isEmpty) return const [];
     final count = sources.length;
     final stride = sizeOf<Pointer<Utf8>>();
@@ -152,9 +154,10 @@ class OxcFFI {
       }
       final blobLen = out[0] | (out[1] << 8) | (out[2] << 16) | (out[3] << 24);
       final bytes = Uint8List.fromList(
-          List<int>.generate(blobLen, (i) => out[4 + i]));
+        List<int>.generate(blobLen, (i) => out[4 + i]),
+      );
       _freeBin(out, blobLen);
-      return BinBatchReader(bytes).readItems();
+      return readBinBatch(bytes);
     } finally {
       for (final p in natives) {
         malloc.free(p);

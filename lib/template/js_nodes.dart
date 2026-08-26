@@ -62,18 +62,55 @@ const hTransitionGroup = 'TransitionGroup';
 /// Strings equal to these are printed as `_name` in codegen (Symbol identity
 /// in official is modeled by helper-name strings in this port).
 const helperNames = {
-  'Fragment', 'Teleport', 'Suspense', 'KeepAlive', 'BaseTransition',
-  'openBlock', 'createBlock', 'createElementBlock', 'createVNode',
-  'createElementVNode', 'createCommentVNode', 'createTextVNode',
-  'createStaticVNode', 'resolveComponent', 'resolveDynamicComponent',
-  'resolveDirective', 'resolveFilter', 'withDirectives', 'renderList',
-  'renderSlot', 'createSlots', 'toDisplayString', 'mergeProps',
-  'normalizeClass', 'normalizeStyle', 'normalizeProps', 'guardReactiveProps',
-  'toHandlers', 'camelize', 'capitalize', 'toHandlerKey', 'setBlockTracking',
-  'pushScopeId', 'popScopeId', 'withCtx', 'unref', 'isRef', 'withMemo',
-  'isMemoSame', 'vModelRadio', 'vModelCheckbox', 'vModelText',
-  'vModelSelect', 'vModelDynamic', 'withModifiers', 'withKeys', 'vShow',
-  'Transition', 'TransitionGroup',
+  'Fragment',
+  'Teleport',
+  'Suspense',
+  'KeepAlive',
+  'BaseTransition',
+  'openBlock',
+  'createBlock',
+  'createElementBlock',
+  'createVNode',
+  'createElementVNode',
+  'createCommentVNode',
+  'createTextVNode',
+  'createStaticVNode',
+  'resolveComponent',
+  'resolveDynamicComponent',
+  'resolveDirective',
+  'resolveFilter',
+  'withDirectives',
+  'renderList',
+  'renderSlot',
+  'createSlots',
+  'toDisplayString',
+  'mergeProps',
+  'normalizeClass',
+  'normalizeStyle',
+  'normalizeProps',
+  'guardReactiveProps',
+  'toHandlers',
+  'camelize',
+  'capitalize',
+  'toHandlerKey',
+  'setBlockTracking',
+  'pushScopeId',
+  'popScopeId',
+  'withCtx',
+  'unref',
+  'isRef',
+  'withMemo',
+  'isMemoSame',
+  'vModelRadio',
+  'vModelCheckbox',
+  'vModelText',
+  'vModelSelect',
+  'vModelDynamic',
+  'withModifiers',
+  'withKeys',
+  'vShow',
+  'Transition',
+  'TransitionGroup',
 };
 
 const patchFlagNames = <int, String>{
@@ -123,16 +160,16 @@ final class VNodeCall extends CodegenNode {
   @override
   TmplLoc loc;
   VNodeCall(VNodeCallSpec s)
-      : tag = s.tag,
-        props = s.props,
-        children = s.children,
-        patchFlag = s.patchFlag,
-        dynamicProps = s.dynamicProps,
-        directives = s.directives,
-        isBlock = s.isBlock,
-        disableTracking = s.disableTracking,
-        isComponent = s.isComponent,
-        loc = s.loc ?? locStub();
+    : tag = s.tag,
+      props = s.props,
+      children = s.children,
+      patchFlag = s.patchFlag,
+      dynamicProps = s.dynamicProps,
+      directives = s.directives,
+      isBlock = s.isBlock,
+      disableTracking = s.disableTracking,
+      isComponent = s.isComponent,
+      loc = s.loc ?? locStub();
 }
 
 /// Parameter object for createVNodeCall (official signature has 11 params).
@@ -147,16 +184,18 @@ final class VNodeCallSpec {
   bool disableTracking;
   bool isComponent;
   TmplLoc? loc;
-  VNodeCallSpec(this.tag,
-      {this.props,
-      this.children,
-      this.patchFlag,
-      this.dynamicProps,
-      this.directives,
-      this.isBlock = false,
-      this.disableTracking = false,
-      this.isComponent = false,
-      this.loc});
+  VNodeCallSpec(
+    this.tag, {
+    this.props,
+    this.children,
+    this.patchFlag,
+    this.dynamicProps,
+    this.directives,
+    this.isBlock = false,
+    this.disableTracking = false,
+    this.isComponent = false,
+    this.loc,
+  });
 }
 
 final class JSCallExpression extends CodegenNode {
@@ -167,7 +206,7 @@ final class JSCallExpression extends CodegenNode {
   @override
   TmplLoc loc;
   JSCallExpression(this.callee, this.arguments, [TmplLoc? loc])
-      : loc = loc ?? locStub();
+    : loc = loc ?? locStub();
 }
 
 final class JSObjectExpression extends CodegenNode {
@@ -176,8 +215,7 @@ final class JSObjectExpression extends CodegenNode {
   List<JSProperty> properties;
   @override
   TmplLoc loc;
-  JSObjectExpression(this.properties, [TmplLoc? loc])
-      : loc = loc ?? locStub();
+  JSObjectExpression(this.properties, [TmplLoc? loc]) : loc = loc ?? locStub();
 }
 
 final class JSProperty extends CodegenNode {
@@ -188,7 +226,7 @@ final class JSProperty extends CodegenNode {
   @override
   TmplLoc loc = _propLoc;
   JSProperty(Object key, this.value)
-      : key = key is String ? createSimpleExp(key, true) : key;
+    : key = key is String ? createSimpleExp(key, true) : key;
   static final _propLoc = locStub();
 }
 
@@ -212,9 +250,13 @@ final class JSFunctionExpression extends CodegenNode {
   bool isNonScopedSlot = false;
   @override
   TmplLoc loc;
-  JSFunctionExpression(this.params, this.returns,
-      {this.newline = false, this.isSlot = false, TmplLoc? loc})
-      : loc = loc ?? locStub();
+  JSFunctionExpression(
+    this.params,
+    this.returns, {
+    this.newline = false,
+    this.isSlot = false,
+    TmplLoc? loc,
+  }) : loc = loc ?? locStub();
 }
 
 final class JSConditionalExpression extends CodegenNode {
@@ -226,8 +268,12 @@ final class JSConditionalExpression extends CodegenNode {
   bool newline;
   @override
   TmplLoc loc = _condLoc;
-  JSConditionalExpression(this.test, this.consequent, this.alternate,
-      {this.newline = true});
+  JSConditionalExpression(
+    this.test,
+    this.consequent,
+    this.alternate, {
+    this.newline = true,
+  });
   static final _condLoc = locStub();
 }
 
@@ -241,8 +287,12 @@ final class JSCacheExpression extends CodegenNode {
   bool needArraySpread = false;
   @override
   TmplLoc loc = _cacheLoc;
-  JSCacheExpression(this.index, this.value,
-      {this.needPauseTracking = false, this.inVOnce = false});
+  JSCacheExpression(
+    this.index,
+    this.value, {
+    this.needPauseTracking = false,
+    this.inVOnce = false,
+  });
   static final _cacheLoc = locStub();
 }
 
@@ -311,18 +361,29 @@ final class JSReturnStatement extends CodegenNode {
 
 // --- Factories mirroring official ast.ts helpers ---
 
-SimpleExpression createSimpleExp(String content,
-    [bool isStatic = false, TmplLoc? loc, int constType = ctNotConstant]) {
+SimpleExpression createSimpleExp(
+  String content, [
+  bool isStatic = false,
+  TmplLoc? loc,
+  int constType = ctNotConstant,
+]) {
   return SimpleExpression(
-      content, isStatic, loc ?? locStub(), isStatic ? ctCanStringify : constType);
+    content,
+    isStatic,
+    loc ?? locStub(),
+    isStatic ? ctCanStringify : constType,
+  );
 }
 
 CompoundExpression createCompoundExp(List<Object?> children, [TmplLoc? loc]) {
   return CompoundExpression(children, loc ?? locStub());
 }
 
-JSCallExpression createCallExp(Object callee,
-    [List<Object?> args = const [], TmplLoc? loc]) {
+JSCallExpression createCallExp(
+  Object callee, [
+  List<Object?> args = const [],
+  TmplLoc? loc,
+]) {
   return JSCallExpression(callee, args, loc);
 }
 
@@ -362,8 +423,10 @@ JSArrayExpression createArrayExp(List<Object?> elements, [TmplLoc? loc]) {
   return JSArrayExpression(elements, loc);
 }
 
-JSObjectExpression createObjectExp(List<JSProperty> properties,
-    [TmplLoc? loc]) {
+JSObjectExpression createObjectExp(
+  List<JSProperty> properties, [
+  TmplLoc? loc,
+]) {
   return JSObjectExpression(properties, loc);
 }
 

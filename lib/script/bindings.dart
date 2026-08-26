@@ -56,8 +56,9 @@ bool _isStaticNode(AstNode? raw) {
     case 'template_string':
       return node.children
           .where((c) => c.type == 'template_substitution')
-          .every((c) =>
-              c.children.isNotEmpty && _isStaticNode(c.children.first));
+          .every(
+            (c) => c.children.isNotEmpty && _isStaticNode(c.children.first),
+          );
     case 'string':
     case 'number':
     case 'true':
@@ -110,12 +111,16 @@ bool walkDeclaration(
   final v = view ?? ctx.view;
   if (node.type == 'lexical_declaration' ||
       node.type == 'variable_declaration') {
-    return _walkVarDecl(ctx, node, bindings,
-        view: v,
-        vueImportAliases: vueImportAliases,
-        hoistStatic: hoistStatic,
-        fromScript: fromScript,
-        propsDestructureEnabled: propsDestructureEnabled);
+    return _walkVarDecl(
+      ctx,
+      node,
+      bindings,
+      view: v,
+      vueImportAliases: vueImportAliases,
+      hoistStatic: hoistStatic,
+      fromScript: fromScript,
+      propsDestructureEnabled: propsDestructureEnabled,
+    );
   }
   if (node.type == 'enum_declaration') {
     return _walkEnum(ctx, node, bindings, v);
@@ -124,8 +129,8 @@ bool walkDeclaration(
       node.type == 'generator_function_declaration' ||
       node.type == 'class_declaration' ||
       node.type == 'abstract_class_declaration') {
-    final id = childOfType(node, 'identifier') ??
-        childOfType(node, 'type_identifier');
+    final id =
+        childOfType(node, 'identifier') ?? childOfType(node, 'type_identifier');
     if (id != null) bindings[v.textOf(id)] = BindingKind.setupConst;
   }
   return false;
@@ -143,11 +148,14 @@ bool _walkVarDecl(
 }) {
   final isConst = declarationKind(node, view) == 'const';
   final declarators = childrenOfType(node, 'variable_declarator').toList();
-  final allLiteral = isConst &&
+  final allLiteral =
+      isConst &&
       declarators.isNotEmpty &&
-      declarators.every((d) =>
-          d.children.first.type == 'identifier' &&
-          _isStaticNode(_declInit(d)));
+      declarators.every(
+        (d) =>
+            d.children.first.type == 'identifier' &&
+            _isStaticNode(_declInit(d)),
+      );
   for (final decl in declarators) {
     final id = decl.children.first;
     final init = _declInit(decl);
@@ -191,11 +199,11 @@ BindingKind _identifierKind(
     return BindingKind.literalConst;
   }
   final reactiveLocal = aliases['reactive'];
-  if (reactiveLocal != null &&
-      _isCallOfName(view, init, {reactiveLocal})) {
+  if (reactiveLocal != null && _isCallOfName(view, init, {reactiveLocal})) {
     return isConst ? BindingKind.setupReactiveConst : BindingKind.setupLet;
   }
-  if (isConst && (_isMacroCall(view, init) || _neverRef(view, init, reactiveLocal))) {
+  if (isConst &&
+      (_isMacroCall(view, init) || _neverRef(view, init, reactiveLocal))) {
     return BindingKind.setupConst;
   }
   if (isConst && _refFamilyCall(view, init, aliases)) {
@@ -216,13 +224,16 @@ bool _walkEnum(
   // 官方：成员无初始化器或初始化器为静态字面量 → literal-const。
   final body = childOfType(node, 'enum_body');
   final members = body?.children ?? const [];
-  final allLiteral = members.every((m) =>
-      m.type == 'property_identifier' ||
-      (m.type == 'enum_assignment' &&
-          m.children.isNotEmpty &&
-          _isStaticNode(m.children.last)));
-  bindings[view.textOf(id)] =
-      allLiteral ? BindingKind.literalConst : BindingKind.setupConst;
+  final allLiteral = members.every(
+    (m) =>
+        m.type == 'property_identifier' ||
+        (m.type == 'enum_assignment' &&
+            m.children.isNotEmpty &&
+            _isStaticNode(m.children.last)),
+  );
+  bindings[view.textOf(id)] = allLiteral
+      ? BindingKind.literalConst
+      : BindingKind.setupConst;
   return allLiteral;
 }
 
@@ -253,8 +264,7 @@ bool _refFamilyCall(SrcView view, AstNode? init, Map<String, String> aliases) {
 /// canNeverBeRef：reactive 调用或纯值表达式，永远不可能是 ref。
 bool _neverRef(SrcView view, AstNode? init, String? reactiveLocal) {
   if (init == null) return false;
-  if (reactiveLocal != null &&
-      _isCallOfName(view, init, {reactiveLocal})) {
+  if (reactiveLocal != null && _isCallOfName(view, init, {reactiveLocal})) {
     return true;
   }
   switch (init.type) {
@@ -315,8 +325,9 @@ void _walkObjectPattern(
     } else if (p.type == 'rest_pattern') {
       final id = childOfType(p, 'identifier');
       if (id != null) {
-        bindings[view.textOf(id)] =
-            isConst ? BindingKind.setupConst : BindingKind.setupLet;
+        bindings[view.textOf(id)] = isConst
+            ? BindingKind.setupConst
+            : BindingKind.setupLet;
       }
     }
   }
@@ -348,8 +359,9 @@ void _walkPattern(
     case 'rest_pattern':
       final id = childOfType(node, 'identifier');
       if (id != null) {
-        bindings[view.textOf(id)] =
-            isConst ? BindingKind.setupConst : BindingKind.setupLet;
+        bindings[view.textOf(id)] = isConst
+            ? BindingKind.setupConst
+            : BindingKind.setupLet;
       }
       break;
     case 'object_pattern':

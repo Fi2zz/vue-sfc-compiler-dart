@@ -9,23 +9,24 @@ import 'transform_expression.dart';
 import 'transform_utils.dart';
 
 final transformIf = createStructuralDirectiveTransform(
-    RegExp(r'^(?:if|else|else-if)$'), (node, dir, context) {
-  return _processIf(node, dir, context, (ifNode, branch, isRoot) {
-    final siblings = _siblingList(context);
-    var i = siblings.indexOf(ifNode);
-    var key = 0;
-    while (i-- >= 0) {
-      // JS reads siblings[-1] as undefined and skips it via truthiness guard.
-      if (i < 0) break;
-      final sibling = siblings[i];
-      if (sibling is IfNode) {
-        key += sibling.branches.length;
+  RegExp(r'^(?:if|else|else-if)$'),
+  (node, dir, context) {
+    return _processIf(node, dir, context, (ifNode, branch, isRoot) {
+      final siblings = _siblingList(context);
+      var i = siblings.indexOf(ifNode);
+      var key = 0;
+      while (i-- >= 0) {
+        // JS reads siblings[-1] as undefined and skips it via truthiness guard.
+        if (i < 0) break;
+        final sibling = siblings[i];
+        if (sibling is IfNode) {
+          key += sibling.branches.length;
+        }
       }
-    }
-    return () =>
-        _assignBranchCodegen(ifNode, branch, isRoot, key, context);
-  });
-});
+      return () => _assignBranchCodegen(ifNode, branch, isRoot, key, context);
+    });
+  },
+);
 
 List<TmplNode> _siblingList(TransformContext context) {
   final p = context.parent!;
@@ -38,28 +39,39 @@ List<TmplNode> _siblingList(TransformContext context) {
   };
 }
 
-void _assignBranchCodegen(IfNode ifNode, IfBranchNode branch, bool isRoot,
-    int key, TransformContext context) {
+void _assignBranchCodegen(
+  IfNode ifNode,
+  IfBranchNode branch,
+  bool isRoot,
+  int key,
+  TransformContext context,
+) {
   if (isRoot) {
     ifNode.codegenNode = createCodegenNodeForBranch(branch, key, context);
   } else {
     final parentCondition = _getParentCondition(ifNode.codegenNode!);
     parentCondition.alternate = createCodegenNodeForBranch(
-        branch, key + ifNode.branches.length - 1, context);
+      branch,
+      key + ifNode.branches.length - 1,
+      context,
+    );
   }
 }
 
 Object? _processIf(
-    TmplNode node,
-    DirectiveNode dir,
-    TransformContext context,
-    Object? Function(IfNode ifNode, IfBranchNode branch, bool isRoot)
-        processCodegen) {
+  TmplNode node,
+  DirectiveNode dir,
+  TransformContext context,
+  Object? Function(IfNode ifNode, IfBranchNode branch, bool isRoot)
+  processCodegen,
+) {
   if (dir.name != 'else' &&
       (dir.exp == null ||
           (dir.exp! as SimpleExpression).content.trim().isEmpty)) {
     final loc = dir.exp?.loc ?? node.loc;
-    context.onError(TmplCompileError(28, 'v-if/v-else-if is missing expression.', dir.loc));
+    context.onError(
+      TmplCompileError(28, 'v-if/v-else-if is missing expression.', dir.loc),
+    );
     dir.exp = createSimpleExp('true', false, loc);
   }
   if (context.prefixIdentifiers && dir.exp != null) {
@@ -75,11 +87,12 @@ Object? _processIf(
 }
 
 Object? _attachElseBranch(
-    TmplNode node,
-    DirectiveNode dir,
-    TransformContext context,
-    Object? Function(IfNode ifNode, IfBranchNode branch, bool isRoot)
-        processCodegen) {
+  TmplNode node,
+  DirectiveNode dir,
+  TransformContext context,
+  Object? Function(IfNode ifNode, IfBranchNode branch, bool isRoot)
+  processCodegen,
+) {
   final siblings = _siblingList(context);
   final comments = <CommentNode>[];
   var i = siblings.indexOf(node);
@@ -98,7 +111,12 @@ Object? _attachElseBranch(
       _mergeIntoIfNode(node, dir, context, processCodegen, sibling, comments);
     } else {
       context.onError(
-          TmplCompileError(30, 'v-else/v-else-if has no adjacent v-if or v-else-if.', node.loc));
+        TmplCompileError(
+          30,
+          'v-else/v-else-if has no adjacent v-if or v-else-if.',
+          node.loc,
+        ),
+      );
     }
     break;
   }
@@ -106,17 +124,23 @@ Object? _attachElseBranch(
 }
 
 void _mergeIntoIfNode(
-    TmplNode node,
-    DirectiveNode dir,
-    TransformContext context,
-    Object? Function(IfNode ifNode, IfBranchNode branch, bool isRoot)
-        processCodegen,
-    IfNode sibling,
-    List<CommentNode> comments) {
+  TmplNode node,
+  DirectiveNode dir,
+  TransformContext context,
+  Object? Function(IfNode ifNode, IfBranchNode branch, bool isRoot)
+  processCodegen,
+  IfNode sibling,
+  List<CommentNode> comments,
+) {
   if ((dir.name == 'else-if' || dir.name == 'else') &&
       sibling.branches.last.condition == null) {
     context.onError(
-        TmplCompileError(30, 'v-else/v-else-if has no adjacent v-if or v-else-if.', node.loc));
+      TmplCompileError(
+        30,
+        'v-else/v-else-if has no adjacent v-if or v-else-if.',
+        node.loc,
+      ),
+    );
   }
   context.removeNode();
   final branch = _createIfBranch(node, dir);
@@ -127,8 +151,7 @@ void _mergeIntoIfNode(
   if (key != null) {
     for (final b in sibling.branches) {
       if (_isSameKey(b.userKey, key)) {
-        context.onError(TmplCompileError(
-            29, tmplErrorMessage(29), null));
+        context.onError(TmplCompileError(29, tmplErrorMessage(29), null));
       }
     }
   }
@@ -158,7 +181,10 @@ IfBranchNode _createIfBranch(TmplNode node, DirectiveNode dir) {
 }
 
 Object createCodegenNodeForBranch(
-    IfBranchNode branch, int keyIndex, TransformContext context) {
+  IfBranchNode branch,
+  int keyIndex,
+  TransformContext context,
+) {
   final condition = branch.condition;
   if (condition != null) {
     // Registration order matters for the import preamble: helper() is called
@@ -173,16 +199,27 @@ Object createCodegenNodeForBranch(
 }
 
 Object createChildrenCodegenNode(
-    IfBranchNode branch, int keyIndex, TransformContext context) {
+  IfBranchNode branch,
+  int keyIndex,
+  TransformContext context,
+) {
   final keyProperty = createObjectProp(
-      'key', createSimpleExp('$keyIndex', false, null, ctCanHoist));
+    'key',
+    createSimpleExp('$keyIndex', false, null, ctCanHoist),
+  );
   final children = branch.children;
   final firstChild = children.isNotEmpty ? children[0] : null;
   final needFragmentWrapper =
       children.length != 1 || firstChild is! ElementNode;
   if (needFragmentWrapper) {
-    return _fragmentChildren(branch, keyIndex, keyProperty, context,
-        children, firstChild);
+    return _fragmentChildren(
+      branch,
+      keyIndex,
+      keyProperty,
+      context,
+      children,
+      firstChild,
+    );
   }
   final ret = firstChild.codegenNode!;
   final vnodeCall = getMemoedVNodeCall(ret);
@@ -193,9 +230,14 @@ Object createChildrenCodegenNode(
   return ret;
 }
 
-Object _fragmentChildren(IfBranchNode branch, int keyIndex,
-    JSProperty keyProperty, TransformContext context,
-    List<TmplNode> children, TmplNode? firstChild) {
+Object _fragmentChildren(
+  IfBranchNode branch,
+  int keyIndex,
+  JSProperty keyProperty,
+  TransformContext context,
+  List<TmplNode> children,
+  TmplNode? firstChild,
+) {
   if (children.length == 1 && firstChild is ForNode) {
     final vnodeCall = firstChild.codegenNode!;
     injectProp(vnodeCall, keyProperty, context);
@@ -208,13 +250,16 @@ Object _fragmentChildren(IfBranchNode branch, int keyIndex,
   }
   context.helper(hFragment);
   return createVNodeCall(
-      context,
-      VNodeCallSpec(hFragment,
-          props: createObjectExp([keyProperty]),
-          children: children,
-          patchFlag: patchFlag,
-          isBlock: true,
-          loc: branch.loc));
+    context,
+    VNodeCallSpec(
+      hFragment,
+      props: createObjectExp([keyProperty]),
+      children: children,
+      patchFlag: patchFlag,
+      isBlock: true,
+      loc: branch.loc,
+    ),
+  );
 }
 
 JSConditionalExpression _getParentCondition(Object node) {

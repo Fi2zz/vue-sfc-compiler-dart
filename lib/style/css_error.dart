@@ -57,8 +57,9 @@ List<int> _lineStarts(String css) {
 /// Full byte-exact `String(CssSyntaxError)` for a parse of [css].
 String formatCssSyntaxError(String css, String file, CssSyntaxError e) {
   final (line, column) = cssOffsetToLineCol(css, e.offset);
-  final endColumn =
-      e.endOffset == null ? null : cssOffsetToLineCol(css, e.endOffset!).$2;
+  final endColumn = e.endOffset == null
+      ? null
+      : cssOffsetToLineCol(css, e.endOffset!).$2;
   final message = '$file:$line:$column: ${e.reason}';
   final frame = _showSourceCode(css, line, column, endColumn);
   return frame.isEmpty
@@ -92,16 +93,19 @@ String _frameLine(String line, int number, int maxWidth, _FramePos pos) {
   if (number != pos.line) return ' $gutter$line';
   if (line.length > 160) return _longLineFrame(line, gutter, pos);
   final blank = gutter.replaceAll(RegExp(r'\d'), ' ');
-  final lead =
-      line.substring(0, pos.column - 1).replaceAll(RegExp(r'[^\t]'), ' ');
+  final lead = line
+      .substring(0, pos.column - 1)
+      .replaceAll(RegExp(r'[^\t]'), ' ');
   return '>$gutter$line\n $blank$lead^';
 }
 
 String _longLineFrame(String line, String gutter, _FramePos pos) {
   const padding = 20;
   final subStart = math.max(0, pos.column - padding);
-  final subEnd = _jsMax((pos.column + padding).toDouble(),
-      pos.endColumn == null ? double.nan : (pos.endColumn! + padding) * 1.0);
+  final subEnd = _jsMax(
+    (pos.column + padding).toDouble(),
+    pos.endColumn == null ? double.nan : (pos.endColumn! + padding) * 1.0,
+  );
   final subLine = _jsSlice(line, subStart, subEnd);
   final leadEnd = math.min(pos.column - 1, padding - 1);
   final lead = line.substring(0, leadEnd).replaceAll(RegExp(r'[^\t]'), ' ');

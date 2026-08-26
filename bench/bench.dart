@@ -14,6 +14,7 @@ import 'package:vue_sfc_parser/script/script_compile.dart';
 import 'package:vue_sfc_parser/template/compile_template.dart';
 import 'package:vue_sfc_parser/template/transform_context.dart';
 import 'package:vue_sfc_parser/ts_parser.dart';
+import 'package:vue_sfc_parser/ts_syntax/est_node.dart';
 import 'package:vue_sfc_parser/ts_syntax/oxc_ffi.dart';
 import 'package:vue_sfc_parser/ts_syntax/oxc_mapper.dart';
 import 'corpus_data.dart';
@@ -169,7 +170,10 @@ Future<Map<String, dynamic>> _tsSegments(int warmup, int runs) async {
   int mapperRun() {
     var n = 0;
     for (final s in scripts) {
-      n += OxcMapper(s, language: 'ts').mapProgram(payload).children.length;
+      n += OxcMapper(
+        s,
+        language: 'ts',
+      ).mapProgram(estOf(payload)).children.length;
     }
     return n;
   }

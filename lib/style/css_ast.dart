@@ -23,32 +23,32 @@ final class CssRaws {
   final Map<String, CssRawValue> values = {};
 
   bool has(String name) => switch (name) {
-        'before' => before != null,
-        'after' => after != null,
-        'between' => between != null,
-        'afterName' => afterName != null,
-        'left' => left != null,
-        'right' => right != null,
-        'important' => important != null,
-        'ownSemicolon' => ownSemicolon != null,
-        'indent' => indent != null,
-        'semicolon' => semicolon != null,
-        _ => values.containsKey(name),
-      };
+    'before' => before != null,
+    'after' => after != null,
+    'between' => between != null,
+    'afterName' => afterName != null,
+    'left' => left != null,
+    'right' => right != null,
+    'important' => important != null,
+    'ownSemicolon' => ownSemicolon != null,
+    'indent' => indent != null,
+    'semicolon' => semicolon != null,
+    _ => values.containsKey(name),
+  };
 
   Object? get(String name) => switch (name) {
-        'before' => before,
-        'after' => after,
-        'between' => between,
-        'afterName' => afterName,
-        'left' => left,
-        'right' => right,
-        'important' => important,
-        'ownSemicolon' => ownSemicolon,
-        'indent' => indent,
-        'semicolon' => semicolon,
-        _ => values[name],
-      };
+    'before' => before,
+    'after' => after,
+    'between' => between,
+    'afterName' => afterName,
+    'left' => left,
+    'right' => right,
+    'important' => important,
+    'ownSemicolon' => ownSemicolon,
+    'indent' => indent,
+    'semicolon' => semicolon,
+    _ => values[name],
+  };
 
   void set(String name, Object? v) {
     switch (name) {
@@ -86,6 +86,7 @@ sealed class CssNode {
   String get type;
   CssContainer? parent;
   final CssRaws raws = CssRaws();
+
   /// postcss source.start.offset — only feeds error positions.
   int sourceStart = 0;
 

@@ -55,8 +55,7 @@ class CssTokenizer {
 
   void back(CssToken token) => _returned.add(token);
 
-  Never _unclosed(String what) =>
-      throw CssSyntaxError('Unclosed $what', pos);
+  Never _unclosed(String what) => throw CssSyntaxError('Unclosed $what', pos);
 
   CssToken? nextToken({bool ignoreUnclosed = false}) {
     if (_returned.isNotEmpty) return _returned.removeLast();
@@ -73,7 +72,11 @@ class CssTokenizer {
   }
 
   bool _isWhitespaceCode(int code) =>
-      code == 0x0A || code == 0x20 || code == 0x09 || code == 0x0D || code == 0x0C;
+      code == 0x0A ||
+      code == 0x20 ||
+      code == 0x09 ||
+      code == 0x0D ||
+      code == 0x0C;
 
   CssToken _readSpace() {
     var next = pos;
@@ -115,7 +118,8 @@ class CssTokenizer {
   CssToken _readOpenParen(bool ignoreUnclosed) {
     final prev = _buffer.isEmpty ? '' : _buffer.removeLast().content;
     final n = pos + 1 < css.length ? css.codeUnitAt(pos + 1) : -1;
-    final opensUrl = prev == 'url' &&
+    final opensUrl =
+        prev == 'url' &&
         n != 0x27 &&
         n != 0x22 &&
         !_isWhitespaceCode(n) &&
@@ -224,7 +228,9 @@ class CssTokenizer {
   bool _isHexChar(String c) => RegExp(r'[\da-fA-F]').hasMatch(c);
 
   CssToken _readWordOrComment(int code, bool ignoreUnclosed) {
-    if (code == 0x2F && pos + 1 < css.length && css.codeUnitAt(pos + 1) == 0x2A) {
+    if (code == 0x2F &&
+        pos + 1 < css.length &&
+        css.codeUnitAt(pos + 1) == 0x2A) {
       return _readComment(ignoreUnclosed);
     }
     final hit = _indexOfWordEnd(css, pos + 1);

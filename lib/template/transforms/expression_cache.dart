@@ -6,6 +6,7 @@
 //   concat - one existing TSParser.parse of "[e0,e1,...]" + span rebase
 import '../../ts_parser.dart';
 import '../../ts_syntax/oxc_ffi.dart';
+import '../../ts_syntax/est_node.dart';
 import '../../ts_syntax/oxc_mapper.dart';
 import '../tmpl_ast.dart';
 
@@ -50,15 +51,18 @@ List<TmplNode> childrenOf(TmplNode n) {
 /// Strategy A: one oxc_parse_batch round-trip; each item decodes through the
 /// regular single-parse mapping path. Whole-batch failure leaves the cache
 /// untouched so every entry falls back individually.
-void fillExpressionCacheFfi(Map<String, AstNode> cache, List<String> sources,
-    {bool binary = false}) {
+void fillExpressionCacheFfi(
+  Map<String, AstNode> cache,
+  List<String> sources, {
+  bool binary = false,
+}) {
   if (sources.isEmpty) return;
   final oxc = OxcFFI.load();
-  final List<Map<String, dynamic>> items;
+  final List<EstNode> items;
   try {
     items = binary
         ? oxc.parseBinBatch(sources, 'ts')
-        : oxc.parseJsonBatch(sources, 'ts');
+        : [for (final m in oxc.parseJsonBatch(sources, 'ts')) estOf(m)];
   } catch (_) {
     return;
   }
@@ -68,7 +72,7 @@ void fillExpressionCacheFfi(Map<String, AstNode> cache, List<String> sources,
   }
 }
 
-AstNode _payloadRoot(Map<String, dynamic> payload, String source) {
+AstNode _payloadRoot(EstNode payload, String source) {
   final mapper = OxcMapper(source, language: 'ts');
   if (payload['ok'] == true) return mapper.mapProgram(payload);
   return mapper.errorTree();

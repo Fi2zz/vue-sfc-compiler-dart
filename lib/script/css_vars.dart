@@ -73,20 +73,24 @@ int? lexBinding(String content, int start) {
 
 /// 官方 getEscapedCssVarName（dev 路径，doubleEscape=false）。
 String _escapeCssVarName(String key) => key.splitMapJoin(
-      RegExp(r'''[ !"#$%&'()*+,./:;<=>?@\[\\\]^`{|}~]'''),
-      onNonMatch: (m) => m,
-      onMatch: (m) => '\\${m[0]}',
-    );
+  RegExp(r'''[ !"#$%&'()*+,./:;<=>?@\[\\\]^`{|}~]'''),
+  onNonMatch: (m) => m,
+  onMatch: (m) => '\\${m[0]}',
+);
 
 String _genVarName(String id, String raw) => '$id-${_escapeCssVarName(raw)}';
 
-String _genCssVarsFromList(List<String> vars, String id) => '{\n'
+String _genCssVarsFromList(List<String> vars, String id) =>
+    '{\n'
     '  ${vars.map((k) => '"${_genVarName(id, k)}": ($k)').join(',\n  ')}\n}';
 
 /// 官方 genCssVarsCode：生成 `_useCssVars(_ctx => ({ ... }))` 注入代码，
 /// 表达式经 processExpression 的 inline 模式改写（unref/.value 等）。
 String genCssVarsCode(
-    List<String> vars, Map<String, String>? bindings, String id) {
+  List<String> vars,
+  Map<String, String>? bindings,
+  String id,
+) {
   final varsExp = _genCssVarsFromList(vars, id);
   final exp = createSimpleExp(varsExp, false, locStub());
   final options = TransformOptions()
@@ -94,18 +98,18 @@ String genCssVarsCode(
     ..inline = true
     ..bindingMetadata =
         (bindings != null && bindings['__isScriptSetup'] != 'false')
-            ? bindings
-            : const {};
+        ? bindings
+        : const {};
   final context = TransformContext(RootNode([], locStub()), options);
   final transformed = processExpression(exp, context);
   final transformedString = transformed is SimpleExpression
       ? transformed.content
       : transformed is CompoundExpression
-          ? transformed.children.map((c) {
-              if (c is String) return c;
-              if (c is SimpleExpression) return c.content;
-              return '';
-            }).join()
-          : '';
+      ? transformed.children.map((c) {
+          if (c is String) return c;
+          if (c is SimpleExpression) return c.content;
+          return '';
+        }).join()
+      : '';
   return '_useCssVars(_ctx => ($transformedString))';
 }

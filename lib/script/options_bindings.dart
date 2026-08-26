@@ -34,8 +34,7 @@ Map<String, String> _bindingsFromOptions(AstNode obj, SrcView view) {
   return bindings;
 }
 
-void _analyzeOptionPair(
-    AstNode pair, SrcView view, Map<String, String> out) {
+void _analyzeOptionPair(AstNode pair, SrcView view, Map<String, String> out) {
   final key = pair.children.isEmpty ? null : pair.children.first;
   final value = pair.children.length < 2 ? null : pair.children.last;
   if (key == null || value == null || key.type != 'property_identifier') {
@@ -56,7 +55,10 @@ void _analyzeOptionPair(
 }
 
 void _analyzeOptionMethod(
-    AstNode method, SrcView view, Map<String, String> out) {
+  AstNode method,
+  SrcView view,
+  Map<String, String> out,
+) {
   final key = method.children.isEmpty ? null : method.children.first;
   if (key == null || key.type != 'property_identifier') return;
   final name = view.textOf(key);
@@ -82,9 +84,9 @@ List<String> _objectOrArrayKeys(AstNode node, SrcView view) {
 }
 
 List<String> _arrayKeys(AstNode node, SrcView view) => [
-      for (final e in node.children)
-        if (e.type == 'string') _stringText(e, view),
-    ];
+  for (final e in node.children)
+    if (e.type == 'string') _stringText(e, view),
+];
 
 /// Port of getObjectExpressionKeys: pair + method keys, spread/computed
 /// skipped.

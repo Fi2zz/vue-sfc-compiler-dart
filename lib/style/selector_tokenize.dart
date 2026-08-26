@@ -39,10 +39,31 @@ const int tkCombinator = -3;
 const _unescapable = {tkTab, tkNewline, tkCr, tkFeed};
 
 const _wordDelimiters = {
-  tkSpace, tkTab, tkNewline, tkCr, tkFeed, tkAmpersand, tkAsterisk, tkBang,
-  tkComma, tkColon, tkSemicolon, tkOpenParenthesis, tkCloseParenthesis,
-  tkOpenSquare, tkCloseSquare, tkSingleQuote, tkDoubleQuote, tkPlus, tkPipe,
-  tkTilde, tkGreaterThan, tkEquals, tkDollar, tkCaret, tkSlash,
+  tkSpace,
+  tkTab,
+  tkNewline,
+  tkCr,
+  tkFeed,
+  tkAmpersand,
+  tkAsterisk,
+  tkBang,
+  tkComma,
+  tkColon,
+  tkSemicolon,
+  tkOpenParenthesis,
+  tkCloseParenthesis,
+  tkOpenSquare,
+  tkCloseSquare,
+  tkSingleQuote,
+  tkDoubleQuote,
+  tkPlus,
+  tkPipe,
+  tkTilde,
+  tkGreaterThan,
+  tkEquals,
+  tkDollar,
+  tkCaret,
+  tkSlash,
 };
 
 final Set<int> _hex = '0123456789abcdefABCDEF'.codeUnits.toSet();

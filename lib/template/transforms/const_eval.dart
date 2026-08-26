@@ -38,29 +38,29 @@ final class _ConstEvalImpl {
   }
 
   Object? _eval(AstNode node) => switch (node.type) {
-        'number' => parseJsNumber(view.textOf(node)),
-        'string' => parseJsString(view.textOf(node)),
-        'true' => true,
-        'false' => false,
-        'null' => null,
-        'identifier' => _evalIdentifier(view.textOf(node)),
-        'template_string' => _evalTemplate(node),
-        'unary_expression' => _evalUnary(node),
-        'binary_expression' => _evalBinary(node),
-        'ternary_expression' => _evalTernary(node),
-        'parenthesized_expression' => _eval(node.children.first),
-        'array' => _evalArray(node),
-        'object' => _evalObject(node),
-        'sequence_expression' => _eval(node.children.last),
-        _ => throw StateError('constEval: unsupported node ${node.type}'),
-      };
+    'number' => parseJsNumber(view.textOf(node)),
+    'string' => parseJsString(view.textOf(node)),
+    'true' => true,
+    'false' => false,
+    'null' => null,
+    'identifier' => _evalIdentifier(view.textOf(node)),
+    'template_string' => _evalTemplate(node),
+    'unary_expression' => _evalUnary(node),
+    'binary_expression' => _evalBinary(node),
+    'ternary_expression' => _evalTernary(node),
+    'parenthesized_expression' => _eval(node.children.first),
+    'array' => _evalArray(node),
+    'object' => _evalObject(node),
+    'sequence_expression' => _eval(node.children.last),
+    _ => throw StateError('constEval: unsupported node ${node.type}'),
+  };
 
   Object? _evalIdentifier(String name) => switch (name) {
-        'undefined' => jsUndefined,
-        'NaN' => double.nan,
-        'Infinity' => double.infinity,
-        _ => throw StateError('constEval: free identifier $name'),
-      };
+    'undefined' => jsUndefined,
+    'NaN' => double.nan,
+    'Infinity' => double.infinity,
+    _ => throw StateError('constEval: free identifier $name'),
+  };
 
   Object? _evalUnary(AstNode node) {
     final arg = node.children.last;
@@ -126,11 +126,11 @@ final class _ConstEvalImpl {
   }
 
   String _objectKey(AstNode key) => switch (key.type) {
-        'property_identifier' => view.textOf(key),
-        'string' => parseJsString(view.textOf(key)),
-        'number' => jsNumToString(parseJsNumber(view.textOf(key))),
-        _ => throw StateError('constEval: unsupported key ${key.type}'),
-      };
+    'property_identifier' => view.textOf(key),
+    'string' => parseJsString(view.textOf(key)),
+    'number' => jsNumToString(parseJsNumber(view.textOf(key))),
+    _ => throw StateError('constEval: unsupported key ${key.type}'),
+  };
 
   Object? _evalTemplate(AstNode node) {
     for (final c in node.children) {
@@ -349,7 +349,7 @@ const _simpleEscapes = {
 (String, int) _hexEscape(String s, int i) {
   return (
     String.fromCharCode(int.parse(s.substring(i + 2, i + 4), radix: 16)),
-    i + 4
+    i + 4,
   );
 }
 
@@ -361,6 +361,6 @@ const _simpleEscapes = {
   }
   return (
     String.fromCharCode(int.parse(s.substring(i + 2, i + 6), radix: 16)),
-    i + 6
+    i + 6,
   );
 }

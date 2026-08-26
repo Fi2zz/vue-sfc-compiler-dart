@@ -47,8 +47,13 @@ Object? transformAssetUrl(TmplNode node, TransformContext context) {
     final (path, hash) = _parseUrl(content);
     final exp = _importsExpression(path, hash, attr.loc, context);
     if (exp == null) continue;
-    node.props[index] = DirectiveNode('bind', ':${attr.name}', attr.loc,
-        arg: createSimpleExp(attr.name, true, attr.loc), exp: exp);
+    node.props[index] = DirectiveNode(
+      'bind',
+      ':${attr.name}',
+      attr.loc,
+      arg: createSimpleExp(attr.name, true, attr.loc),
+      exp: exp,
+    );
   }
   return null;
 }
@@ -61,11 +66,16 @@ bool _isSkippableUrl(String content) {
 }
 
 SimpleExpression? _importsExpression(
-    String path, String? hash, TmplLoc loc, TransformContext context) {
+  String path,
+  String? hash,
+  TmplLoc loc,
+  TransformContext context,
+) {
   if (path.isEmpty) return null;
   SimpleExpression exp;
-  final existingIndex =
-      context.imports.indexWhere((i) => (i as Map)['path'] == path);
+  final existingIndex = context.imports.indexWhere(
+    (i) => (i as Map)['path'] == path,
+  );
   if (existingIndex > -1) {
     exp = (context.imports[existingIndex] as Map)['exp'] as SimpleExpression;
   } else {
@@ -86,17 +96,26 @@ String _decodeUriComponent(String path) {
 }
 
 SimpleExpression _hashExpression(
-    SimpleExpression exp, String hash, TmplLoc loc, TransformContext context) {
+  SimpleExpression exp,
+  String hash,
+  TmplLoc loc,
+  TransformContext context,
+) {
   final name = exp.content;
   final hashExp = "$name + '$hash'";
   if (!context.hoistStatic) {
     return createSimpleExp(hashExp, false, loc, ctCanStringify);
   }
-  final existingHoistIndex = context.hoists.indexWhere((h) =>
-      h is SimpleExpression && !h.static_ && h.content == hashExp);
+  final existingHoistIndex = context.hoists.indexWhere(
+    (h) => h is SimpleExpression && !h.static_ && h.content == hashExp,
+  );
   if (existingHoistIndex > -1) {
     return createSimpleExp(
-        '_hoisted_${existingHoistIndex + 1}', false, loc, ctCanHoist);
+      '_hoisted_${existingHoistIndex + 1}',
+      false,
+      loc,
+      ctCanHoist,
+    );
   }
   return context.hoist(createSimpleExp(hashExp, false, loc, ctCanStringify));
 }
@@ -106,9 +125,7 @@ Object? transformSrcset(TmplNode node, TransformContext context) {
   if (!_srcsetTags.contains(node.tag) || node.props.isEmpty) return null;
   for (var index = 0; index < node.props.length; index++) {
     final attr = node.props[index];
-    if (attr is! AttributeNode ||
-        attr.name != 'srcset' ||
-        attr.value == null) {
+    if (attr is! AttributeNode || attr.name != 'srcset' || attr.value == null) {
       continue;
     }
     _processSrcsetAttr(node, index, attr, context);
@@ -117,12 +134,15 @@ Object? transformSrcset(TmplNode node, TransformContext context) {
 }
 
 void _processSrcsetAttr(
-    ElementNode node, int index, AttributeNode attr, TransformContext context) {
+  ElementNode node,
+  int index,
+  AttributeNode attr,
+  TransformContext context,
+) {
   final value = attr.value!.content;
   if (value.isEmpty) return;
   final candidates = value.split(',').map((s) {
-    final parts =
-        s.replaceAll(_escapedSpaceRE, ' ').trim().split(' ');
+    final parts = s.replaceAll(_escapedSpaceRE, ' ').trim().split(' ');
     return (parts[0], parts.length > 1 ? parts[1] : null);
   }).toList();
   // Fold data-url candidates (they contain a comma) back together.
@@ -144,8 +164,13 @@ bool _shouldProcessUrl(String url) {
       _isRelativeUrl(url);
 }
 
-void _rewriteSrcset(ElementNode node, int index, AttributeNode attr,
-    List<(String, String?)> candidates, TransformContext context) {
+void _rewriteSrcset(
+  ElementNode node,
+  int index,
+  AttributeNode attr,
+  List<(String, String?)> candidates,
+  TransformContext context,
+) {
   final compound = createCompoundExp([], attr.loc);
   for (var i = 0; i < candidates.length; i++) {
     final (url, descriptor) = candidates[i];
@@ -155,8 +180,9 @@ void _rewriteSrcset(ElementNode node, int index, AttributeNode attr,
         compound.children.add(_srcsetImportExp(path, attr.loc, context));
       }
     } else {
-      compound.children
-          .add(createSimpleExp('"$url"', false, attr.loc, ctCanStringify));
+      compound.children.add(
+        createSimpleExp('"$url"', false, attr.loc, ctCanStringify),
+      );
     }
     final isNotLast = candidates.length - 1 > i;
     if (descriptor != null && isNotLast) {
@@ -173,21 +199,37 @@ void _rewriteSrcset(ElementNode node, int index, AttributeNode attr,
     hoisted.constType = ctCanStringify;
     exp = hoisted;
   }
-  node.props[index] = DirectiveNode('bind', ':srcset', attr.loc,
-      arg: createSimpleExp('srcset', true, attr.loc),
-      exp: exp is SimpleExpression ? exp : null);
+  node.props[index] = DirectiveNode(
+    'bind',
+    ':srcset',
+    attr.loc,
+    arg: createSimpleExp('srcset', true, attr.loc),
+    exp: exp is SimpleExpression ? exp : null,
+  );
 }
 
 SimpleExpression _srcsetImportExp(
-    String path, TmplLoc loc, TransformContext context) {
-  final existingIndex =
-      context.imports.indexWhere((i) => (i as Map)['path'] == path);
+  String path,
+  TmplLoc loc,
+  TransformContext context,
+) {
+  final existingIndex = context.imports.indexWhere(
+    (i) => (i as Map)['path'] == path,
+  );
   if (existingIndex > -1) {
     return createSimpleExp(
-        '_imports_$existingIndex', false, loc, ctCanStringify);
+      '_imports_$existingIndex',
+      false,
+      loc,
+      ctCanStringify,
+    );
   }
   final exp = createSimpleExp(
-      '_imports_${context.imports.length}', false, loc, ctCanStringify);
+    '_imports_${context.imports.length}',
+    false,
+    loc,
+    ctCanStringify,
+  );
   context.imports.add({'exp': exp, 'path': path});
   return exp;
 }

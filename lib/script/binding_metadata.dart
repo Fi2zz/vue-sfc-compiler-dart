@@ -27,7 +27,8 @@ void _registerImports(SetupContext ctx, Map<String, String> out) {
   for (final entry in ctx.userImports.entries) {
     final b = entry.value;
     if (b.typeOnly) continue;
-    final isConst = b.imported == '*' ||
+    final isConst =
+        b.imported == '*' ||
         (b.imported == 'default' && b.source.endsWith('.vue')) ||
         b.source == 'vue';
     out[entry.key] = isConst ? 'setup-const' : 'setup-maybe-ref';
@@ -41,14 +42,14 @@ void _mergeKinds(Map<String, BindingKind> src, Map<String, String> out) {
 }
 
 String _kindName(BindingKind kind) => switch (kind) {
-      BindingKind.literalConst => 'literal-const',
-      BindingKind.setupConst => 'setup-const',
-      BindingKind.setupLet => 'setup-let',
-      BindingKind.setupMaybeRef => 'setup-maybe-ref',
-      BindingKind.setupRef => 'setup-ref',
-      BindingKind.setupReactiveConst => 'setup-reactive-const',
-      BindingKind.props => 'props',
-    };
+  BindingKind.literalConst => 'literal-const',
+  BindingKind.setupConst => 'setup-const',
+  BindingKind.setupLet => 'setup-let',
+  BindingKind.setupMaybeRef => 'setup-maybe-ref',
+  BindingKind.setupRef => 'setup-ref',
+  BindingKind.setupReactiveConst => 'setup-reactive-const',
+  BindingKind.props => 'props',
+};
 
 void _registerModels(SetupContext ctx, Map<String, String> out) {
   for (final name in ctx.modelDecls.keys) {

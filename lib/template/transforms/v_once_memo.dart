@@ -36,8 +36,7 @@ Object? transformMemo(TmplNode node, TransformContext context) {
   }
   _seenMemo.add(node);
   return () {
-    final codegenNode =
-        node.codegenNode ?? _codegenNodeOf(context.currentNode);
+    final codegenNode = node.codegenNode ?? _codegenNodeOf(context.currentNode);
     if (codegenNode is VNodeCall) {
       if (node.tagType != etComponent) {
         convertToBlock(codegenNode, context);
@@ -47,7 +46,7 @@ Object? transformMemo(TmplNode node, TransformContext context) {
         dir.exp,
         JSFunctionExpression(null, codegenNode),
         '_cache',
-        '${context.cached.length}'
+        '${context.cached.length}',
       ]);
       context.cached.add(null);
     }
@@ -55,12 +54,12 @@ Object? transformMemo(TmplNode node, TransformContext context) {
 }
 
 Object? _codegenNodeOf(TmplNode? node) => switch (node) {
-      ElementNode n => n.codegenNode,
-      TextCallNode n => n.codegenNode,
-      IfNode n => n.codegenNode,
-      ForNode n => n.codegenNode,
-      _ => null,
-    };
+  ElementNode n => n.codegenNode,
+  TextCallNode n => n.codegenNode,
+  IfNode n => n.codegenNode,
+  ForNode n => n.codegenNode,
+  _ => null,
+};
 
 void _setCodegenNode(TmplNode node, Object? codegenNode) {
   switch (node) {
@@ -88,8 +87,7 @@ Object? transformVBindShorthand(TmplNode node, TransformContext context) {
         prop.arg != null) {
       final arg = prop.arg!;
       if (arg is! SimpleExpression || !arg.static_) {
-        context.onError(TmplCompileError(
-            52, tmplErrorMessage(52), arg.loc));
+        context.onError(TmplCompileError(52, tmplErrorMessage(52), arg.loc));
         prop.exp = createSimpleExp('', true, arg.loc);
       } else {
         final propName = camelize(arg.content);

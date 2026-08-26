@@ -111,5 +111,3 @@ String _slice(String src, int startByte, int endByte) {
   if (safeEnd <= safeStart) return '';
   return utf8.decode(bytes.sublist(safeStart, safeEnd));
 }
-
-

@@ -85,10 +85,11 @@ final class MiniMagic {
   }
 
   bool _hasInsertion(int offset) {
-    final outro = !_consumedOutro.contains(offset) &&
+    final outro =
+        !_consumedOutro.contains(offset) &&
         (_outroLeft.containsKey(offset) || _outroRight.containsKey(offset));
-    final intro = !_consumedIntro.contains(offset) &&
-        _introRight.containsKey(offset);
+    final intro =
+        !_consumedIntro.contains(offset) && _introRight.containsKey(offset);
     return outro || intro;
   }
 
@@ -124,11 +125,10 @@ final class MiniMagic {
   }
 
   List<_Edit> _sortedEdits() {
-    return [..._edits]
-      ..sort((a, b) {
-        final c = a.start.compareTo(b.start);
-        return c != 0 ? c : a.end.compareTo(b.end);
-      });
+    return [..._edits]..sort((a, b) {
+      final c = a.start.compareTo(b.start);
+      return c != 0 ? c : a.end.compareTo(b.end);
+    });
   }
 
   bool _coveredByMove(int offset) {

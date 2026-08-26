@@ -10,12 +10,16 @@ import 'const_eval.dart';
 
 final _expReplaceRE = RegExp(r'__VUE_EXP_START__(.*?)__VUE_EXP_END__');
 final _dataAriaRE = RegExp(r'^(?:data|aria)-');
-final _nonStringifiable =
-    makeMap('caption,thead,tr,th,tbody,td,tfoot,colgroup,col');
+final _nonStringifiable = makeMap(
+  'caption,thead,tr,th,tbody,td,tfoot,colgroup,col',
+);
 
 /// Official stringifyStatic(children, context, parent).
 void stringifyStatic(
-    List<TmplNode> children, TransformContext context, TmplNode parent) {
+  List<TmplNode> children,
+  TransformContext context,
+  TmplNode parent,
+) {
   if (context.scopes.vSlot > 0) return;
   _Stringifier(children, context, parent).run();
 }
@@ -70,8 +74,9 @@ final class _Stringifier {
   int stringifyChunk(int currentIndex) {
     if (nc < 20 && ec < 5) return 0;
     final content = chunk.map((n) => _stringifyNode(n, context)).join();
-    final json = jsJsonString(content)
-        .replaceAllMapped(_expReplaceRE, (m) => '" + ${m[1]} + "');
+    final json = jsJsonString(
+      content,
+    ).replaceAllMapped(_expReplaceRE, (m) => '" + ${m[1]} + "');
     context.helper(hCreateStatic);
     final call = createCallExp(hCreateStatic, [json, '${chunk.length}']);
     if (parentCached) {
@@ -113,11 +118,13 @@ final class _Stringifier {
 }
 
 JSCacheExpression? _cachedNodeOf(TmplNode node) {
-  final ok = node is TextCallNode ||
+  final ok =
+      node is TextCallNode ||
       (node is ElementNode && node.tagType == etElement);
   if (!ok) return null;
-  final cn =
-      node is ElementNode ? node.codegenNode : (node as TextCallNode).codegenNode;
+  final cn = node is ElementNode
+      ? node.codegenNode
+      : (node as TextCallNode).codegenNode;
   return cn is JSCacheExpression ? cn : null;
 }
 
@@ -192,8 +199,9 @@ String _stringifyNode(Object? node, TransformContext context) {
     ElementNode n => _stringifyElement(n, context),
     TextNode n => escapeHtml(n.content),
     CommentNode n => '<!--${escapeHtml(n.content)}-->',
-    InterpolationNode n =>
-      escapeHtml(toDisplayString(evaluateConstant(n.content))),
+    InterpolationNode n => escapeHtml(
+      toDisplayString(evaluateConstant(n.content)),
+    ),
     CompoundExpression n => escapeHtml(jsStr(evaluateConstant(n))),
     TextCallNode n => _stringifyNode(n.content, context),
     _ => '',
@@ -242,8 +250,11 @@ String _stringifyElement(ElementNode node, TransformContext context) {
   final arg = (p.arg as SimpleExpression).content;
   final exp = p.exp as SimpleExpression;
   if (exp.content.isNotEmpty && exp.content[0] == '_') {
-    return (' $arg="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"',
-        false, null);
+    return (
+      ' $arg="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"',
+      false,
+      null,
+    );
   }
   if (isBooleanAttr(arg) && exp.content == 'false') return ('', false, null);
   final evaluated = evaluateConstant(exp);
@@ -251,8 +262,8 @@ String _stringifyElement(ElementNode node, TransformContext context) {
   final value = arg == 'class'
       ? normalizeClass(evaluated)
       : arg == 'style'
-          ? stringifyStyle(normalizeStyle(evaluated))
-          : evaluated;
+      ? stringifyStyle(normalizeStyle(evaluated))
+      : evaluated;
   return (' $arg="${escapeHtml(value)}"', false, null);
 }
 
