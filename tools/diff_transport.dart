@@ -1,4 +1,4 @@
-// Differential harness: for every corpus entry, parse via the JSON batch
+// Differential transport harness: for every corpus entry, parse via the JSON batch
 // transport and the binary batch transport and compare AstNode.toJson
 // byte-for-byte. Also covers single-parse (off) as a third witness.
 import 'dart:convert';
