@@ -64,87 +64,38 @@
 2. **大文件是唯一落后项**——分段画像（large_50：tmpl=6.8ms 61% / script=2.0ms / ts链=1.1ms / parse+style=1.2ms）显示大头在**模板管线**而非 mapper。已落地 `pointAt` 二分（mapper 段 -44%，端到端 -2.6%），差距从 13% 收窄到 11%。**剩余差距要靠模板侧优化**（codegen 字符串拼接/空白处理），是独立的大工程，未排期。
 3. 官方对照跑法已固化进 bench 工具链，后续每次优化重跑三份 JSON 即可回归对比。
 
-## 二期：表达式批量 FFI——方案 A/B 实现与对比（2026-08-26）
+## 二期终版：四种基线方案统一对照（2026-08-26，AOT 交错三轮取中位）
 
-**问题量化**：large_50 一次模板编译触发 **601 次 FFI 往返**（每表达式一次）。单次往返分解（`r.id` 样本）：Rust 解析+序列化 0.26µs(9%) / UTF-8 解码 0.06µs / **Dart jsonDecode 1.64µs(56%)** / malloc-free+包装 ~0.9µs——JSON 中间层与逐次固定开销是主体。
+**背景量化**：large_50 单次模板编译原触发 **601 次 FFI 往返**（逐表达式一次）。
+单次往返分解：Rust 解析+序列化 0.26µs(9%) / jsonDecode 1.64µs(56%) / 其余为
+分配与包装。四种消除策略同热状态交错实测（`--tier=large --runs=150` × 3 轮）：
 
-**方案 A（ffi）**：新增 Rust 符号 `oxc_parse_batch(char**,n,lang)`（条目级 panic 隔离），一次往返返回 JSON 数组；模板 transform 前 pre-pass 收集全部 `(raw)` 包裹源 → 批量解析 → 按 source 文本缓存（包裹源完全决定解析树，缓存安全；asParams/asRawStatements 少数派走逐条回退）。
-**方案 B（concat）**：零 FFI 改动，把所有表达式拼成 `[e0,e1,...]` 单次解析，元素子树深拷贝再基线到独立坐标。
+| 方案 | 机制 | large P50 中位 | vs off | 状态 |
+|---|---|---|---|---|
+| off | 逐表达式独立 FFI ×N | 11.92ms | 基线 | 已被替换 |
+| **concat（推荐默认）** | 全部表达式拼成 `[e0,e1,…]` 单次解析 + span 再基线，零 FFI 契约变更 | **9.99ms** | **-16.2%** | ✅ 默认启用 |
+| ffi（方案 A） | 新符号 `oxc_parse_batch`，一次往返返回 JSON 数组 | 10.63ms | -10.8% | 可用 |
+| bin（方案 B） | OXB2 标签二进制 + ByteData 惰性视图直读 | 11.22ms | -5.9% | 对照保留 |
 
-| 档位(AOT runs=300) | off | A(ffi) | B(concat) |
-|---|---|---|---|
-| large(34KB) | 8.89ms | **8.05ms(-9.5%)** | 9.82ms(+10% 劣化) |
-| tiny/typical/ts_heavy | 基线 | 持平（阈值≥8 保护） | — |
+其余档位（tiny/typical/ts_heavy）经 ≥8 表达式阈值保护全部与 off 持平；
+官方 @vue/compiler-sfc 同状态 large 对照 = 7.50ms。
 
-**结论**：
-1. **A 采纳**：large 档 -9.5%，其余档位经阈值保护无回退；FFI 调用次数 601→0（表达式侧）。门禁全绿（v1 159 / v2 115 / v4 12 / dom 53+438 / probe / golden）。
-2. **B 否决**：深拷贝再基线的分配风暴超过运输节省，实测净负收益——保留实现作对照记录，默认不启用。
-3. 开关：`TS_EXPR_BATCH=ffi` 启用（阈值 ≥8 表达式才批处理）；默认 off 待生产验证后翻转。
+**方法论教训（重要）**：早期"concat 净负收益"的结论来自跨会话顺序测量，
+被机器热漂移污染——本轮改为**模式交错×多轮中位**后结论反转。任何 A/B 性能
+对比必须交错采样；PERF_BENCHMARK 的对比表一律以同轮数据为准。
 
-**结论**：
-1. **A 采纳**：large 档 -9.5%，其余档位经阈值保护无回退；FFI 调用次数 601→0（表达式侧）。门禁全绿（v1 159 / v2 115 / v4 12 / dom 53+438 / probe / golden）。
-2. **B 否决**：深拷贝再基线的分配风暴超过运输节省，实测净负收益——保留实现作对照记录，默认不启用。
-3. 开关：`TS_EXPR_BATCH=ffi` 启用（阈值 ≥8 表达式才批处理）；默认 off 待生产验证后翻转。
+**解码层微基准**（207 表达式批量 transport+decode）：JSON+jsonDecode 827µs；
+OXB2+纯 Dart ByteData 视图 13.4ms——原生 C 解码器在同抽象层级不可战胜，
+Map 中间层的消灭在 Dart 侧无胜利路径（详见 git 历史 e85a4da / dfd2ecf）。
 
-## 三期：二进制直读（方案 B 的解码层）——实测否决（2026-08-26）
-
-**实现**：worker 新增 `oxc_parse_batch_bin`（标签化编码：obj/arr/str/f64/i64/bool/null + 长度前缀索引，配对释放符号 `oxc_free_bin`）；Dart 端 `BinBatchReader` 用 ByteData 直接解码为与 jsonDecode 同构的 Map/List（mapper 零改动），开关 `TS_EXPR_BATCH=bin`。
-
-| 批量调用 207 表达式（transport+decode） | P50 |
-|---|---|
-| A：JSON 数组 → 原生 `jsonDecode` | **859µs** |
-| B(bin)：二进制 → 纯 Dart ByteData 解码 | 2317µs（json 的 **270%**） |
-
-端到端 large 档 9.74ms，比 A（8.05ms）差 21%。正确性门禁全绿（v1/v2/v4/dom/probe）。
-
-**为什么输**：Dart 原生 `jsonDecode` 是 C++ 实现，字节扫描极快；纯 Dart 的标签分发在每个字段上都要方法调用 + 子串分配。只要解码产物还是 Map 中间层，"换格式"就赢不了"原生解析"。要真正赢必须让二进制直通 AstNode 构建（mapper 输入层重写，影响面覆盖 mapper_expr/stmt/type 三文件），投入产出比不支持。
-
-**沉淀**：`oxc_parse_batch_bin`/`oxc_free_bin` 与 BinBatchReader 保留在代码库（env=bin 启用），作为该结论的可复现证据；默认路径为方案 A。
-
-## 决策记录：Map 层消灭的短期/长期评估（2026-08-26）
-
-量化：mapper 四文件共 **399 处字段访问、80 个不同字段名**。
-
-- **短期（<3 月）负收益**：成本前置、收益仅 large 档 ~10%、挤占主线。
-- **长期条件性正收益**：改造一次性；类型化节点类把字符串键变编译期校验（持续复利）；GC 压力下降抬升并发饱和点；前提是接受 oxc bump 的三件套同步税（pin 死策略下有界）。
-- **触发信号**（满足任一启动全量）：>10KB 模板占比显著 / 并发饱和点成为部署瓶颈 / 字段访问类 bug 再现两次以上。
-- **2026-08-26 决定**：项目处实验阶段，立即以**表达式子集**为范围落地二进制直读原型（spike 转正式），全量推广待触发信号。护栏：与 JSON 批量路径逐字节对拍 + 全量门禁。
-
-## 四期：Map 层消灭——EstNode 接口反转 + 二进制直读实测（2026-08-26）
-
-**架构落地**：
-1. **EstNode 接口反转**：mapper 输入契约从 `Map<String,dynamic>` 换成抽象
-   `EstNode`（保留 `[]` 访问语法使改造成为纯签名重构，编译器兜底全部
-   ~400 站点）；JSON 实现 JsonEstNode（带 canonical 包装缓存）。
-2. **二进制直读 BinEstNode**（`oxc_parse_batch_bin` OXB2 格式）：键表/
-   类型表内嵌 + taggedObj 标签，ByteData 惰性解码直出 EstNode 视图，
-   **无文本解析、无 Map 物化**；配对释放符号 `oxc_free_bin`。
-
-**正确性**：差分 harness 对全语料 452 条做三见证对拍（单解析/JSON 批量/
-二进制批量）——**452/452 逐字节一致**，失败仅 3 条 panic 语料且双传输同崩；
-三种模式门禁全绿（v2 115、探针、golden 452/452）。差分器固化为 `tools/diff_transport.dart`，任何传输层改动必须重跑。
-
-**性能（AOT 同轮相对值，绝对值受机器热节流影响）**：
-
-| 模式 | large P50 | 相对 |
-|---|---|---|
-| off | 12.26ms | 基线 |
-| **ffi(A)** | **10.99ms** | **-10.4% ✅** |
-| bin(B 直读视图) | 11.41ms | -6.9%（劣于 A） |
-
-微基准（207 表达式批量，transport+decode）：json 827µs vs bin 视图 13.4ms——
-**纯 Dart ByteData 解码比 C 原生 jsonDecode 慢一个数量级**。字节级对拍证实
-两种传输的 item 编码完全一致，差距纯粹在 Dart 解码器常数。
-
-**终审结论**：
-1. **方案 A 为最终路径**；bin 视图与 concat 保留为对照证据（env 可复现）。
-2. Map 中间层的消灭在 Dart 里赢不了：原生 jsonDecode 的 C 扫描 + 高效
-   对象物化，优于任何纯 Dart 标签分发。要赢只剩"Rust 直接输出 CST 形状
-   终态树"一条路——那会把映射语义搬过 FFI 边界，制造双实现漂移面，
-   与字节对齐目标冲突，明确不做。
-3. **保留资产**：EstNode 接口让 mapper 与传输解耦（未来任何协议升级只动
-   实现类）；类型化访问的长期红利已兑现一半（热字段 at/endAt/typeName
-   走专用 getter）。
+**最终状态**：
+1. 默认 `TS_EXPR_BATCH=concat`；off/ffi/bin 保留作对照与回退（env 可切）。
+2. `oxc_parse_batch`/`_bin`、EstNode 接口、BinEstNode 全部保留：mapper 与
+   传输解耦，未来协议演进只动实现类。
+3. 差分器 `tools/diff_transport.dart` 固化为传输层改动的强制门禁
+   （452 条三见证逐字节对拍）。
+4. 遗留差距：large 档 vs 官方仍慢 ~33%（9.99 vs 7.50），瓶颈在模板管线
+   结构性成本（非表达式链路），未排期。
 
 ## 一、基准问题（按优先级）
 

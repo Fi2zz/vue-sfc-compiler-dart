@@ -100,12 +100,11 @@ TmplCompileResult compileTemplateSource(
   );
 }
 
-/// Batch-expression toggle for benchmarking/tuning (PERF_BENCHMARK.md):
-/// TS_EXPR_BATCH=ffi|concat|off. Off by default. 'ffi' only engages when
-/// enough expressions are collected to amortize the round-trip (measured
-/// crossover ≈ 8); 'concat' measured net-negative on large tiers (rebase
-/// allocation cost exceeds transport savings) and is kept for reference.
-final String exprBatchMode = Platform.environment['TS_EXPR_BATCH'] ?? 'off';
+/// Batch-expression strategy (PERF_BENCHMARK.md 四期对照表):
+/// TS_EXPR_BATCH=concat(默认)|ffi|bin|off。'concat' 以单次解析+span 再基线
+/// 消除逐表达式往返，交错实测 large 档 -16.2%（三方案中最优）；阈值 ≥8
+/// 表达式才启用，小模板零开销。'off' 保留作回归对照。
+final String exprBatchMode = Platform.environment['TS_EXPR_BATCH'] ?? 'concat';
 
 const int _exprBatchMinSources = 8;
 
