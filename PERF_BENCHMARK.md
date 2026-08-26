@@ -282,9 +282,13 @@ fill 批解析 ~1ms（parity 必需）+ 分配模式差异。
 2. P1.2 已结案（parity 必需）；P1.3 审查完成并落地修复（本节）。
 3. P2.5 large 复核：修复前 9775µs（仍高于二期 8708，min 7655 指向热漂移），
    修复后 7294µs 已远低于二期记录，回归疑虑消除。
-4. 剩余可选优化（未排期，需 profiler 验证）：`SrcView._buildMap` 纯 ASCII
-   快路径（估 0.2–0.5ms）、表达式重建分配簇复用、`hoist_static` 每容器
-   无条件分配 toCache list。
+4. ~~剩余可选优化~~ **已落地（2026-08-26，be6421a）**：`SrcView._buildMap`
+   纯 ASCII 快路径（恒等映射，跳过 utf8.encode+建表）、`hoist_static`
+   toCache 惰性分配、`expression_walk` 空作用域 const 复用。交错采样：
+   模板探针 sum -6.7%、large 端到端 -1.4%，无回归。表达式重建分配簇
+   （KnownIds/ExpressionWalker 复用）因状态重置有行为风险，放弃。
+   此后 Dart 侧模板链路已进入递减区；再压需动 Rust 序列化格式
+   （script 段 ~2ms + fill ~1ms，占 large 的 ~40%），未排期。
 
 ## 一、基准问题（按优先级）
 
