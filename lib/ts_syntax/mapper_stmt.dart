@@ -89,9 +89,61 @@ extension OxcStmtMapper on OxcMapper {
       case 'ExportDefaultDeclaration':
       case 'ExportAllDeclaration':
         return mapExport(n);
+      case 'TSDeclareFunction':
+        return _mapTsDeclareFunction(n);
+      case 'TSModuleDeclaration':
+        return _mapTsModule(n);
       default:
         return mapTypeNode(n);
     }
+  }
+
+  /// `declare function f(...): T;` -> ambient_declaration > function_signature
+  /// (tree-sitter shape). Ambient declarations produce no runtime output and
+  /// no bindings; downstream skips unknown statement bodies.
+  AstNode _mapTsDeclareFunction(EstNode n) {
+    final start = n['start'] as int;
+    final end = extendStatementEnd(n['end'] as int);
+    final id = n['id'];
+    final idNode = id == null
+        ? null
+        : buildNode(
+            'identifier',
+            _m(id)['start'] as int,
+            _m(id)['end'] as int,
+            const [],
+          );
+    return buildNode('ambient_declaration', start, end, [
+      buildNode('function_signature', start, end, [idNode]),
+    ]);
+  }
+
+  /// `namespace N {}` / `module "x" {}` / nested `namespace A.B {}` ->
+  /// tree-sitter `module` statement. Body statements map recursively; a
+  /// shorthand declaration (`declare module "x";`) has no body.
+  AstNode _mapTsModule(EstNode n) {
+    final start = n['start'] as int;
+    final end = extendStatementEnd(n['end'] as int);
+    final idNode = _m(n['id']);
+    final name = buildNode(
+      idNode['type'] == 'StringLiteral' ? 'string' : 'identifier',
+      idNode['start'] as int,
+      idNode['end'] as int,
+      const [],
+    );
+    final body = n['body'];
+    final AstNode? bodyNode;
+    if (body == null) {
+      bodyNode = null;
+    } else {
+      final block = _m(body);
+      bodyNode = buildNode('statement_block', block['start'] as int,
+          block['end'] as int, [
+        for (final st in (block['body'] as List? ?? const []))
+          mapStatement(_m(st)),
+      ]);
+    }
+    return buildNode('module', start, end, [name, bodyNode]);
   }
 
   /// Synthesize tree-sitter's parenthesized_expression around a condition.

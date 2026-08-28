@@ -35,3 +35,4 @@ for (const f of names) {
 }
 console.log(JSON.stringify({ total: names.length, ...summary }, null, 2));
 console.log("DIFF_FILES:"); diffs.forEach((d) => console.log(d));
+process.exit(summary.DIFF || summary.MISSING ? 1 : 0);

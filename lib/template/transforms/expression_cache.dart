@@ -4,6 +4,8 @@
 // Two fill strategies, compared in PERF_BENCHMARK.md:
 //   ffi    - one oxc_parse_batch round-trip returning a JSON array
 //   concat - one existing TSParser.parse of "[e0,e1,...]" + span rebase
+import 'dart:convert';
+
 import '../../ts_parser.dart';
 import '../../ts_syntax/oxc_ffi.dart';
 import '../../ts_syntax/est_node.dart';
@@ -100,17 +102,22 @@ void fillExpressionCacheConcat(
   final array = _rootArray(root);
   if (array == null || array.children.length != sources.length) return;
 
-  var cursor = 1;
+  // All offsets below are UTF-8 bytes: oxc spans (el.startByte/endByte) are
+  // byte-based, so cursor/len/line-starts must be byte-based too. UTF-16
+  // indices would shift every element after the first multi-byte character.
+  final textBytes = utf8.encode(text);
+  final sourceBytes = [for (final s in sources) utf8.encode(s)];
+
+  var cursor = 1; // just past '['
   for (var i = 0; i < sources.length; i++) {
     final el = array.children[i];
-    final len = sources[i].length;
-    while (cursor < el.startByte && text.codeUnitAt(cursor) != 0x28) {
+    final len = sourceBytes[i].length;
+    while (cursor < el.startByte && textBytes[cursor] != 0x28) {
       cursor++;
     }
-    final sub = text.substring(cursor, cursor + len);
-    final body = _rebase(el, cursor, _lineStarts(sub));
-    final lines = _lineStarts(sub);
+    final lines = _lineStarts(sourceBytes[i]);
     final endPt = _pointAt(lines, len);
+    final sub = _rebase(el, cursor, lines);
     cache[sources[i]] = AstNode(
       type: 'program',
       startByte: 0,
@@ -128,11 +135,11 @@ void fillExpressionCacheConcat(
           startColumn: 0,
           endRow: endPt.$1,
           endColumn: endPt.$2,
-          children: [body],
+          children: [sub],
         ),
       ],
     );
-    cursor += len + 1; // element + comma
+    cursor += len + 1; // element + comma, in bytes
   }
 }
 
@@ -169,10 +176,10 @@ AstNode _rebase(AstNode n, int delta, List<int> lineStarts) {
   );
 }
 
-List<int> _lineStarts(String s) {
+List<int> _lineStarts(List<int> bytes) {
   final starts = <int>[0];
-  for (var i = 0; i < s.length; i++) {
-    if (s.codeUnitAt(i) == 0x0A) starts.add(i + 1);
+  for (var i = 0; i < bytes.length; i++) {
+    if (bytes[i] == 0x0A) starts.add(i + 1);
   }
   return starts;
 }

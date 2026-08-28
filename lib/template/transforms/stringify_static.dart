@@ -73,7 +73,20 @@ final class _Stringifier {
   /// Official stringifyCurrentChunk.
   int stringifyChunk(int currentIndex) {
     if (nc < 20 && ec < 5) return 0;
-    final content = chunk.map((n) => _stringifyNode(n, context)).join();
+    final List<String> parts;
+    try {
+      parts = [for (final n in chunk) _stringifyNode(n, context)];
+    } on StateError {
+      // The constant evaluator hit a construct outside its supported subset
+      // (official `new Function` evaluates any valid JS). Degrade to no
+      // hoisting instead of crashing the whole compile or emitting a wrong
+      // constant; the children stay as regular vnodes.
+      nc = 0;
+      ec = 0;
+      chunk.clear();
+      return 0;
+    }
+    final content = parts.join();
     final json = jsJsonString(
       content,
     ).replaceAllMapped(_expReplaceRE, (m) => '" + ${m[1]} + "');

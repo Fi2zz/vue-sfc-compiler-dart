@@ -102,26 +102,61 @@ final class MiniMagic {
   }
 
   /// Render moved chunk [from, to): intro of the chunk starting at `from`,
-  /// edited content, then outro of the chunk ending at `to`.
+  /// edited content (with every interior insertion traveling along), then the
+  /// outro of the chunk ending at `to`. Outro/left attachments at `from`
+  /// belong to the chunk ENDING at `from` (outside the move) and are rendered
+  /// in place by the main pass, not here.
   String _renderRange(int from, int to) {
     final buf = StringBuffer();
     buf.write(_takeIntro(from));
     var cursor = from;
-    final edits = _sortedEdits();
-    for (final e in edits) {
+    for (final e in _sortedEdits()) {
       if (e.end <= from || e.start >= to) continue;
-      if (e.start > cursor) buf.write(source.substring(cursor, e.start));
-      if (e.start >= cursor) {
-        buf.write(e.replacement);
-        cursor = e.end;
-      }
+      if (e.start < cursor) continue; // overlapping edits: first wins
+      _emitTraveling(buf, cursor, e.start);
+      buf.write(_takeOutro(e.start));
+      buf.write(_takeIntro(e.start));
+      _dropInsertionsBetween(e.start, e.end);
+      buf.write(e.replacement);
+      cursor = e.end;
     }
-    if (cursor < to) buf.write(source.substring(cursor, to));
-    // 官方 MagicString：prependLeft(to) 属于"结束于 to 的块"，随块渲染；
-    // 移动区间起点处的插入在内容之后补齐，避免被区间覆盖而丢失。
-    buf.write(_takeOutro(from));
+    if (cursor < to) _emitTraveling(buf, cursor, to);
     buf.write(_takeOutro(to));
     return buf.toString();
+  }
+
+  /// Emit source[from, to) verbatim, consuming pending insertions at any
+  /// interior offset as they are reached (everything inside a moved chunk
+  /// travels with it).
+  void _emitTraveling(StringBuffer buf, int from, int to) {
+    var i = from;
+    while (i < to) {
+      if (_hasInsertion(i)) {
+        buf.write(_takeOutro(i));
+        buf.write(_takeIntro(i));
+        continue;
+      }
+      var j = i;
+      while (j < to && !_hasInsertion(j)) {
+        j++;
+      }
+      buf.write(source.substring(i, j));
+      i = j;
+    }
+  }
+
+  /// Mark insertions attached at offsets in [start, end) as consumed without
+  /// rendering: overwrite/remove wipes the covered source, and magic-string
+  /// drops the chunks (and their attachments) inside an overwritten span.
+  void _dropInsertionsBetween(int start, int end) {
+    for (final map in [_outroLeft, _outroRight, _introRight]) {
+      for (final offset in map.keys) {
+        if (offset > start && offset < end) {
+          _consumedOutro.add(offset);
+          _consumedIntro.add(offset);
+        }
+      }
+    }
   }
 
   List<_Edit> _sortedEdits() {
@@ -138,31 +173,54 @@ final class MiniMagic {
     return false;
   }
 
+  bool _isMoveStart(int offset) {
+    for (final m in _moves) {
+      if (offset == m.start) return true;
+    }
+    return false;
+  }
+
   @override
   String toString() {
-    final edits = _sortedEdits();
     final buf = StringBuffer();
     for (final p in _prepends) {
       buf.write(p);
     }
     buf.write(_renderMoves());
+    _renderMain(buf);
+    return buf.toString();
+  }
+
+  void _renderMain(StringBuffer buf) {
+    final edits = _sortedEdits();
     var cursor = 0;
     for (final e in edits) {
-      if (e.start < cursor) continue; // overlapping edits: first wins
+      if (e.start < cursor) {
+        // Overlapping edits: the earlier-starting (outer) span wins and the
+        // inner edit dies with the replaced content, matching magic-string's
+        // chunk replacement semantics.
+        continue;
+      }
+      if (_coveredByMove(e.start)) continue; // rendered with its moved chunk
       _appendRange(buf, cursor, e.start);
       buf.write(_takeOutro(e.start));
       buf.write(_takeIntro(e.start));
+      _dropInsertionsBetween(e.start, e.end);
       buf.write(e.replacement);
       cursor = e.end;
     }
     _appendRange(buf, cursor, source.length);
-    return buf.toString();
   }
 
   void _appendRange(StringBuffer buf, int from, int to) {
     var i = from;
     while (i < to) {
       if (_coveredByMove(i)) {
+        // Left attachments at a move's start offset belong to the chunk
+        // ending there (outside the move) and render in place, before the
+        // hole left by the moved content. Everything else inside the move
+        // either traveled with the chunk or was dropped with it.
+        if (_isMoveStart(i)) buf.write(_takeOutro(i));
         i++;
         continue;
       }
@@ -175,7 +233,7 @@ final class MiniMagic {
         buf.write(_takeOutro(j));
         buf.write(_takeIntro(j));
       }
-      i = j; // consumed insertions no longer match _hasInsertion
+      i = j; // insertions at j consumed above, so scanning makes progress
     }
   }
 }

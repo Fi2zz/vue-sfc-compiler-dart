@@ -160,9 +160,15 @@ num jsToNum(Object? v) {
 double _strToNum(String s) {
   final t = s.trim();
   if (t.isEmpty) return 0;
-  if (t.startsWith('0x') || t.startsWith('0X')) {
-    final hex = int.tryParse(t.substring(2), radix: 16);
-    return hex == null ? double.nan : hex.toDouble();
+  // Number() accepts a sign before the radix prefix ('-0x10' -> -16).
+  final sign = t.startsWith('-') ? -1.0 : 1.0;
+  final body = (t.startsWith('+') || t.startsWith('-')) ? t.substring(1) : t;
+  if (body.startsWith('0x') || body.startsWith('0X')) {
+    final digits = body.substring(2);
+    final v =
+        int.tryParse(digits, radix: 16) ??
+        BigInt.tryParse(digits, radix: 16)?.toDouble();
+    return v == null ? double.nan : sign * v.toDouble();
   }
   return double.tryParse(t) ?? double.nan;
 }
@@ -192,7 +198,20 @@ Object? applyJsBinary(String op, Object? l, Object? r) {
   if (op == '<' || op == '<=' || op == '>' || op == '>=') {
     return _comparison(op, l, r);
   }
-  if (op == 'in') return r is Map && r.containsKey(jsStr(l));
+  if (op == 'in') {
+    // `x in obj`: Map literals use key lookup; array literals support
+    // integer indices and 'length'. Anything else is outside the constant
+    // subset — bail instead of guessing (official `new Function` handles it).
+    if (r is Map) return r.containsKey(jsStr(l));
+    if (r is List) {
+      if (jsStr(l) == 'length') return true;
+      final i = jsToNum(l);
+      return i is int || (i is double && i == i.truncateToDouble())
+          ? i >= 0 && i < r.length
+          : false;
+    }
+    throw StateError('constEval: unsupported `in` right operand');
+  }
   return _arithOrBitwise(op, l, r);
 }
 
@@ -235,7 +254,9 @@ Object? _arithOrBitwise(String op, Object? l, Object? r) {
     case '%':
       return jsToNum(l).remainder(jsToNum(r));
     case '**':
-      return math.pow(jsToNum(l), jsToNum(r));
+      // Double arithmetic: JS numbers are doubles, so 2 ** 1024 must yield
+      // Infinity rather than wrap around 64-bit int math.
+      return math.pow(jsToNum(l).toDouble(), jsToNum(r).toDouble());
   }
   return _bitwise(op, l, r);
 }
@@ -279,6 +300,13 @@ bool _looseEq(Object? l, Object? r) {
   if (l is String && r is num) return _strToNum(l) == r;
   if (l is bool) return _looseEq(jsToNum(l), r);
   if (r is bool) return _looseEq(l, jsToNum(r));
+  // Object (array/object literal) vs primitive: ToPrimitive (join(',') for
+  // arrays, '[object Object]' for plain objects) then compare primitives.
+  final lp = (l is List || l is Map) ? jsStr(l) : null;
+  final rp = (r is List || r is Map) ? jsStr(r) : null;
+  if (lp != null || rp != null) {
+    return _looseEq(lp ?? l, rp ?? r);
+  }
   return false;
 }
 
@@ -288,18 +316,27 @@ num parseJsNumber(String text) {
   final t = text.replaceAll('_', '');
   if (t.endsWith('n')) throw StateError('constEval: bigint unsupported');
   if (t.startsWith('0x') || t.startsWith('0X')) {
-    return int.parse(t.substring(2), radix: 16);
+    return _parseRadix(t.substring(2), 16);
   }
   if (t.startsWith('0b') || t.startsWith('0B')) {
-    return int.parse(t.substring(2), radix: 2);
+    return _parseRadix(t.substring(2), 2);
   }
   if (t.startsWith('0o') || t.startsWith('0O')) {
-    return int.parse(t.substring(2), radix: 8);
+    return _parseRadix(t.substring(2), 8);
   }
   var normalized = t;
   if (normalized.startsWith('.')) normalized = '0$normalized';
   if (normalized.endsWith('.')) normalized = '${normalized}0';
   return double.parse(normalized);
+}
+
+/// Radix literal value; beyond 64-bit range falls back to double, matching
+/// JS where every numeric literal is a double (e.g. 0xFFFFFFFFFFFFFFFFF).
+num _parseRadix(String digits, int radix) {
+  final v = int.tryParse(digits, radix: radix);
+  if (v != null) return v;
+  return BigInt.tryParse(digits, radix: radix)?.toDouble() ??
+      (throw StateError('constEval: malformed radix-$radix literal'));
 }
 
 /// Unquote ('..'/\"..\" already stripped by caller) JS string escapes.

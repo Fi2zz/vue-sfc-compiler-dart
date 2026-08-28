@@ -634,5 +634,25 @@
   {
     "name": "props_leading_vue_ignore",
     "sfc": "<script setup lang=\"ts\">\ntype Foo = { foo: number }\ntype Bar = { bar: boolean }\ndefineProps</* @vue-ignore */ Foo & Bar>()\n</script>\n<template><div>{{ bar }}</div></template>"
+  },
+  {
+    "name": "script_normal_after_setup",
+    "sfc": "<script setup>\nimport { ref } from 'vue'\nconst count = ref(1)\nconsole.log('setup side effect')\n</script>\n<script>\nexport default {\n  name: 'ScriptOrder',\n  inheritAttrs: false,\n}\n</script>\n<template><div>{{ count }}</div></template>\n"
+  },
+  {
+    "name": "ts_declare_function",
+    "sfc": "<script setup lang=\"ts\">\ndeclare function gtag(...args: any[]): void\nconst x = 1\n</script>\n\n<template><div>{{ x }}</div></template>\n"
+  },
+  {
+    "name": "ts_namespace_decl",
+    "sfc": "<script setup lang=\"ts\">\nnamespace N {\n  export type A = string\n}\nconst y = 2\n</script>\n\n<template><div>{{ y }}</div></template>\n"
+  },
+  {
+    "name": "ts_declare_module_augment",
+    "sfc": "<script setup lang=\"ts\">\ndeclare module '@/types' {\n  interface Window { v: number }\n}\nconst z = 3\n</script>\n\n<template><div>{{ z }}</div></template>\n"
+  },
+  {
+    "name": "tsx_script_setup_no_jsx",
+    "sfc": "<script setup lang=\"tsx\">\nimport { ref } from \"vue\"\nconst n = ref(0)\n</script>\n<template><button @click=\"n++\">{{ n }}</button></template>"
   }
 ]

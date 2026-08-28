@@ -46,5 +46,12 @@ StyleCompileResult compileStyleSource(
   } on SelSyntaxError catch (e) {
     // selector 错误是原生 Error，String(e) = 'Error: <message>'
     return StyleCompileResult('', ['Error: ${e.message}']);
+  } catch (e) {
+    // Official doCompileStyle catches any plugin exception into
+    // result.errors (postcss re-throws the original error object; its
+    // String() carries the JS type name, e.g. 'TypeError: ...'). Match the
+    // never-crash contract; the exact message text is JS-internal and not
+    // byte-reproducible in Dart.
+    return StyleCompileResult('', [e.toString()]);
   }
 }

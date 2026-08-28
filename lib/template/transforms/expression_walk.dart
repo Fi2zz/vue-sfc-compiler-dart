@@ -46,6 +46,7 @@ typedef OnIdentifier =
       bool isReferenced,
       bool isLocal, {
       bool destructureAssignment,
+      bool isNewExpression,
     });
 
 /// tree-sitter type containers whose subtrees are TS type space (skipped).
@@ -122,21 +123,32 @@ final class ExpressionWalker {
     if (parent != null) parentStack.add(parent);
     final type = node.type;
     if (type == 'identifier' || type == 'shorthand_property_identifier') {
-      _onIdent(node, parent);
+      _onIdent(node, parent, destructureAssignment: _lvalDestructure(parent));
     } else if (type == 'undefined') {
       // babel 中 undefined 是 Identifier（true/false/null 则是 Literal，
       // 不进 walker）；官方为其生成子表达式，使注释等尾随文本进入
       // compound 而非滞留 SimpleExpression。
-      _onIdent(node, parent);
+      _onIdent(node, parent, destructureAssignment: _lvalDestructure(parent));
     } else if (type == 'property_identifier') {
       // 官方 babel 全标识符遍历：成员属性 b（a.b）也生成子表达式以支持
       // sourcemap；但对象字面量/解构模式的静态键按 isStaticPropertyKey 跳过。
-      if (!_isStaticPairKey(node, parent)) _onIdent(node, parent);
+      if (!_isStaticPairKey(node, parent)) {
+        _onIdent(node, parent, destructureAssignment: _lvalDestructure(parent));
+      }
     } else if (type == 'shorthand_property_identifier_pattern') {
       // 解构模式简写 { a }：对应 babel 简写属性的 value 节点（key!==value）。
       // 赋值解构目标（({ a } = v)）按官方 isInDestructureAssignment 视为
-      // 引用并注入 'a: ' 前缀；绑定位置则是局部量。
-      _onIdent(node, parent, destructureAssignment: _inDestructureAssignment());
+      // 引用并注入 'a: ' 前缀；绑定位置则是局部量。带默认值的
+      // object_assignment_pattern 左值（{ a = b } 的 a）父节点对应官方
+      // AssignmentPattern：按引用处理，但不属解构赋值目标（无前缀、unref
+      // 包装）。
+      _onIdent(
+        node,
+        parent,
+        destructureAssignment: parent?.type == 'object_assignment_pattern'
+            ? false
+            : _inDestructureAssignment(),
+      );
     } else if (_isFunctionType(type)) {
       _walkFunctionParams(node);
     } else if (type == 'statement_block') {
@@ -206,6 +218,11 @@ final class ExpressionWalker {
     return false;
   }
 
+  /// 显式键值位（pair/pair_pattern 的 value、array_pattern 元素）是否处于
+  /// 赋值解构目标：官方 rewriteIdentifier 内的 isInDestructureAssignment。
+  bool _lvalDestructure(AstNode? parent) =>
+      parent != null && _isInDestructureAssignment(parent);
+
   void _onIdent(
     AstNode node,
     AstNode? parent, {
@@ -243,6 +260,7 @@ final class ExpressionWalker {
       isRefed,
       isLocal,
       destructureAssignment: destructureAssignment,
+      isNewExpression: _inNewExpression(),
     );
   }
 
@@ -472,6 +490,8 @@ final class ExpressionWalker {
       case 'assignment_expression':
       case 'augmented_assignment_expression':
       case 'assignment_pattern':
+      // { a = b } 的 a：父节点对应官方 AssignmentPattern，按引用改写。
+      case 'object_assignment_pattern':
         return true;
       case 'pair':
         return !_pairKeyIs(parent, id) && _isInDestructureAssignment(parent);
@@ -490,18 +510,35 @@ final class ExpressionWalker {
   }
 
   bool _isInDestructureAssignment(AstNode parent) {
-    if (parent.type == 'pair' || parent.type == 'array_pattern') {
+    if (parent.type == 'pair' ||
+        parent.type == 'pair_pattern' ||
+        parent.type == 'array_pattern') {
       var i = parentStack.length;
       while (i-- > 0) {
         final p = parentStack[i];
         if (p == null) break;
-        if (p.type == 'assignment_expression') return true;
+        if (p.type == 'assignment_expression' ||
+            p.type == 'augmented_assignment_expression') {
+          return true;
+        }
         if (p.type != 'pair' &&
             p.type != 'pair_pattern' &&
             !p.type.endsWith('_pattern')) {
           break;
         }
       }
+    }
+    return false;
+  }
+
+  /// 官方 isInNewExpression：向上穿过成员链命中 new_expression 即为
+  /// new 的调用方，unref 包装需加括号。
+  bool _inNewExpression() {
+    for (var i = parentStack.length - 1; i >= 0; i--) {
+      final p = parentStack[i];
+      if (p == null) break;
+      if (p.type == 'new_expression') return true;
+      if (p.type != 'member_expression') break;
     }
     return false;
   }

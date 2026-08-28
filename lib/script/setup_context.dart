@@ -67,6 +67,10 @@ final class SetupContext {
   final Map<String, BindingKind> setupBindings = {};
   final Set<String> helperImports = {};
 
+  /// 模板中使用的标识符（官方 resolveTemplateUsedIdentifiers）；null 表示
+  /// 不做模板使用检查（非 TS、无模板或 inlineTemplate），import 全部保留。
+  Set<String>? templateUsedIds;
+
   bool hasDefinePropsCall = false;
   bool hasDefineEmitCall = false;
   bool hasDefineExposeCall = false;

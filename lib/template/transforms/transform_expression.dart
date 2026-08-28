@@ -121,6 +121,8 @@ String _rewriteIdentifier(
   WalkedIdent? id,
   int Function(int)? byteToChar,
   String Function(int, int)? sliceText,
+  bool destructureAssignment = false,
+  bool isNewExpression = false,
 }) {
   final bindings = context.bindingMetadata;
   final type = bindings[raw];
@@ -133,6 +135,8 @@ String _rewriteIdentifier(
       id: id,
       byteToChar: byteToChar,
       sliceText: sliceText,
+      destructureAssignment: destructureAssignment,
+      isNewExpression: isNewExpression,
     );
   }
   if (type != null && (type.startsWith('setup') || type == 'literal-const')) {
@@ -157,8 +161,15 @@ String _rewriteInline(
   WalkedIdent? id,
   int Function(int)? byteToChar,
   String Function(int, int)? sliceText,
+  bool destructureAssignment = false,
+  bool isNewExpression = false,
 }) {
   final lval = _lvalKind(parent, id, byteToChar ?? (b) => b);
+  // Lazy: helperString(hUnref) registers the import as a side effect, so it
+  // must not run unless the unref form is actually emitted.
+  String unrefWrapped() => isNewExpression
+      ? '(${context.helperString(hUnref)}($raw))'
+      : '${context.helperString(hUnref)}($raw)';
   switch (type) {
     case 'setup-const':
     case 'literal-const':
@@ -167,41 +178,18 @@ String _rewriteInline(
     case 'setup-ref':
       return '$raw.value';
     case 'setup-maybe-ref':
-      return lval == _LVal.none
-          ? '${context.helperString(hUnref)}($raw)'
+      return lval == _LVal.none && !destructureAssignment
+          ? unrefWrapped()
           : '$raw.value';
     case 'setup-let':
-      if (lval == _LVal.none) {
-        return '${context.helperString(hUnref)}($raw)';
+      if (lval == _LVal.assign) {
+        return _rewriteInlineAssign(raw, context, parent!, byteToChar!, sliceText!);
       }
-      // 赋值/自更新左值：isRef 三元（官方形态），RHS 递归改写。
-      final tsIgnore = context.isTS ? ' //@ts-ignore\n' : '';
-      final b2c = byteToChar ?? (b) => b;
-      final cut = sliceText ?? (s, e) => '';
-      final first = parent!.children.first;
-      if (parent.type == 'assignment_expression') {
-        final right = parent.children.last;
-        final op = cut(first.endByte, right.startByte).trim();
-        final rExp = cut(right.startByte, right.endByte);
-        final processed = stringifyExpression(
-          processExpression(
-            SimpleExpression(rExp, false, locStub()),
-            context,
-            localVars: KnownIds(context.identifiers),
-          ),
-        );
-        return '${context.helperString(hIsRef)}($raw)$tsIgnore'
-            ' ? $raw.value $op $processed : $raw';
+      if (lval == _LVal.update) {
+        return _rewriteInlineUpdate(raw, context, parent!, id!, byteToChar!, sliceText!);
       }
-      // update_expression：n++ / ++n，替换区间扩到整个表达式。
-      final opText = cut(_opStart(parent, first, b2c), parent.endByte).trim();
-      final prefix = first.startByte == parent.startByte ? '' : opText;
-      final postfix = first.startByte == parent.startByte ? opText : '';
-      id!
-        ..startChar = b2c(parent.startByte)
-        ..endChar = b2c(parent.endByte);
-      return '${context.helperString(hIsRef)}($raw)$tsIgnore'
-          ' ? $prefix$raw.value$postfix : $prefix$raw$postfix';
+      if (destructureAssignment) return raw;
+      return unrefWrapped();
     case 'props':
       return _propsAccessExp(raw);
     case 'props-aliased':
@@ -209,6 +197,53 @@ String _rewriteInline(
       return _propsAccessExp(alias);
   }
   return '_ctx.$raw';
+}
+
+/// setup-let 赋值左值：isRef 三元（官方形态），RHS 递归改写。
+String _rewriteInlineAssign(
+  String raw,
+  TransformContext context,
+  AstNode parent,
+  int Function(int) byteToChar,
+  String Function(int, int) sliceText,
+) {
+  final tsIgnore = context.isTS ? ' //@ts-ignore\n' : '';
+  final first = parent.children.first;
+  final right = parent.children.last;
+  final op = sliceText(first.endByte, right.startByte).trim();
+  final rExp = sliceText(right.startByte, right.endByte);
+  final processed = stringifyExpression(
+    processExpression(
+      SimpleExpression(rExp, false, locStub()),
+      context,
+      localVars: KnownIds(context.identifiers),
+    ),
+  );
+  return '${context.helperString(hIsRef)}($raw)$tsIgnore'
+      ' ? $raw.value $op $processed : $raw';
+}
+
+/// update 表达式（n++ / ++n）：操作符在参数前为前缀形式，参数后为后缀。
+String _rewriteInlineUpdate(
+  String raw,
+  TransformContext context,
+  AstNode parent,
+  WalkedIdent id,
+  int Function(int) byteToChar,
+  String Function(int, int) sliceText,
+) {
+  final tsIgnore = context.isTS ? ' //@ts-ignore\n' : '';
+  final first = parent.children.first;
+  // Prefix form: the operator sits before the argument (parent starts at
+  // the operator); postfix: after it. Compute both from the actual spans so
+  // prefix operators are never dropped.
+  final pre = sliceText(parent.startByte, first.startByte).trim();
+  final post = sliceText(first.endByte, parent.endByte).trim();
+  id
+    ..startChar = byteToChar(parent.startByte)
+    ..endChar = byteToChar(parent.endByte);
+  return '${context.helperString(hIsRef)}($raw)$tsIgnore'
+      ' ? $pre$raw.value$post : $pre$raw$post';
 }
 
 enum _LVal { none, assign, update }
@@ -229,16 +264,12 @@ _LVal _lvalKind(
       id.endChar <= end;
   switch (parent.type) {
     case 'assignment_expression':
+    case 'augmented_assignment_expression':
       return covers ? _LVal.assign : _LVal.none;
     case 'update_expression':
       return covers ? _LVal.update : _LVal.none;
   }
   return _LVal.none;
-}
-
-int _opStart(AstNode parent, AstNode argument, int Function(int) b2c) {
-  // 前缀形式（++n）：操作符在参数之前；后缀：参数之后。
-  return b2c(argument.endByte);
 }
 
 final _plainIdentRE = RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$');
@@ -314,6 +345,7 @@ TmplNode _rebuildExpression(
     bool isRefed,
     bool isLocal, {
     bool destructureAssignment = false,
+    bool isNewExpression = false,
   }) {
     _onIdentifier(
       id,
@@ -325,6 +357,7 @@ TmplNode _rebuildExpression(
       srcView.charOf,
       (s, e) => srcView.slice(srcView.charOf(s), srcView.charOf(e)),
       destructureAssignment: destructureAssignment,
+      isNewExpression: isNewExpression,
     );
   }
 
@@ -345,17 +378,18 @@ void _onIdentifier(
   int Function(int byteOffset) byteToChar,
   String Function(int, int) sliceText, {
   bool destructureAssignment = false,
+  bool isNewExpression = false,
 }) {
   if (id.name.startsWith('_filter_')) return;
   final needPrefix = isRefed && _canPrefix(id.name);
   if (needPrefix && !isLocal) {
     // 对象简写与赋值解构目标：改写 value 后需补回 'key: '（官方
-    // isStaticProperty(parent)&&parent.shorthand 分支）。
+    // isStaticProperty(parent)&&parent.shorthand 分支）。带默认值的
+    // object_assignment_pattern 不在此列（官方父节点是 AssignmentPattern，
+    // 非 shorthand，无 key 前缀）。
     final shorthandKey =
         parent != null &&
-        (parent.type == 'object' ||
-            parent.type == 'object_pattern' ||
-            parent.type == 'object_assignment_pattern');
+        (parent.type == 'object' || parent.type == 'object_pattern');
     if (shorthandKey && (parent.type == 'object' || destructureAssignment)) {
       id.prefix = '${id.name}: ';
     }
@@ -366,6 +400,8 @@ void _onIdentifier(
       id: id,
       byteToChar: byteToChar,
       sliceText: sliceText,
+      destructureAssignment: destructureAssignment,
+      isNewExpression: isNewExpression,
     );
     ids.add(id);
   } else {

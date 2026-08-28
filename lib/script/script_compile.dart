@@ -17,7 +17,12 @@ import 'setup_context.dart';
 import 'src_view.dart';
 import 'type_infer.dart';
 import '../template/compile_template.dart';
+import '../template/dom_options.dart'
+    show domBuiltInComponent, domNativeTag;
 import '../template/js_nodes.dart' show hUnref;
+import '../template/shared_utils.dart' show camelize, capitalize, isBuiltInDirective;
+import '../template/tmpl_ast.dart';
+import '../template/tmpl_parser.dart';
 
 const normalScriptDefaultVar = '__default__';
 
@@ -45,6 +50,29 @@ final class _Specifier {
   // 时 hoistStatic 一律关闭。
   final hoist = hoistStatic && script == null;
   final ts = _isTs(script?.lang) || _isTs(scriptSetup.lang);
+  final lang = ts ? (_isTsx(script?.lang) || _isTsx(scriptSetup.lang) ? 'tsx' : 'ts') : 'js';
+  final parser = TSParser();
+
+  AstNode parseScript(String code) {
+    try {
+      return parser.parse(code: code, language: lang);
+    } on UnimplementedError {
+      // oxc parses JSX but the mapper has no JSX node shapes. Fail loud with
+      // an actionable message instead of silently passing the script through
+      // (a parse ERROR tree would yield empty bindings and untransformed
+      // macros).
+      throw ScriptCompileError(
+        reason:
+            'JSX syntax in lang="tsx" scripts is not supported by this '
+            'compiler build; move JSX to a render function in a separate '
+            'file or drop the JSX expression.',
+        filename: filename,
+        source: source,
+        nodeStart: scriptSetup.locStart,
+        nodeEnd: scriptSetup.locEnd,
+      );
+    }
+  }
 
   if (script != null && script.lang != scriptSetup.lang) {
     throw ScriptCompileError(
@@ -66,15 +94,13 @@ final class _Specifier {
       : source.lastIndexOf('</', script.locEnd);
 
   final setupSource = source.substring(startOffset, endOffset);
-  final lang = ts ? 'ts' : 'js';
-  final parser = TSParser();
-  final setupRoot = parser.parse(code: setupSource, language: lang);
+  final setupRoot = parseScript(setupSource);
   AstNode? scriptRoot;
   SrcView? scriptView;
   final typeScope = <String, TypeScopeEntry>{};
   if (script != null) {
     final scriptSource = source.substring(scriptStartOffset, scriptEndOffset);
-    scriptRoot = parser.parse(code: scriptSource, language: lang);
+    scriptRoot = parseScript(scriptSource);
     scriptView = SrcView(scriptSource);
     // normal <script> type declarations are visible to setup type resolution
     typeScope.addAll(collectTypeScope(scriptRoot, scriptView));
@@ -87,6 +113,14 @@ final class _Specifier {
     ..startOffset = startOffset
     ..endOffset = endOffset
     ..typeScope = typeScope;
+  // 官方 registerUserImport 的 needTemplateUsageCheck：isTS 且模板存在
+  // （无 src/lang）时按模板使用情况过滤 __returned__ 里的 import 项。
+  if (ts && !inlineTemplate) {
+    final tpl = descriptor.template;
+    if (tpl != null && tpl.attrs['src'] == null && tpl.attrs['lang'] == null) {
+      ctx.templateUsedIds = templateUsedIdentifiers(tpl.content);
+    }
+  }
   // setup declarations shadow same-named normal-script declarations
   ctx.typeScope.addAll(collectTypeScope(setupRoot, view));
   final s = MiniMagic(source);
@@ -251,6 +285,7 @@ void _appendInlineRender(
 }
 
 bool _isTs(String? lang) => lang == 'ts' || lang == 'tsx';
+bool _isTsx(String? lang) => lang == 'tsx';
 
 void _registerUserImport(SetupContext ctx, _Specifier spec, bool fromSetup) {
   ctx.userImports[spec.local] = ImportBinding(
@@ -760,6 +795,10 @@ String _genReturned(SetupContext ctx) {
   final importKeys = <String>{};
   for (final entry in ctx.userImports.entries) {
     if (entry.value.typeOnly) continue;
+    // 官方：__returned__ 只包含模板中实际使用的 import（isImportUsed）。
+    if (ctx.templateUsedIds != null && !ctx.templateUsedIds!.contains(entry.key)) {
+      continue;
+    }
     allBindings[entry.key] = null; // null marks an import binding
     importKeys.add(entry.key);
   }
@@ -845,5 +884,103 @@ void _assembleHeader(
       'setup($args) {\n$exposeCall$bodyPrefix',
     );
     s.appendRight(ctx.endOffset, '}');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// template usage analysis (official resolveTemplateUsedIdentifiers)
+// ---------------------------------------------------------------------------
+
+/// Identifiers referenced by the template: component tags, directive names
+/// (as `vXxx` helpers), dynamic args, expression identifiers and static refs.
+/// Port of the official walk over the un-transformed template AST.
+Set<String> templateUsedIdentifiers(String content) {
+  final ids = <String>{};
+  final ast = baseParse(
+    content,
+    TmplParserOptions(
+      isNativeTag: domNativeTag,
+      isBuiltInComponent: domBuiltInComponent,
+    ),
+  );
+  for (final c in ast.children) {
+    _walkTemplateUsage(c, ids);
+  }
+  return ids;
+}
+
+void _walkTemplateUsage(TmplNode node, Set<String> ids) {
+  if (node is ElementNode) {
+    var tag = node.tag;
+    if (tag.contains('.')) tag = tag.split('.').first.trim();
+    if (!domNativeTag(tag) && !domBuiltInComponent(tag)) {
+      final camel = camelize(tag);
+      ids
+        ..add(camel)
+        ..add(capitalize(camel));
+    }
+    for (final p in node.props) {
+      if (p is DirectiveNode) {
+        if (!isBuiltInDirective(p.name)) {
+          ids.add('v${capitalize(camelize(p.name))}');
+        }
+        final arg = p.arg;
+        if (arg is SimpleExpression && !arg.static_) {
+          _templateExprIdentifiers(arg.content, ids);
+        }
+        if (p.name == 'for') {
+          final src = p.forParseResult?.source;
+          if (src is SimpleExpression) {
+            _templateExprIdentifiers(src.content, ids);
+          }
+        } else if (p.exp != null) {
+          final exp = p.exp!;
+          if (exp is SimpleExpression) {
+            _templateExprIdentifiers(exp.content, ids);
+          }
+        } else if (p.name == 'bind' && arg is SimpleExpression) {
+          ids.add(camelize(arg.content));
+        }
+      } else if (p is AttributeNode &&
+          p.name == 'ref' &&
+          p.value != null &&
+          p.value!.content.isNotEmpty) {
+        ids.add(p.value!.content);
+      }
+    }
+    for (final c in node.children) {
+      _walkTemplateUsage(c, ids);
+    }
+  } else if (node is InterpolationNode) {
+    final c = node.content;
+    if (c is SimpleExpression) _templateExprIdentifiers(c.content, ids);
+  }
+}
+
+/// All identifiers in an expression source (official extractIdentifiers:
+/// walkIdentifiers over the parsed expression, adding every name).
+void _templateExprIdentifiers(String content, Set<String> ids) {
+  if (content.trim().isEmpty) return;
+  try {
+    final view = SrcView('($content)');
+    final root = TSParser().parse(code: view.content, language: 'ts');
+    void walkAst(AstNode n) {
+      final t = n.type;
+      if (t == 'identifier' ||
+          t == 'shorthand_property_identifier' ||
+          t == 'shorthand_property_identifier_pattern') {
+        ids.add(view.textOf(n));
+      } else if (t == 'ERROR') {
+        ids.add(content);
+        return;
+      }
+      for (final c in n.children) {
+        walkAst(c);
+      }
+    }
+
+    walkAst(root);
+  } catch (_) {
+    ids.add(content);
   }
 }

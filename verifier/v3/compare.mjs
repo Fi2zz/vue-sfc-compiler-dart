@@ -5,14 +5,18 @@ import { readFile, readdir } from "node:fs/promises";
 const officialDir = "samples_style";
 const dartDir = "samples_style_dart";
 const files = (await readdir(officialDir)).filter((f) => f.endsWith(".md")).sort();
+// Error-path goldens embed the absolute repo path of the sample file. Normalize
+// it (and any leading absolute path generally) so comparison is machine-independent.
+const normalizePath = (text) =>
+  text.replaceAll(`${process.cwd()}/`, "").replaceAll(/(?:^|(?<=\n|: ))\/Users\/[^\s:]+\/(vue-sfc-compiler-dart\/)/g, "$1");
 let exact = 0;
 const diffs = [];
 const missing = [];
 for (const f of files) {
-  const official = await readFile(`${officialDir}/${f}`, "utf8");
+  const official = normalizePath(await readFile(`${officialDir}/${f}`, "utf8"));
   let dart;
   try {
-    dart = await readFile(`${dartDir}/${f}`, "utf8");
+    dart = normalizePath(await readFile(`${dartDir}/${f}`, "utf8"));
   } catch {
     missing.push(f);
     continue;
