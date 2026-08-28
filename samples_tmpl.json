@@ -465,5 +465,9 @@
   {
     "name": "tmpl_non_ascii_concat_batch",
     "sfc": "<template>{{ '中' + a }}{{ v0 + 1 }}{{ v1 + 1 }}{{ v2 + 1 }}{{ v3 + 1 }}{{ v4 + 1 }}{{ v5 + 1 }}{{ v6 + 1 }}{{ v7 + 1 }}</template>"
+  },
+  {
+    "name": "tmpl_v_memo_v_for_key_out_of_scope",
+    "sfc": "<template><div><template v-for=\"i in list\" :key=\"outer\"><span v-memo=\"[i]\">{{ i }}</span></template></div></template>"
   }
 ]

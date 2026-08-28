@@ -135,12 +135,24 @@ abstract class CssContainer extends CssNode {
     nodes!.insert(i, child);
   }
 
+  /// Port of postcss 8.5 Container.walk: the visitor returning false aborts
+  /// the ENTIRE traversal (not just the current subtree), matching postcss's
+  /// explicit-stack implementation.
   void walk(bool Function(CssNode node) visitor) {
-    if (nodes == null) return;
-    for (final child in List<CssNode>.of(nodes!)) {
-      if (visitor(child) == false) continue;
-      if (child is CssContainer) child.walk(visitor);
+    _walkImpl(this, visitor);
+  }
+
+  bool _walkImpl(CssContainer container, bool Function(CssNode node) visitor) {
+    final nodes = container.nodes;
+    if (nodes == null) return true;
+    for (final child in List<CssNode>.of(nodes)) {
+      final result = visitor(child);
+      if (result == false) return false;
+      if (child is CssContainer && !_walkImpl(child, visitor)) {
+        return false;
+      }
     }
+    return true;
   }
 
   void walkDecls(void Function(CssDecl decl) visitor) {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'sfc_descriptor.dart';
 import 'script/script_compile.dart';
+import 'script/src_view.dart';
 import 'ts_parser.dart';
 import 'sfc_error.dart';
 
@@ -59,7 +60,10 @@ void _validateNormalScriptExports(
     language: language,
     namedOnly: true,
   );
-  final ranges = <List<int>>[]; // [startByte, endByte]
+  final ranges = <List<int>>[]; // [charStart, charEnd] in `content`
+  // Byte-offset AST spans must map to UTF-16 char offsets before combining
+  // with regex match offsets (which are char-based) or splicing `content`.
+  final view = SrcView(content);
   void walk(AstNode n) {
     if (n.type.contains('export')) {
       final text = _slice(content, n.startByte, n.endByte);
@@ -68,11 +72,14 @@ void _validateNormalScriptExports(
       if (RegExp(r'export\s+default').hasMatch(text)) {
         final m = RegExp(r'export\s+default').firstMatch(text);
         if (m != null) {
-          final s = n.startByte + m.start;
+          final s = view.charOf(n.startByte) + m.start;
           final e = s + m.group(0)!.length;
           ranges.add([s, e]);
         } else {
-          ranges.add([n.startByte, n.endByte]);
+          ranges.add([
+            view.charOf(n.startByte),
+            view.charOf(n.endByte),
+          ]);
         }
       }
     }

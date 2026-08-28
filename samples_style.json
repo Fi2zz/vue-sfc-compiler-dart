@@ -477,5 +477,40 @@
     "options": {
       "isProd": true
     }
+  },
+  {
+    "name": "style_not_deep_nested",
+    "source": ":not(:deep(.a)) .b{x:y}",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_is_deep_split",
+    "source": ":is(:deep(.a), .b) .c{x:y}",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_has_deep",
+    "source": ".x:has(:deep(.y)){z:w}",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_nested_deep_mixed",
+    "source": ":is(.p, :deep(.q)) .r{s:t}",
+    "options": {
+      "scoped": true
+    }
+  },
+  {
+    "name": "style_mixed_format_raw_detect",
+    "source": ".a{color:red;\n .b{x:y}\n}\n.c{d:e}",
+    "options": {
+      "scoped": true
+    }
   }
 ]

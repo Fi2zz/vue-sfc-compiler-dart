@@ -63,6 +63,77 @@ sealed class SelNode {
     remove();
   }
 
+  /// JS replaceWith(...nodes): replace this with several siblings in order.
+  /// Must use the insertBefore chain (matching the official node.replaceWith)
+  /// so the container's each-iterator index lands past the last replacement
+  /// — an insertAfter chain would make an in-progress iteration revisit the
+  /// newly inserted nodes.
+  void replaceWithMany(List<SelNode> replacements) {
+    final p = parent;
+    if (p == null) return;
+    for (final r in replacements) {
+      p.insertBefore(this, r);
+    }
+    remove();
+  }
+
+  /// Deep structural copy: value, spaces, raws (part-space maps copied) and
+  /// children recursively; the clone is detached (parent = null).
+  SelNode deepClone() {
+    final SelNode copy = switch (this) {
+      SelAttribute() => SelAttribute(),
+      SelClassName() => SelClassName(),
+      SelCombinator() => SelCombinator(),
+      SelComment() => SelComment(),
+      SelId() => SelId(),
+      SelNesting() => SelNesting(),
+      SelPseudo() => SelPseudo(value: value),
+      SelRoot() => SelRoot(),
+      SelSelector() => SelSelector(),
+      SelStringNode() => SelStringNode(value: value),
+      SelTag() => SelTag(value: value),
+      SelUniversal() => SelUniversal(value: value),
+      SelNamespaceNode() ||
+      SelContainer() => throw StateError('unreachable'),
+    };
+    copy.value = value;
+    copy.spaces
+      ..before = spaces.before
+      ..after = spaces.after;
+    if (raws != null) {
+      copy.raws = SelRaws()
+        ..value = raws!.value
+        ..namespace = raws!.namespace
+        ..attribute = raws!.attribute
+        ..insensitiveFlag = raws!.insensitiveFlag;
+      copy.raws!.spaces.addAll(raws!.spaces);
+      raws!.partSpaces.forEach((k, v) => copy.raws!.partSpaces[k] = Map.of(v));
+    }
+    if (this is SelNamespaceNode) {
+      (copy as SelNamespaceNode).namespace =
+          (this as SelNamespaceNode).namespace;
+    }
+    if (copy is SelAttribute) {
+      final src = this as SelAttribute;
+      copy
+        ..attribute = src.attribute
+        ..operator = src.operator
+        ..attrValue = src.attrValue
+        ..quoteMark = src.quoteMark
+        ..insensitive = src.insensitive;
+      src.partSpaces.forEach((k, v) => copy.partSpaces[k] = Map.of(v));
+    }
+    if (copy is SelRoot) {
+      copy.trailingComma = (this as SelRoot).trailingComma;
+    }
+    if (this is SelContainer) {
+      for (final child in (this as SelContainer).nodes) {
+        (copy as SelContainer).appendChild(child.deepClone());
+      }
+    }
+    return copy;
+  }
+
   String stringify() => '$rawSpaceBefore${valueToString()}$rawSpaceAfter';
 
   @override
@@ -154,9 +225,23 @@ abstract class SelContainer extends SelNode {
   SelNode? get last => nodes.isEmpty ? null : nodes.last;
   int get length => nodes.length;
 
+  void appendChild(SelNode child) {
+    child.parent = this;
+    nodes.add(child);
+  }
+
   void append(SelNode child) {
     child.parent = this;
     nodes.add(child);
+  }
+
+  /// JS removeAll(): detach every child.
+  void removeAll() {
+    for (final n in nodes) {
+      n.parent = null;
+    }
+    nodes.clear();
+    _indexes.clear();
   }
 
   void prepend(SelNode child) {

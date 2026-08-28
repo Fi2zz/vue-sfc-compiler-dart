@@ -102,6 +102,8 @@ void _rewriteSelector(
 ]) {
   SelNode? node;
   var shouldInject = !deep;
+  var hasNestedDeep = false;
+  var splitForNestedDeep = false;
   selector.each((n) {
     if (n.type == 'combinator' && (n.value == '>>>' || n.value == '/deep/')) {
       n.value = ' ';
@@ -109,6 +111,49 @@ void _rewriteSelector(
       return false;
     }
     if (n.type == 'pseudo') {
+      final value = n.value;
+      // 3.5.x: :is/:where/:has/:not containing :deep selectors.
+      if (_isDeepContainerPseudo(n)) {
+        final pseudo = n as SelPseudo;
+        final hasDeepSelectors = pseudo.nodes.any(_isDeepSelector);
+        if (hasDeepSelectors) {
+          final hasScopeAnchor = node != null;
+          final hasMixedSelectors = pseudo.nodes.any(
+            (sel) => !(sel as SelContainer).nodes.any(_isDeepSelector),
+          );
+          final hasTrailingNodes = selector.index(n) < selector.length - 1;
+          if (_canSplitDeepContainerPseudo(n) &&
+              !deep &&
+              !hasScopeAnchor &&
+              hasMixedSelectors &&
+              hasTrailingNodes) {
+            _splitSelectorForNestedDeep(id, rule, selector, pseudo, deep, slotted);
+            splitForNestedDeep = true;
+            return false;
+          }
+          if (value == ':not' &&
+              !deep &&
+              !hasScopeAnchor &&
+              hasMixedSelectors &&
+              hasTrailingNodes) {
+            return null;
+          }
+          for (final inner in pseudo.nodes) {
+            _rewriteSelector(
+              id,
+              rule,
+              inner as SelSelector,
+              deep || hasScopeAnchor,
+              slotted,
+            );
+          }
+          if (!hasScopeAnchor) {
+            node = n;
+            shouldInject = false;
+          }
+          hasNestedDeep = true;
+        }
+      }
       final res = _pseudoBranch(id, rule, selector, n as SelPseudo, deep);
       if (res.handled) {
         if (res.shouldInject != null) shouldInject = res.shouldInject!;
@@ -123,16 +168,19 @@ void _rewriteSelector(
       }
       if (res.skip) return null;
     }
-    final plain = n.type != 'pseudo' && n.type != 'combinator';
+    final plain =
+        !hasNestedDeep && n.type != 'pseudo' && n.type != 'combinator';
     final isWhere =
+        !hasNestedDeep &&
         n.type == 'pseudo' &&
         (n.value == ':is' || n.value == ':where') &&
         node == null;
     if (plain || isWhere) node = n;
     return null;
   });
+  if (splitForNestedDeep) return;
   shouldInject = _wrapNestedRules(rule, shouldInject);
-  if (node != null && _isIsOrWhere(node!)) {
+  if (node != null && !hasNestedDeep && _isIsOrWhere(node!)) {
     for (final inner in (node as SelPseudo).nodes) {
       _rewriteSelector(id, rule, inner as SelSelector, deep, slotted);
     }
@@ -239,6 +287,58 @@ void _rewriteSlotted(
 
 bool _isSpaceCombinator(SelNode node) =>
     node.type == 'combinator' && RegExp(r'^\s+$').hasMatch(node.value);
+
+/// Official isDeepSelector: :deep/:v-deep anywhere in the subtree.
+bool _isDeepSelector(SelNode node) {
+  if (node.type == 'pseudo' &&
+      (node.value == ':deep' || node.value == '::v-deep')) {
+    return true;
+  }
+  return node is SelContainer && node.nodes.any(_isDeepSelector);
+}
+
+bool _isDeepContainerPseudo(SelNode node) =>
+    node.type == 'pseudo' &&
+    (node.value == ':is' ||
+        node.value == ':where' ||
+        node.value == ':has' ||
+        node.value == ':not');
+
+bool _canSplitDeepContainerPseudo(SelNode node) =>
+    node.value == ':is' || node.value == ':where' || node.value == ':has';
+
+/// Official splitSelectorForNestedDeep: one selector per branch of the
+/// container pseudo, each branch inlined into a clone of the full selector
+/// and rewritten independently; the branch selectors replace the original.
+void _splitSelectorForNestedDeep(
+  String id,
+  CssRule rule,
+  SelSelector selector,
+  SelPseudo pseudo,
+  bool deep,
+  bool slotted,
+) {
+  final pseudoIndex = selector.index(pseudo);
+  final selectors = <SelSelector>[];
+  for (var i = 0; i < pseudo.nodes.length; i++) {
+    final branch = pseudo.nodes[i];
+    final branchSelector = selector.deepClone() as SelSelector;
+    if (branchSelector.first != null) {
+      branchSelector.first!.rawSpaceBefore =
+          i == 0 ? selector.first!.rawSpaceBefore : ' ';
+    }
+    final branchPseudo = branchSelector.at(pseudoIndex) as SelPseudo;
+    final branchClone = branch.deepClone();
+    if (branchClone is SelContainer && branchClone.first != null) {
+      branchClone.first!.rawSpaceBefore = '';
+    }
+    branchPseudo.removeAll();
+    branchPseudo.append(branchClone);
+    _rewriteSelector(id, rule, branchSelector, deep, slotted);
+    selectors.add(branchSelector);
+  }
+  selector.replaceWithMany(selectors);
+}
 
 bool _isIsOrWhere(SelNode node) =>
     node.type == 'pseudo' && (node.value == ':is' || node.value == ':where');

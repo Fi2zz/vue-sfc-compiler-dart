@@ -15,26 +15,30 @@ final transformFor = createStructuralDirectiveTransform('for', (
 ) {
   return _processFor(node, dir, context, (forNode) {
     context.helper(hRenderList);
-    final renderExp = createCallExp(hRenderList, [forNode.source]);
-    final isTemplate = isTemplateNode(node);
-    final memo = findDir(node, 'memo');
-    final keyProp = findProp(node, 'key', false, true);
-    final isDirKey = keyProp is DirectiveNode;
-    TmplNode? keyExp = _keyExpOf(keyProp);
-    if (memo != null && keyExp != null && isDirKey) {
-      keyProp.exp = keyExp = processExpression(
-        keyExp as SimpleExpression,
-        context,
-      );
-    }
-    final keyProperty = keyProp != null && keyExp != null
-        ? createObjectProp('key', keyExp)
-        : null;
-    if (memo != null && keyProperty != null && isDirKey) {
-      // Official vForMemoKeyedNodes: the :key expression was processed here,
-      // so transformExpression must skip it (avoids double processing).
+  final renderExp = createCallExp(hRenderList, [forNode.source]);
+  final isTemplate = isTemplateNode(node);
+  final memo = findDir(node, 'memo');
+  final keyProp = findProp(node, 'key', false, true);
+  final isDirKey = keyProp is DirectiveNode;
+  TmplNode? keyExp = _keyExpOf(keyProp);
+  final keyProperty = keyProp != null && keyExp != null
+      ? createObjectProp('key', keyExp)
+      : null;
+  if (isTemplate && memo != null && memo.exp != null) {
+    memo.exp = processExpression(memo.exp! as SimpleExpression, context);
+  }
+  if ((isTemplate || memo != null) && keyProperty != null && isDirKey) {
+    // Official transformFor: the :key expression is processed once here, on
+    // entry. transformExpression skips it via vForMemoKeyedNodes (memo only);
+    // re-processing an already-processed key would yield `_ctx._ctx.foo`.
+    keyExp = keyProp.exp = keyProperty.value = processExpression(
+      keyExp as SimpleExpression,
+      context,
+    );
+    if (memo != null) {
       context.vForMemoKeyedNodes.add(node);
     }
+  }
     _processTemplateMemoAndKey(node, memo, keyProp, keyProperty, context);
     final src = forNode.source;
     final isStableFragment = src is SimpleExpression && src.constType > 0;
@@ -82,16 +86,10 @@ void _processTemplateMemoAndKey(
   JSProperty? keyProperty,
   TransformContext context,
 ) {
+  // Official transformFor processes memo.exp and the :key on entry (see
+  // above); nothing is re-processed here — a second pass on the :key would
+  // yield `_ctx._ctx.foo` for out-of-scope identifiers.
   if (!isTemplateNode(node)) return;
-  if (memo != null && memo.exp != null) {
-    memo.exp = processExpression(memo.exp! as SimpleExpression, context);
-  }
-  if (keyProperty != null && keyProp is! AttributeNode) {
-    final value = keyProperty.value;
-    if (value is SimpleExpression) {
-      keyProperty.value = processExpression(value, context);
-    }
-  }
 }
 
 void _finishForCodegen(
@@ -189,10 +187,14 @@ Object _adjustChildBlock(
   bool isStableFragment,
   TransformContext context,
 ) {
-  final childBlock = child.codegenNode! as VNodeCall;
+  // The child's codegenNode may be a withMemo() call (v-memo child of
+  // <template v-for>): official code reads/writes isBlock on it harmlessly;
+  // injectProp routes the key to the call's 6th argument via injectSlotKey.
+  final childBlock = child.codegenNode!;
   if (isTemplate && keyProperty != null) {
     injectProp(childBlock, keyProperty, context);
   }
+  if (childBlock is! VNodeCall) return childBlock;
   if (childBlock.isBlock != !isStableFragment) {
     if (childBlock.isBlock) {
       context.removeHelper(hOpenBlock);

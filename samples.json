@@ -654,5 +654,9 @@
   {
     "name": "tsx_script_setup_no_jsx",
     "sfc": "<script setup lang=\"tsx\">\nimport { ref } from \"vue\"\nconst n = ref(0)\n</script>\n<template><button @click=\"n++\">{{ n }}</button></template>"
+  },
+  {
+    "name": "define_model_zh_key_getset",
+    "sfc": "<script setup>\nconst title = defineModel(\"标题\", { get: (v) => v, set: (v) => v })\n</script>\n"
   }
 ]

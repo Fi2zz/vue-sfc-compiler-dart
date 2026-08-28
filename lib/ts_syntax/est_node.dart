@@ -35,8 +35,6 @@ class JsonEstNode implements EstNode {
 
   JsonEstNode(this.map);
 
-  static final Map<Map<String, dynamic>, EstNode> _canonical = {};
-
   @override
   String get typeName => map['type'] as String;
   @override
@@ -48,12 +46,9 @@ class JsonEstNode implements EstNode {
   dynamic operator [](String key) {
     final v = map[key];
     // Wrap child objects so nested navigation stays on the interface.
-    if (v is Map<String, dynamic>) return wrap(v);
+    if (v is Map<String, dynamic>) return JsonEstNode(v);
     return v;
   }
-
-  static EstNode wrap(Map<String, dynamic> m) =>
-      _canonical[m] ??= JsonEstNode(m);
 
   @override
   bool flag(String key) => map[key] == true;
@@ -67,12 +62,12 @@ class JsonEstNode implements EstNode {
   @override
   EstNode nodeOf(Object? v) {
     if (v is EstNode) return v;
-    return wrap(v as Map<String, dynamic>);
+    return JsonEstNode(v as Map<String, dynamic>);
   }
 }
 
 /// Adapts a legacy/scalar entry into a node view.
 EstNode estOf(Object? v) {
   if (v is EstNode) return v;
-  return JsonEstNode.wrap(v as Map<String, dynamic>);
+  return JsonEstNode(v as Map<String, dynamic>);
 }

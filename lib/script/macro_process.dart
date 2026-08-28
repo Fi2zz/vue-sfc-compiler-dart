@@ -373,15 +373,21 @@ ModelDecl _recordModel(
 
 String _stripGetSet(SetupContext ctx, AstNode options, String text) {
   final props = objectProperties(options);
+  // Byte spans must convert to UTF-16 char offsets before splicing `text`
+  // (the object source text): get/set ranges after a multi-byte key would
+  // otherwise cut at the wrong position.
+  final optionsStart = ctx.view.charOf(options.startByte);
   final ranges = <List<int>>[];
   for (var i = 0; i < props.length; i++) {
     final name = _propertyKeyText(ctx, props[i]);
     if (name != 'get' && name != 'set') continue;
-    final start = props[i].startByte;
-    final end = i + 1 < props.length
+    final endByte = i + 1 < props.length
         ? props[i + 1].startByte
         : options.endByte - 1;
-    ranges.add([start - options.startByte, end - options.startByte]);
+    ranges.add([
+      ctx.view.charOf(props[i].startByte) - optionsStart,
+      ctx.view.charOf(endByte) - optionsStart,
+    ]);
   }
   for (final r in ranges.reversed) {
     text = text.substring(0, r[0]) + text.substring(r[1]);
